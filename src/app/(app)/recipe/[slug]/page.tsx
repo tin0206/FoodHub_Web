@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Clock, Flame, ShoppingBasket, ListOrdered, Tag, Heart } from 'lucide-react'
 import { useDarkMode } from '@/lib/use-dark-mode'
 import { loadRecipe, storeRecipe, type RecipeForDetail } from '@/lib/recipe-slug'
+import LoadingOverlay from '@/components/loading-overlay'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ export default function RecipeDetailPage() {
   const [prepStage, setPrepStage] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
   const [showComplete, setShowComplete] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // edit mode (home only)
   const [editMode, setEditMode] = useState(false)
@@ -176,10 +178,14 @@ export default function RecipeDetailPage() {
       )
       localStorage.setItem('fh_recipes', JSON.stringify(next))
     } catch {}
-    storeRecipe(updated)
-    setRecipe(updated)
-    setEditMode(false)
-    setEditError('')
+    setSaving(true)
+    setTimeout(() => {
+      storeRecipe(updated)
+      setRecipe(updated)
+      setEditMode(false)
+      setEditError('')
+      setSaving(false)
+    }, 700)
   }
 
   function toggleLabel(label: string) {
@@ -481,6 +487,7 @@ export default function RecipeDetailPage() {
 
       {/* ── Overlays ── */}
       {showComplete && <CompletionOverlay onClose={() => setShowComplete(false)} />}
+      {saving && <LoadingOverlay />}
     </div>
   )
 }

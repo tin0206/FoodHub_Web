@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BookOpen, Plus, X, Eye } from 'lucide-react'
 import { useDarkMode } from '@/lib/use-dark-mode'
 import { toSlug, storeRecipe } from '@/lib/recipe-slug'
+import LoadingOverlay from '@/components/loading-overlay'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,7 @@ function AddRecipeForm({
   const [calories, setCalories] = useState('')
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   function toggleLabel(label: string) {
     setSelectedLabels(prev => {
@@ -178,18 +180,22 @@ function AddRecipeForm({
       setError('Please fill in all required fields.')
       return
     }
-    onSave({
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      ingredients: ingredients.trim(),
-      steps: steps.trim(),
-      labels: [...selectedLabels],
-      cookingMinutes: mins,
-      calories: cals,
-    })
+    setSaving(true)
+    setTimeout(() => {
+      onSave({
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        ingredients: ingredients.trim(),
+        steps: steps.trim(),
+        labels: [...selectedLabels],
+        cookingMinutes: mins,
+        calories: cals,
+      })
+    }, 700)
   }
 
   const field = 'w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+  const fieldStyle = { borderColor: 'var(--tm-border-i)', backgroundColor: 'var(--tm-surface)', color: 'var(--tm-text)' }
 
   return (
     <div className="flex flex-col h-full rounded-xl border overflow-hidden" style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border)' }}>
@@ -212,7 +218,7 @@ function AddRecipeForm({
             onChange={e => setName(e.target.value)}
             placeholder="e.g. Spaghetti Bolognese"
             className={field}
-            style={{ borderColor: 'var(--tm-border-i)' }}
+            style={fieldStyle}
           />
         </div>
 
@@ -225,7 +231,7 @@ function AddRecipeForm({
               onChange={e => setCookingMinutes(e.target.value)}
               placeholder="30"
               className={field}
-              style={{ borderColor: 'var(--tm-border-i)' }}
+              style={fieldStyle}
             />
           </div>
           <div className="flex-1">
@@ -236,7 +242,7 @@ function AddRecipeForm({
               onChange={e => setCalories(e.target.value)}
               placeholder="500"
               className={field}
-              style={{ borderColor: 'var(--tm-border-i)' }}
+              style={fieldStyle}
             />
           </div>
         </div>
@@ -251,7 +257,7 @@ function AddRecipeForm({
             rows={4}
             placeholder={'1 cup rice\n2 eggs\n...'}
             className={field + ' resize-none'}
-            style={{ borderColor: 'var(--tm-border-i)' }}
+            style={fieldStyle}
           />
         </div>
 
@@ -265,7 +271,7 @@ function AddRecipeForm({
             rows={4}
             placeholder={'Boil water.\nAdd rice.\n...'}
             className={field + ' resize-none'}
-            style={{ borderColor: 'var(--tm-border-i)' }}
+            style={fieldStyle}
           />
         </div>
 
@@ -305,12 +311,14 @@ function AddRecipeForm({
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+          disabled={saving}
+          className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: '#059669' }}
         >
           Save
         </button>
       </div>
+      {saving && <LoadingOverlay />}
     </div>
   )
 }

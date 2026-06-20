@@ -59,10 +59,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           className="flex items-center justify-between px-4 h-14 border-b shrink-0"
           style={{ borderColor: 'var(--tm-border-s)' }}
         >
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <ChefHat size={20} color="#059669" />
             <span className="text-sm font-bold" style={{ color: 'var(--tm-text)' }}>FoodHub</span>
-          </div>
+          </Link>
         </div>
 
         <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">

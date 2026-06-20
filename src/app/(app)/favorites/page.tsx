@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Heart, Clock, Flame, MessageSquare, Eye } from 'lucide-react'
 import { useDarkMode } from '@/lib/use-dark-mode'
 import { toSlug, storeRecipe } from '@/lib/recipe-slug'
+import LoadingOverlay from '@/components/loading-overlay'
 
 interface FavoriteRecipe {
   id: string
@@ -85,6 +86,7 @@ function FavoriteCard({
   const tagBorder = dark ? '#274A73' : 'var(--tm-border)'
   const tagText = dark ? '#CBD5E1' : 'var(--tm-text-2)'
   const [noteInput, setNoteInput] = useState(recipe.note ?? '')
+  const [savingNote, setSavingNote] = useState(false)
 
   useEffect(() => {
     if (isEditing) setNoteInput(recipe.note ?? '')
@@ -149,7 +151,7 @@ function FavoriteCard({
               Cancel
             </button>
             <button
-              onClick={() => onSaveNote(noteInput)}
+              onClick={() => { setSavingNote(true); setTimeout(() => { onSaveNote(noteInput); setSavingNote(false) }, 700) }}
               className="flex-1 py-1.5 rounded-lg text-xs font-medium text-white"
               style={{ backgroundColor: '#059669' }}
             >
@@ -167,6 +169,7 @@ function FavoriteCard({
           {recipe.note ? 'Edit Note' : 'Add Note'}
         </button>
       )}
+      {savingNote && <LoadingOverlay />}
     </div>
   )
 }

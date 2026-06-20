@@ -2,9 +2,11 @@
 
 import type { ReactNode } from 'react'
 import { useState, useEffect } from 'react'
-import { User, Target, Bell, Palette } from 'lucide-react'
-import { getCurrentUser } from '@/lib/auth'
+import { useRouter } from 'next/navigation'
+import { User, Target, Bell, Palette, LogOut } from 'lucide-react'
+import { getCurrentUser, logout } from '@/lib/auth'
 import { applyTheme } from '@/lib/theme'
+import LoadingOverlay from '@/components/loading-overlay'
 
 interface ProfileData {
   fullName: string
@@ -98,6 +100,7 @@ export default function ProfilePage() {
   const [loaded, setLoaded] = useState(false)
   const [email, setEmail] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(NO_ERRORS)
 
   // Apply theme live as user toggles
@@ -154,10 +157,14 @@ export default function ProfilePage() {
     setFieldErrors(errors)
     if (Object.values(errors).some(Boolean)) return
 
-    localStorage.setItem('fh_profile', JSON.stringify(formData))
-    setSavedData(formData)
-    setSaveSuccess(true)
-    setTimeout(() => setSaveSuccess(false), 1500)
+    setSaving(true)
+    setTimeout(() => {
+      localStorage.setItem('fh_profile', JSON.stringify(formData))
+      setSavedData(formData)
+      setSaving(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 1500)
+    }, 700)
   }
 
   function handleCancel() {
@@ -166,6 +173,12 @@ export default function ProfilePage() {
   }
 
   const isDirty = JSON.stringify(formData) !== JSON.stringify(savedData)
+  const router = useRouter()
+
+  function handleLogout() {
+    logout()
+    router.replace('/login')
+  }
 
   if (!loaded) return null
 
@@ -174,8 +187,10 @@ export default function ProfilePage() {
   const errStyle = { color: '#f87171' }
 
   return (
+    <>
+    {saving && <LoadingOverlay />}
     <div className="h-full overflow-y-auto" style={{ backgroundColor: 'var(--tm-bg)' }}>
-      <div className="p-4 md:p-6 pb-28">
+      <div className="p-4 md:p-6 pb-6">
         <h1 className="text-xl font-bold mb-0.5" style={{ color: 'var(--tm-text)' }}>Profile Settings</h1>
         <p className="text-sm mb-5" style={{ color: 'var(--tm-text-2)' }}>Manage your account and nutrition preferences</p>
 
@@ -322,27 +337,38 @@ export default function ProfilePage() {
             ))}
           </div>
         </SectionCard>
-      </div>
 
-      {/* Sticky save bar */}
-      <div className="sticky bottom-0 border-t px-4 py-3 flex gap-3" style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border)' }}>
+        {/* Cancel + Save changes (same row) */}
+        <div className="flex gap-2 mt-3 mb-2">
+          <button
+            onClick={handleCancel}
+            disabled={!isDirty}
+            className="flex-1 h-11 border rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
+            style={{ borderColor: 'var(--tm-border)', color: 'var(--tm-text-2)', backgroundColor: 'var(--tm-subtle)' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!isDirty}
+            className="flex-1 h-11 rounded-full text-sm font-bold text-white transition-opacity disabled:opacity-40"
+            style={{ backgroundColor: saveSuccess ? '#10B981' : '#059669' }}
+          >
+            {saveSuccess ? 'Saved!' : 'Save changes'}
+          </button>
+        </div>
+
+        {/* Log out */}
         <button
-          onClick={handleCancel}
-          disabled={!isDirty}
-          className="flex-1 py-2.5 border rounded-lg text-sm font-medium transition-opacity disabled:opacity-40"
-          style={{ borderColor: 'var(--tm-border)', color: 'var(--tm-text-2)' }}
+          onClick={handleLogout}
+          className="w-full h-11 flex items-center justify-center gap-2 rounded-full border text-sm font-bold transition-colors"
+          style={{ backgroundColor: '#FFF1F2', borderColor: '#FCA5A5', color: '#DC2626' }}
         >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={!isDirty}
-          className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-40"
-          style={{ backgroundColor: saveSuccess ? '#10B981' : '#059669' }}
-        >
-          {saveSuccess ? 'Saved!' : 'Save changes'}
+          <LogOut size={16} />
+          Log out
         </button>
       </div>
     </div>
+    </>
   )
 }
