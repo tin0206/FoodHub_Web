@@ -14,6 +14,7 @@ export interface CurrentUser {
   id: string
   name: string
   email: string
+  role?: 'admin' | 'user'
 }
 
 export class FieldError extends Error {
@@ -78,4 +79,16 @@ export function getCurrentUser(): CurrentUser | null {
 
 export function logout(): void {
   localStorage.removeItem('fh_current_user')
+}
+
+// Temporary dev shortcut: signs in as a fixed admin user without checking credentials,
+// so /admin can be reached for testing before a real admin signup/role flow exists.
+export function loginAsAdminBypass(): void {
+  const admin: CurrentUser = {
+    id: 'admin-demo',
+    name: 'Admin',
+    email: 'admin@foodhub.dev',
+    role: 'admin',
+  }
+  localStorage.setItem('fh_current_user', JSON.stringify(admin))
 }

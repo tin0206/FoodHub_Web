@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { applyTheme } from "@/lib/theme";
-import { ChefHat, Home, Search, Heart, User, LogOut } from "lucide-react";
+import { ChefHat, Home, Search, Heart, User, LogOut, ShieldCheck } from "lucide-react";
 
 function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
   return (
@@ -29,9 +29,15 @@ const NAV: NavItem[] = [
 export default function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (!getCurrentUser()) router.replace("/login");
+    const user = getCurrentUser();
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    setIsAdmin(user.role === "admin");
   }, [router]);
 
   // Restore saved theme on every page load
@@ -86,7 +92,21 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t py-3 px-2 shrink-0" style={{ borderColor: 'var(--tm-border-s)' }}>
+        <div className="border-t py-3 px-2 shrink-0 space-y-0.5" style={{ borderColor: 'var(--tm-border-s)' }}>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+              style={{
+                backgroundColor: pathname.startsWith('/admin') ? '#ECFDF5' : 'transparent',
+                color: pathname.startsWith('/admin') ? '#059669' : 'var(--tm-text-2)',
+                fontWeight: pathname.startsWith('/admin') ? 500 : 400,
+              }}
+            >
+              <ShieldCheck size={16} />
+              Admin
+            </Link>
+          )}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-colors hover:opacity-80"

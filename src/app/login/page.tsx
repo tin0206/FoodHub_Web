@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { login, FieldError } from '@/lib/auth'
+import { login, loginAsAdminBypass, FieldError } from '@/lib/auth'
 import { ChefHat } from 'lucide-react'
 
 function MailIcon() {
@@ -183,6 +183,27 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px" style={{ backgroundColor: '#E5E7EB' }} />
+              <span className="text-xs" style={{ color: '#9ca3af' }}>or</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: '#E5E7EB' }} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                loginAsAdminBypass()
+                router.replace('/admin')
+              }}
+              className="w-full h-11 text-sm font-semibold rounded-lg border transition-colors hover:bg-blue-50 mb-1"
+              style={{ borderColor: '#2a78d6', color: '#2a78d6' }}
+            >
+              Vào thẳng trang Admin (tạm)
+            </button>
+            <p className="text-center text-xs mb-3" style={{ color: '#9ca3af' }}>
+              Bỏ qua đăng nhập — chỉ dùng để test, sẽ gỡ khi có đăng nhập admin thật.
+            </p>
 
             <div className="flex items-center justify-center gap-1 text-[15px]">
               <span style={{ color: '#475569' }}>Don&apos;t have an account?</span>
