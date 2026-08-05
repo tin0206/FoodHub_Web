@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "FoodHub",
-  description: "Your food delivery companion",
+  description:
+    "AI cooking companion — recipes, recommendations, and dietary goals in one place.",
 };
 
 export default function RootLayout({

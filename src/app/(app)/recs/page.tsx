@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Send, ShoppingBasket, ImageIcon } from "lucide-react";
 
 function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
@@ -270,6 +271,19 @@ export default function RecsPage() {
             </p>
           </div>
         </div>
+
+        <Link
+          href="/demo/chat"
+          className="mb-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold"
+          style={{
+            backgroundColor: "rgba(5,150,105,0.1)",
+            color: "#059669",
+            border: "1px solid rgba(5,150,105,0.25)",
+          }}
+        >
+          <span>Try live AI Companion demo (API)</span>
+          <span aria-hidden>→</span>
+        </Link>
 
         {/* Profile nutrition filters */}
         {profileFilters.length > 0 && (

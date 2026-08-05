@@ -1,48 +1,298 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2, Clock, Flame, ShoppingBasket, ListOrdered, Tag, BookOpen } from "lucide-react";
-import { useDarkMode } from "@/lib/use-dark-mode";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import {
-  ADMIN_ACCENT_LIGHT,
-  ADMIN_ACCENT_DARK,
-  getAdminRecipe,
-  deleteAdminRecipe,
-  type AdminRecipe,
-} from "@/lib/admin";
+  ArrowLeft,
+  BookOpen,
+  Eye,
+  EyeOff,
+  ListOrdered,
+  Pencil,
+  ShoppingBasket,
+  Tag,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
+import { useDarkMode } from "@/lib/use-dark-mode";
+import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
+import { hasAccessToken } from "@/lib/auth";
+import { ApiError, resolveMediaUrl } from "@/lib/api-client";
+import {
+  deleteRecipe,
+  deleteRecipeTranslation,
+  getRecipe,
+  listRecipeTranslations,
+  updateRecipeVisibility,
+  upsertRecipeTranslation,
+} from "@/lib/api/admin-recipes";
+import type {
+  ApiRecipe,
+  ApiRecipeTranslation,
+  RecipeVisibility,
+} from "@/lib/api/types";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+
+const LOCALES = ["en", "vi"] as const;
+
+function linesToText(lines: string[]): string {
+  return lines.join("\n");
+}
+
+function textToLines(text: string): string[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
 
 export default function AdminRecipeDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const recipeId = Number(params.id);
 
-  const [recipe, setRecipe] = useState<AdminRecipe | null | undefined>(undefined);
-  const [confirming, setConfirming] = useState(false);
+  const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
+  const [translations, setTranslations] = useState<ApiRecipeTranslation[]>([]);
+  const [locale, setLocale] = useState<string>("en");
+  const [title, setTitle] = useState("");
+  const [ingredientsText, setIngredientsText] = useState("");
+  const [directionsText, setDirectionsText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toggling, setToggling] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [confirmDeleteLocale, setConfirmDeleteLocale] = useState(false);
+  const [confirmDeleteRecipe, setConfirmDeleteRecipe] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const found = getAdminRecipe(params.id);
-    if (!found) {
+  const existingLocales = useMemo(
+    () => new Set(translations.map((t) => t.locale)),
+    [translations],
+  );
+
+  const applyTranslationForm = useCallback(
+    (list: ApiRecipeTranslation[], nextLocale: string, fallback?: ApiRecipe | null) => {
+      const match = list.find((t) => t.locale === nextLocale);
+      if (match) {
+        setTitle(match.title);
+        setIngredientsText(linesToText(match.ingredients));
+        setDirectionsText(linesToText(match.directions));
+        return;
+      }
+      if (fallback) {
+        setTitle(fallback.title);
+        setIngredientsText(linesToText(fallback.ingredients ?? []));
+        setDirectionsText(linesToText(fallback.directions ?? []));
+        return;
+      }
+      setTitle("");
+      setIngredientsText("");
+      setDirectionsText("");
+    },
+    [],
+  );
+
+  const load = useCallback(async () => {
+    if (!Number.isFinite(recipeId)) {
       router.replace("/admin/recipes");
       return;
     }
-    setRecipe(found);
-  }, [params.id, router]);
+    if (!hasAccessToken()) {
+      setError(
+        "No API token. Sign in with a real admin account (not Admin Bypass).",
+      );
+      setLoading(false);
+      return;
+    }
 
-  if (!recipe) return null;
+    setLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      // Load recipe first — do not couple to translations (older APIs may 404 that route)
+      const found = await getRecipe(recipeId);
+      setRecipe(found);
 
-  function handleDelete() {
-    if (!recipe) return;
-    deleteAdminRecipe(recipe.id);
-    router.push("/admin/recipes");
+      let tr: ApiRecipeTranslation[] = [];
+      try {
+        tr = await listRecipeTranslations(recipeId);
+      } catch (trErr) {
+        // Recipe still viewable; translations panel just starts empty
+        if (trErr instanceof ApiError && trErr.status !== 404) {
+          setNotice(
+            trErr.status === 403
+              ? "Translations unavailable (admin required)."
+              : `Translations could not be loaded: ${trErr.message}`,
+          );
+        }
+      }
+
+      setTranslations(tr);
+      const initialLocale =
+        tr.find((t) => t.locale === found.locale)?.locale ||
+        tr[0]?.locale ||
+        found.locale ||
+        "en";
+      setLocale(initialLocale);
+      applyTranslationForm(tr, initialLocale, found);
+    } catch (err) {
+      setRecipe(null);
+      setTranslations([]);
+      if (err instanceof ApiError) {
+        setError(
+          err.status === 404
+            ? "Recipe not found."
+            : err.message || "Failed to load recipe",
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to load recipe");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [applyTranslationForm, recipeId, router]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function handleLocaleChange(next: string) {
+    setLocale(next);
+    applyTranslationForm(translations, next, recipe);
+    setNotice("");
   }
+
+  async function handleToggleVisibility() {
+    if (!recipe) return;
+    const next: RecipeVisibility =
+      recipe.visibility === "public" ? "private" : "public";
+    setToggling(true);
+    setNotice("");
+    setError("");
+    try {
+      const updated = await updateRecipeVisibility(recipe.id, next);
+      setRecipe(updated);
+      setNotice(`Visibility set to ${updated.visibility}.`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to update visibility");
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function handleSaveTranslation() {
+    if (!recipe || !title.trim()) {
+      setError("Translation title is required.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const saved = await upsertRecipeTranslation(recipe.id, locale, {
+        title: title.trim(),
+        ingredients: textToLines(ingredientsText),
+        directions: textToLines(directionsText),
+      });
+      const next = [
+        ...translations.filter((t) => t.locale !== locale),
+        saved,
+      ].sort((a, b) => a.locale.localeCompare(b.locale));
+      setTranslations(next);
+      setNotice(`Saved ${locale} translation.`);
+      if (locale === recipe.locale) {
+        setRecipe({
+          ...recipe,
+          title: saved.title,
+          ingredients: saved.ingredients,
+          directions: saved.directions,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save translation");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteTranslation() {
+    if (!recipe) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    setConfirmDeleteLocale(false);
+    try {
+      await deleteRecipeTranslation(recipe.id, locale);
+      const next = translations.filter((t) => t.locale !== locale);
+      setTranslations(next);
+      setNotice(`Deleted ${locale} translation.`);
+      applyTranslationForm(next, locale, recipe);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to delete translation");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteRecipe() {
+    if (!recipe) return;
+    setDeleting(true);
+    setError("");
+    setConfirmDeleteRecipe(false);
+    try {
+      await deleteRecipe(recipe.id);
+      router.push("/admin/recipes");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to delete recipe",
+      );
+      setDeleting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-4 max-w-2xl mx-auto">
+        <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>
+          Loading recipe…
+        </p>
+      </div>
+    );
+  }
+
+  if (!recipe) {
+    return (
+      <div className="p-4 max-w-2xl mx-auto space-y-3">
+        {error && (
+          <div
+            className="rounded-2xl p-4 text-sm"
+            style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+          >
+            {error}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => router.push("/admin/recipes")}
+          className="flex items-center gap-1.5 text-xs font-semibold"
+          style={{ color: "var(--tm-text-2)" }}
+        >
+          <ArrowLeft size={14} /> Back to recipes
+        </button>
+      </div>
+    );
+  }
+
+  const isPublic = recipe.visibility === "public";
+  const isCatalog = recipe.created_by == null;
+  const canDelete = !isCatalog;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => router.push("/admin/recipes")}
@@ -51,7 +301,7 @@ export default function AdminRecipeDetailPage() {
         >
           <ArrowLeft size={14} /> Back
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             href={`/admin/recipes/${recipe.id}/edit`}
             className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
@@ -59,20 +309,64 @@ export default function AdminRecipeDetailPage() {
           >
             <Pencil size={13} /> Edit
           </Link>
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteRecipe(true)}
+              disabled={deleting}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
+              style={{ backgroundColor: "#F43F5E19", color: "#F43F5E" }}
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => setConfirming(true)}
+            onClick={() => void handleToggleVisibility()}
+            disabled={toggling}
             className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
-            style={{ backgroundColor: "#F43F5E19", color: "#F43F5E" }}
+            style={{ backgroundColor: `${accent}1F`, color: accent }}
           >
-            <Trash2 size={13} /> Delete
+            {isPublic ? <EyeOff size={13} /> : <Eye size={13} />}
+            {toggling ? "Updating…" : isPublic ? "Make private" : "Make public"}
           </button>
         </div>
       </div>
 
-      {recipe.imageUrl ? (
+      {isCatalog && (
+        <div
+          className="rounded-2xl p-3 mb-3 text-xs"
+          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+        >
+          Catalog recipe (shared). Edit creates a private copy. Delete is not
+          allowed by the API.
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="rounded-2xl p-3 mb-3 text-sm"
+          style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+        >
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div
+          className="rounded-2xl p-3 mb-3 text-sm"
+          style={{ backgroundColor: `${accent}14`, color: accent }}
+        >
+          {notice}
+        </div>
+      )}
+
+      {recipe.image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-48 object-cover rounded-2xl mb-3" />
+        <img
+          src={resolveMediaUrl(recipe.image_url)}
+          alt={recipe.title}
+          className="w-full h-48 object-cover rounded-2xl mb-3"
+        />
       ) : (
         <div
           className="w-full h-48 rounded-2xl mb-3 flex items-center justify-center"
@@ -82,55 +376,101 @@ export default function AdminRecipeDetailPage() {
         </div>
       )}
 
-      <h1 className="text-xl font-extrabold tracking-tight mb-2" style={{ color: "var(--tm-text)" }}>
+      <h1
+        className="text-xl font-extrabold tracking-tight mb-2"
+        style={{ color: "var(--tm-text)" }}
+      >
         {recipe.title}
       </h1>
 
-      <div className="flex items-center gap-4 mb-3">
-        <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--tm-text-2)" }}>
-          <Clock size={14} color={accent} /> {recipe.cookingMinutes} min
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span
+          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+          style={{
+            backgroundColor: isPublic ? `${accent}1A` : "var(--tm-subtle)",
+            color: isPublic ? accent : "var(--tm-text-2)",
+          }}
+        >
+          {isPublic ? <Eye size={11} /> : <EyeOff size={11} />}
+          {recipe.visibility}
         </span>
-        <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--tm-text-2)" }}>
-          <Flame size={14} color={accent} /> {recipe.calories} cal
+        <span className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+          #{recipe.id} · locale {recipe.locale}
         </span>
       </div>
 
-      {recipe.labels.length > 0 && (
+      {(recipe.dietary_restrictions?.length ?? 0) > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {recipe.labels.map((label) => (
-            <span key={label} className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: `${accent}1A`, color: accent }}>
+          {recipe.dietary_restrictions.map((label) => (
+            <span
+              key={label}
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ backgroundColor: `${accent}1A`, color: accent }}
+            >
               {label}
             </span>
           ))}
         </div>
       )}
 
-      <div className="space-y-3">
-        <div className="rounded-2xl p-3.5" style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}>
+      <div className="space-y-3 mb-5">
+        <div
+          className="rounded-2xl p-3.5"
+          style={{
+            backgroundColor: "var(--tm-surface)",
+            border: "1px solid var(--tm-border-i)",
+          }}
+        >
           <div className="flex items-center gap-1.5 mb-2">
             <ShoppingBasket size={15} color={accent} />
-            <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>Ingredients</span>
+            <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
+              Ingredients
+            </span>
           </div>
           <ul className="space-y-1.5">
-            {recipe.ingredientLines.map((line, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-[13px]" style={{ color: "var(--tm-text)" }}>
-                <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: accent }} />
+            {(recipe.ingredients ?? []).map((line, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2.5 text-[13px]"
+                style={{ color: "var(--tm-text)" }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
+                  style={{ backgroundColor: accent }}
+                />
                 {line}
               </li>
             ))}
+            {(recipe.ingredients ?? []).length === 0 && (
+              <li className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+                No ingredients
+              </li>
+            )}
           </ul>
         </div>
 
-        <div className="rounded-2xl p-3.5" style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}>
+        <div
+          className="rounded-2xl p-3.5"
+          style={{
+            backgroundColor: "var(--tm-surface)",
+            border: "1px solid var(--tm-border-i)",
+          }}
+        >
           <div className="flex items-center gap-1.5 mb-2">
             <ListOrdered size={15} color={accent} />
-            <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>Instructions</span>
+            <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
+              Instructions
+            </span>
           </div>
           <ol className="space-y-2">
-            {recipe.stepLines.map((line, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-[13px]" style={{ color: "var(--tm-text)" }}>
+            {(recipe.directions ?? []).map((line, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2.5 text-[13px]"
+                style={{ color: "var(--tm-text)" }}
+              >
                 <span
-                  className="w-5.5 h-5.5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
                   style={{ backgroundColor: `${accent}2E`, color: accent }}
                 >
                   {i + 1}
@@ -138,24 +478,142 @@ export default function AdminRecipeDetailPage() {
                 <span className="pt-0.5">{line}</span>
               </li>
             ))}
+            {(recipe.directions ?? []).length === 0 && (
+              <li className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+                No directions
+              </li>
+            )}
           </ol>
         </div>
 
-        {recipe.labels.length === 0 && (
+        {(recipe.dietary_restrictions?.length ?? 0) === 0 && (
           <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--tm-text-3)" }}>
-            <Tag size={12} /> No labels
+            <Tag size={12} /> No dietary labels
           </div>
         )}
       </div>
 
-      {confirming && (
+      {/* Translations */}
+      <div
+        className="rounded-2xl p-3.5"
+        style={{
+          backgroundColor: "var(--tm-surface)",
+          border: "1px solid var(--tm-border-i)",
+        }}
+      >
+        <p className="text-[13px] font-bold mb-3" style={{ color: "var(--tm-text)" }}>
+          Translations
+        </p>
+
+        <div className="flex flex-wrap gap-2 mb-3">
+          {LOCALES.map((loc) => {
+            const active = locale === loc;
+            const exists = existingLocales.has(loc);
+            return (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => handleLocaleChange(loc)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{
+                  backgroundColor: active ? accent : "var(--tm-subtle)",
+                  color: active ? "#fff" : "var(--tm-text-2)",
+                }}
+              >
+                {loc}
+                {exists ? "" : " · new"}
+              </button>
+            );
+          })}
+        </div>
+
+        <label className="block text-xs font-semibold mb-1" style={{ color: "var(--tm-text-2)" }}>
+          Title
+        </label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full rounded-lg px-3 py-2 text-sm mb-3 outline-none"
+          style={{
+            backgroundColor: "var(--tm-bg)",
+            color: "var(--tm-text)",
+            border: "1px solid var(--tm-border-i)",
+          }}
+        />
+
+        <label className="block text-xs font-semibold mb-1" style={{ color: "var(--tm-text-2)" }}>
+          Ingredients (one per line)
+        </label>
+        <textarea
+          value={ingredientsText}
+          onChange={(e) => setIngredientsText(e.target.value)}
+          rows={5}
+          className="w-full rounded-lg px-3 py-2 text-sm mb-3 outline-none resize-y"
+          style={{
+            backgroundColor: "var(--tm-bg)",
+            color: "var(--tm-text)",
+            border: "1px solid var(--tm-border-i)",
+          }}
+        />
+
+        <label className="block text-xs font-semibold mb-1" style={{ color: "var(--tm-text-2)" }}>
+          Directions (one per line)
+        </label>
+        <textarea
+          value={directionsText}
+          onChange={(e) => setDirectionsText(e.target.value)}
+          rows={6}
+          className="w-full rounded-lg px-3 py-2 text-sm mb-3 outline-none resize-y"
+          style={{
+            backgroundColor: "var(--tm-bg)",
+            color: "var(--tm-text)",
+            border: "1px solid var(--tm-border-i)",
+          }}
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void handleSaveTranslation()}
+            disabled={saving}
+            className="text-xs font-bold text-white px-3 py-2 rounded-lg"
+            style={{ backgroundColor: accent }}
+          >
+            {saving ? "Saving…" : `Save ${locale}`}
+          </button>
+          {existingLocales.has(locale) && (
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteLocale(true)}
+              disabled={saving}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
+              style={{ backgroundColor: "#F43F5E19", color: "#F43F5E" }}
+            >
+              <Trash2 size={13} /> Delete {locale}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {confirmDeleteLocale && (
         <ConfirmDialog
-          title="Delete recipe?"
-          message={`"${recipe.title}" will be permanently removed.`}
+          title="Delete translation?"
+          message={`Remove the "${locale}" translation for "${recipe.title}"?`}
           confirmLabel="Delete"
           confirmColor="#F43F5E"
-          onConfirm={handleDelete}
-          onCancel={() => setConfirming(false)}
+          onConfirm={() => void handleDeleteTranslation()}
+          onCancel={() => setConfirmDeleteLocale(false)}
+        />
+      )}
+
+      {confirmDeleteRecipe && (
+        <ConfirmDialog
+          title="Delete recipe?"
+          message={`"${recipe.title}" will be permanently deleted.`}
+          confirmLabel="Delete"
+          confirmColor="#F43F5E"
+          onConfirm={() => void handleDeleteRecipe()}
+          onCancel={() => setConfirmDeleteRecipe(false)}
         />
       )}
     </div>

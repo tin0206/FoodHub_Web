@@ -1,0 +1,342 @@
+.landing-root {
+  --lh-green: #047857;
+  --lh-green-bright: #059669;
+  --lh-ink: #0c1a14;
+  --lh-muted: #3d5248;
+  --lh-cream: #f4f7f5;
+  --lh-line: rgba(12, 26, 20, 0.12);
+  min-height: 100vh;
+  background: var(--lh-cream);
+  color: var(--lh-ink);
+  font-family: var(--font-landing-sans), system-ui, sans-serif;
+}
+
+.landing-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(
+    to bottom,
+    rgba(12, 26, 20, 0.55) 0%,
+    rgba(12, 26, 20, 0) 100%
+  );
+  animation: landing-fade-down 0.7s ease-out both;
+}
+
+@media (min-width: 768px) {
+  .landing-header {
+    padding: 1.25rem 2.5rem;
+  }
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.landing-nav-link {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.landing-nav-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.landing-nav-cta {
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--lh-green);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-nav-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.landing-hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.landing-hero-media {
+  position: absolute;
+  inset: 0;
+  background-image: url("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=2400&q=80");
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.04);
+  animation: landing-ken-in 8s ease-out both;
+}
+
+.landing-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(12, 26, 20, 0.35) 0%,
+    rgba(12, 26, 20, 0.25) 40%,
+    rgba(12, 26, 20, 0.78) 100%
+  );
+}
+
+.landing-hero-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 40rem;
+  padding: 0 1.25rem 3.5rem;
+  animation: landing-fade-up 0.85s 0.15s ease-out both;
+}
+
+@media (min-width: 768px) {
+  .landing-hero-content {
+    padding: 0 2.5rem 4.5rem;
+    max-width: 44rem;
+  }
+}
+
+.landing-brand-mark {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-landing-display), Georgia, serif;
+  font-size: clamp(2.4rem, 7vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #fff;
+}
+
+.landing-headline {
+  margin: 0 0 0.9rem;
+  font-family: var(--font-landing-display), Georgia, serif;
+  font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+  font-weight: 500;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.94);
+  max-width: 22ch;
+}
+
+.landing-lede {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 36ch;
+}
+
+.landing-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.landing-btn-primary,
+.landing-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.8rem 1.25rem;
+  border-radius: 999px;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-btn-primary {
+  background: var(--lh-green-bright);
+  color: #fff;
+}
+
+.landing-btn-primary:hover {
+  background: var(--lh-green);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(4, 120, 87, 0.35);
+}
+
+.landing-btn-secondary {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.landing-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.landing-section {
+  padding: 4.5rem 1.25rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .landing-section {
+    padding: 5.5rem 2.5rem;
+  }
+}
+
+.landing-section-alt {
+  max-width: none;
+  background: #e8f2ec;
+  border-top: 1px solid var(--lh-line);
+  border-bottom: 1px solid var(--lh-line);
+}
+
+.landing-section-alt .landing-section-title,
+.landing-section-alt .landing-section-copy {
+  max-width: 40rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.landing-section-title {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-landing-display), Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--lh-ink);
+  animation: landing-fade-up 0.7s ease-out both;
+}
+
+.landing-section-copy {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--lh-muted);
+}
+
+.landing-demo {
+  padding: 3.5rem 1.25rem 4.5rem;
+  scroll-margin-top: 1rem;
+}
+
+@media (min-width: 768px) {
+  .landing-demo {
+    padding: 4.5rem 2.5rem 5.5rem;
+  }
+}
+
+.landing-demo-intro {
+  max-width: 40rem;
+  margin: 0 auto 1.5rem;
+}
+
+.landing-demo-frame {
+  max-width: 44rem;
+  margin: 0 auto;
+  height: min(70vh, 640px);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--lh-line);
+  box-shadow: 0 18px 50px rgba(12, 26, 20, 0.1);
+  background: #fff;
+}
+
+.demo-chat-embed {
+  height: 100%;
+}
+
+.landing-cta-row-section {
+  max-width: 40rem;
+  margin: 1.75rem auto 0;
+}
+
+.landing-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1.75rem 1.25rem 2.25rem;
+  border-top: 1px solid var(--lh-line);
+}
+
+@media (min-width: 768px) {
+  .landing-footer {
+    padding: 2rem 2.5rem 2.75rem;
+  }
+}
+
+.landing-footer-brand {
+  font-family: var(--font-landing-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.landing-footer-meta {
+  font-size: 0.85rem;
+  color: var(--lh-muted);
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-fade-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-ken-in {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-header,
+  .landing-hero-content,
+  .landing-hero-media,
+  .landing-section-title {
+    animation: none !important;
+  }
+}

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChefHat, LayoutDashboard, BarChart3, BookOpen, Users, LogOut, ArrowLeft } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme } from "@/lib/theme";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 
@@ -30,8 +30,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       router.replace("/login");
       return;
     }
-    if (user.role !== "admin") {
-      router.replace("/");
+    if (!isAdminRole(user.role)) {
+      router.replace("/home");
       return;
     }
     setAllowed(true);
@@ -89,7 +89,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         <div className="border-t py-3 px-2 shrink-0 space-y-0.5" style={{ borderColor: "var(--tm-border-s)" }}>
           <Link
-            href="/"
+            href="/home"
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors hover:opacity-80"
             style={{ color: "var(--tm-text-2)" }}
           >

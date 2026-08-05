@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { signup, FieldError } from '@/lib/auth'
+import { signup, FieldError, needsAdminViewChooser } from '@/lib/auth'
 import { ChefHat } from 'lucide-react'
 
 function UserIcon() {
@@ -82,8 +82,9 @@ export default function SignupPage() {
     try {
       setLoading(true)
       setAuthError('')
-      await signup({ name: nameValue, email: emailValue, password: passwordValue })
-      router.replace('/')
+      const user = await signup({ name: nameValue, email: emailValue, password: passwordValue })
+      // Admin must pick view on login screen; regular users go to the app
+      router.replace(needsAdminViewChooser(user) ? '/login' : '/home')
     } catch (err: unknown) {
       if (err instanceof FieldError) {
         setErrors(prev => ({ ...prev, [err.field]: err.message }))

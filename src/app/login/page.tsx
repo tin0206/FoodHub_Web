@@ -1,11 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { login, loginAsAdminBypass, FieldError } from '@/lib/auth'
-import { ChefHat } from 'lucide-react'
+import {
+  login,
+  FieldError,
+  getCurrentUser,
+  needsAdminViewChooser,
+  type CurrentUser,
+} from '@/lib/auth'
+import { ChefHat, LayoutDashboard, User } from 'lucide-react'
 
 function MailIcon() {
   return (
@@ -37,6 +43,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [errors, setErrors] = useState<Errors>({ email: '', password: '' })
+  const [chooserUser, setChooserUser] = useState<CurrentUser | null>(null)
+
+  useEffect(() => {
+    const existing = getCurrentUser()
+    if (!existing) return
+    if (needsAdminViewChooser(existing)) {
+      setChooserUser(existing)
+      return
+    }
+    router.replace('/home')
+  }, [router])
 
   function getEmailError(val = email) {
     if (!val.trim()) return 'Please enter your email.'
@@ -63,8 +80,12 @@ export default function LoginPage() {
     try {
       setLoading(true)
       setAuthError('')
-      await login({ email: emailValue, password: passwordValue, rememberMe })
-      router.replace('/')
+      const user = await login({ email: emailValue, password: passwordValue, rememberMe })
+      if (needsAdminViewChooser(user)) {
+        setChooserUser(user)
+        return
+      }
+      router.replace('/home')
     } catch (err: unknown) {
       if (err instanceof FieldError) {
         setErrors(prev => ({ ...prev, [err.field]: err.message }))
@@ -82,6 +103,74 @@ export default function LoginPage() {
 
   function iconColor(hasError: boolean) {
     return hasError ? '#f87171' : '#9ca3af'
+  }
+
+  if (chooserUser) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ backgroundColor: '#F3F4F6' }}>
+        <div className="w-full max-w-90">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <ChefHat size={28} color="#059669" />
+            <span className="text-[17px] font-bold" style={{ color: '#0F172A' }}>FoodHub</span>
+          </div>
+
+          <div className="text-center mb-6">
+            <h1 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>
+              Choose a view
+            </h1>
+            <p className="text-base" style={{ color: '#475569' }}>
+              Signed in as {chooserUser.name || chooserUser.email}
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-[14px] border space-y-3" style={{ borderColor: '#D1D5DB' }}>
+            <button
+              type="button"
+              onClick={() => router.replace('/home')}
+              className="w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-colors hover:bg-emerald-50"
+              style={{ borderColor: '#D1D5DB' }}
+            >
+              <span
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: '#ECFDF5', color: '#059669' }}
+              >
+                <User size={20} />
+              </span>
+              <span>
+                <span className="block text-sm font-bold" style={{ color: '#0F172A' }}>
+                  User view
+                </span>
+                <span className="block text-xs mt-0.5" style={{ color: '#64748B' }}>
+                  App người dùng — home, recs, favorites…
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.replace('/admin')}
+              className="w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-colors hover:bg-blue-50"
+              style={{ borderColor: '#D1D5DB' }}
+            >
+              <span
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: '#EFF6FF', color: '#2a78d6' }}
+              >
+                <LayoutDashboard size={20} />
+              </span>
+              <span>
+                <span className="block text-sm font-bold" style={{ color: '#0F172A' }}>
+                  Admin dashboard
+                </span>
+                <span className="block text-xs mt-0.5" style={{ color: '#64748B' }}>
+                  Quản lý recipes, analytics…
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -183,27 +272,6 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
-
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px" style={{ backgroundColor: '#E5E7EB' }} />
-              <span className="text-xs" style={{ color: '#9ca3af' }}>or</span>
-              <div className="flex-1 h-px" style={{ backgroundColor: '#E5E7EB' }} />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                loginAsAdminBypass()
-                router.replace('/admin')
-              }}
-              className="w-full h-11 text-sm font-semibold rounded-lg border transition-colors hover:bg-blue-50 mb-1"
-              style={{ borderColor: '#2a78d6', color: '#2a78d6' }}
-            >
-              Vào thẳng trang Admin (tạm)
-            </button>
-            <p className="text-center text-xs mb-3" style={{ color: '#9ca3af' }}>
-              Bỏ qua đăng nhập — chỉ dùng để test, sẽ gỡ khi có đăng nhập admin thật.
-            </p>
 
             <div className="flex items-center justify-center gap-1 text-[15px]">
               <span style={{ color: '#475569' }}>Don&apos;t have an account?</span>

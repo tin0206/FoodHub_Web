@@ -81,16 +81,19 @@ export const WEEKLY_SIGNUPS = [3, 7, 5, 12, 8, 15, 10]
 export const WEEKLY_AI_SCANS = [18, 24, 31, 19, 42, 38, 27]
 
 export const AVAILABLE_LABELS = [
-  'Vietnamese',
+  'Dairy Free',
+  'Egg Free',
+  'Gluten Free',
+  'Nut Free',
   'Vegan',
   'Vegetarian',
+  'Pescetarian',
   'High Protein',
+  'Keto',
   'Quick Meal',
   'Breakfast',
-  'Keto',
-  'Gluten-Free',
+  'Vietnamese',
   'Low Carb',
-  'Dairy-Free',
 ]
 
 // ── Admin-created recipes (localStorage-backed, mirrors the rest of the app's mock data layer) ──

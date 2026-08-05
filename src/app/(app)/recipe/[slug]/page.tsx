@@ -106,12 +106,14 @@ export default function RecipeDetailPage() {
     )
   }
 
-  const source = recipe.source ?? 'search'
+  const detail = recipe
+
+  const source = detail.source ?? 'search'
   const showEdit = source === 'home'
   const showLove = source === 'search' || source === 'favorites'
 
-  const ingredients = parseLines(recipe.ingredients)
-  const steps = parseLines(recipe.steps)
+  const ingredients = parseLines(detail.ingredients)
+  const steps = parseLines(detail.steps)
   const totalStages = steps.length + 1
   const currentStage = prepStage ? 1 : stepIndex + 2
   const progress = currentStage / totalStages
@@ -120,7 +122,7 @@ export default function RecipeDetailPage() {
   const panelBg = dark ? '#102647' : 'var(--tm-bg)'
   const panelBorder = dark ? '#274A73' : 'var(--tm-border)'
   const headerBg = dark ? '#0B1B38' : 'var(--tm-surface)'
-  const cardBg = dark ? '#07152D' : recipe.cardColor
+  const cardBg = dark ? '#07152D' : detail.cardColor
 
   // ── cooking ──────────────────────────────────────────────────────────────────
 
@@ -142,11 +144,11 @@ export default function RecipeDetailPage() {
   // ── edit ─────────────────────────────────────────────────────────────────────
 
   function openEdit() {
-    setEditIngredients(recipe.ingredients)
-    setEditSteps(recipe.steps)
-    setEditMinutes(String(recipe.cookingMinutes))
-    setEditCalories(String(recipe.calories))
-    setEditLabels(new Set(recipe.labels))
+    setEditIngredients(detail.ingredients)
+    setEditSteps(detail.steps)
+    setEditMinutes(String(detail.cookingMinutes))
+    setEditCalories(String(detail.calories))
+    setEditLabels(new Set(detail.labels))
     setEditError('')
     setEditMode(true)
   }
@@ -161,7 +163,7 @@ export default function RecipeDetailPage() {
       return
     }
     const updated: RecipeForDetail = {
-      ...recipe,
+      ...detail,
       ingredients: editIngredients.trim(),
       steps: editSteps.trim(),
       cookingMinutes: mins,
@@ -172,7 +174,7 @@ export default function RecipeDetailPage() {
     try {
       const stored: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem('fh_recipes') ?? '[]')
       const next = stored.map(r =>
-        (r.id === recipe.id || r.name === recipe.name)
+        (r.id === detail.id || r.name === detail.name)
           ? { ...r, ingredients: updated.ingredients, steps: updated.steps, cookingMinutes: mins, calories: cals, labels: updated.labels }
           : r
       )
@@ -202,10 +204,10 @@ export default function RecipeDetailPage() {
     try {
       const favs: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem('fh_favorites') ?? '[]')
       const entry = {
-        id: recipe.id ?? crypto.randomUUID(),
-        name: recipe.name, tags: recipe.labels,
-        cookingMinutes: recipe.cookingMinutes, calories: recipe.calories,
-        ingredients: recipe.ingredients, steps: recipe.steps,
+        id: detail.id ?? crypto.randomUUID(),
+        name: detail.name, tags: detail.labels,
+        cookingMinutes: detail.cookingMinutes, calories: detail.calories,
+        ingredients: detail.ingredients, steps: detail.steps,
       }
       localStorage.setItem('fh_favorites', JSON.stringify([...favs, entry]))
       setIsSaved(true)
@@ -215,7 +217,7 @@ export default function RecipeDetailPage() {
   function removeFavorite() {
     try {
       const favs: Array<{ name: string }> = JSON.parse(localStorage.getItem('fh_favorites') ?? '[]')
-      localStorage.setItem('fh_favorites', JSON.stringify(favs.filter(f => f.name !== recipe.name)))
+      localStorage.setItem('fh_favorites', JSON.stringify(favs.filter(f => f.name !== detail.name)))
       setIsSaved(false)
     } catch {}
   }

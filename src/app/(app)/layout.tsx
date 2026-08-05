@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme } from "@/lib/theme";
 import { ChefHat, Home, Search, Heart, User, LogOut, ShieldCheck } from "lucide-react";
 
@@ -19,7 +19,7 @@ function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
 type NavItem = { href: string; label: string; icon: (size?: number) => ReactNode };
 
 const NAV: NavItem[] = [
-  { href: "/",          label: "Home",      icon: (s = 16) => <Home size={s} /> },
+  { href: "/home",      label: "Home",      icon: (s = 16) => <Home size={s} /> },
   { href: "/search",    label: "Search",    icon: (s = 16) => <Search size={s} /> },
   { href: "/recs",      label: "Recs",      icon: (s = 16) => <AutoAwesomeIcon size={s} /> },
   { href: "/favorites", label: "Favorites", icon: (s = 16) => <Heart size={s} /> },
@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       router.replace("/login");
       return;
     }
-    setIsAdmin(user.role === "admin");
+    setIsAdmin(isAdminRole(user.role));
   }, [router]);
 
   // Restore saved theme on every page load
@@ -65,7 +65,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           className="flex items-center justify-between px-4 h-14 border-b shrink-0"
           style={{ borderColor: 'var(--tm-border-s)' }}
         >
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/home" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <ChefHat size={20} color="#059669" />
             <span className="text-sm font-bold" style={{ color: 'var(--tm-text)' }}>FoodHub</span>
           </Link>
@@ -73,7 +73,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
           {NAV.map((item) => {
-            const active = pathname === item.href;
+          const active =
+            item.href === "/home"
+              ? pathname === "/home"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.label}
@@ -119,7 +122,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-hidden pb-14 md:pb-0">{children}</main>
+      <main className="flex-1 overflow-hidden pb-14 md:pb-0 flex flex-col min-h-0">{children}</main>
 
       {/* ── Bottom bar — below md ── */}
       <nav
@@ -127,7 +130,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border-s)' }}
       >
         {NAV.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            item.href === "/home"
+              ? pathname === "/home"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.label}

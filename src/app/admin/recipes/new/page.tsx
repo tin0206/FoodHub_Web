@@ -2,6 +2,6 @@
 
 import { AdminRecipeForm } from "@/components/admin/recipe-form";
 
-export default function NewAdminRecipePage() {
+export default function AdminRecipeNewPage() {
   return <AdminRecipeForm />;
 }
