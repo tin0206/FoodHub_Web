@@ -3,6 +3,7 @@ import { Fraunces, Outfit } from "next/font/google";
 import Link from "next/link";
 import { ChefHat } from "lucide-react";
 import { DemoChatPanel } from "@/components/chat/demo-chat-panel";
+import { AuthRedirect } from "@/components/auth-redirect";
 import "./landing.css";
 
 const display = Fraunces({
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div className={`${display.variable} ${sans.variable} landing-root`}>
+      <AuthRedirect />
       <header className="landing-header">
         <Link href="/" className="landing-brand">
           <ChefHat size={22} strokeWidth={2.25} />

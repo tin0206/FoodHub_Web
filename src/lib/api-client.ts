@@ -87,7 +87,7 @@ export class ApiError extends Error {
   }
 }
 
-function extractDetail(data: unknown): string {
+export function extractDetail(data: unknown): string {
   if (!data || typeof data !== "object") return "Request failed";
   const detail = (data as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;
@@ -154,6 +154,41 @@ export async function apiFetch<T = unknown>(
   if (res.status === 204) {
     return undefined as T;
   }
+
+  const text = await res.text();
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!res.ok) {
+    throw new ApiError(extractDetail(data), res.status, data);
+  }
+
+  return data as T;
+}
+
+/** Multipart upload (e.g. recipe photo). `apiFetch` always JSON-encodes, so this bypasses it. */
+export async function apiUpload<T = unknown>(
+  path: string,
+  file: File,
+  fieldName = "file",
+): Promise<T> {
+  const base = getApiBaseUrl();
+  const url = `${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`;
+
+  const form = new FormData();
+  form.append(fieldName, file, file.name);
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const token = getAccessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(url, { method: "POST", headers, body: form });
 
   const text = await res.text();
   let data: unknown = null;

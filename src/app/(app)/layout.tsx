@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme } from "@/lib/theme";
 import { ChefHat, Home, Search, Heart, User, LogOut, ShieldCheck } from "lucide-react";
+import { authDisplay, authSans } from "../auth-fonts";
 
 function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
   return (
@@ -53,39 +54,50 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     router.replace("/login");
   }
 
+  function isActive(href: string) {
+    return href === "/home" ? pathname === "/home" : pathname === href || pathname.startsWith(`${href}/`);
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--tm-bg)' }}>
+    <div
+      className={`${authDisplay.variable} ${authSans.variable} flex h-screen overflow-hidden`}
+      style={{ backgroundColor: 'var(--tm-bg)', fontFamily: 'var(--font-auth-sans), system-ui, sans-serif' }}
+    >
 
       {/* ── Sidebar — md and up ── */}
       <aside
-        className="hidden md:flex flex-col w-44 shrink-0 border-r"
+        className="hidden md:flex flex-col w-56 shrink-0 border-r"
         style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border-s)' }}
       >
-        <div
-          className="flex items-center justify-between px-4 h-14 border-b shrink-0"
-          style={{ borderColor: 'var(--tm-border-s)' }}
-        >
-          <Link href="/home" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <ChefHat size={20} color="#059669" />
-            <span className="text-sm font-bold" style={{ color: 'var(--tm-text)' }}>FoodHub</span>
+        <div className="flex items-center gap-2.5 px-5 h-16 shrink-0">
+          <Link href="/home" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <span
+              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: 'rgba(5,150,105,0.12)' }}
+            >
+              <ChefHat size={17} color="#059669" />
+            </span>
+            <span
+              className="text-[17px] font-bold tracking-tight"
+              style={{ fontFamily: 'var(--font-auth-display), Georgia, serif', color: 'var(--tm-text)' }}
+            >
+              FoodHub
+            </span>
           </Link>
         </div>
 
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {NAV.map((item) => {
-          const active =
-            item.href === "/home"
-              ? pathname === "/home"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-full text-sm font-medium transition-colors"
                 style={{
-                  backgroundColor: active ? '#ECFDF5' : 'transparent',
-                  color: active ? '#059669' : 'var(--tm-text-2)',
-                  fontWeight: active ? 500 : 400,
+                  backgroundColor: active ? '#059669' : 'transparent',
+                  color: active ? '#ffffff' : 'var(--tm-text-2)',
+                  boxShadow: active ? '0 6px 16px rgba(5,150,105,0.28)' : 'none',
                 }}
               >
                 {item.icon(16)}
@@ -95,15 +107,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t py-3 px-2 shrink-0 space-y-0.5" style={{ borderColor: 'var(--tm-border-s)' }}>
+        <div className="px-3 pb-4 pt-3 shrink-0 space-y-1" style={{ borderTop: '1px solid var(--tm-border-s)' }}>
           {isAdmin && (
             <Link
               href="/admin"
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-full text-sm font-medium transition-colors"
               style={{
-                backgroundColor: pathname.startsWith('/admin') ? '#ECFDF5' : 'transparent',
+                backgroundColor: pathname.startsWith('/admin') ? 'rgba(5,150,105,0.12)' : 'transparent',
                 color: pathname.startsWith('/admin') ? '#059669' : 'var(--tm-text-2)',
-                fontWeight: pathname.startsWith('/admin') ? 500 : 400,
               }}
             >
               <ShieldCheck size={16} />
@@ -112,7 +123,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-colors hover:opacity-80"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-full text-sm font-medium text-left transition-colors hover:text-[#DC2626]"
             style={{ color: 'var(--tm-text-2)' }}
           >
             <LogOut size={16} />
@@ -122,27 +133,31 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-hidden pb-14 md:pb-0 flex flex-col min-h-0">{children}</main>
+      <main className="flex-1 overflow-hidden pb-16 md:pb-0 flex flex-col min-h-0">{children}</main>
 
       {/* ── Bottom bar — below md ── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t flex items-center justify-around h-14"
-        style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border-s)' }}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-16 px-2"
+        style={{
+          backgroundColor: 'var(--tm-surface)',
+          borderTop: '1px solid var(--tm-border-s)',
+          boxShadow: '0 -8px 20px rgba(12,26,20,0.06)',
+        }}
       >
         {NAV.map((item) => {
-          const active =
-            item.href === "/home"
-              ? pathname === "/home"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = isActive(item.href);
           return (
             <Link
               key={item.label}
               href={item.href}
-              className="flex flex-col items-center gap-0.5 px-3 py-1 transition-colors"
-              style={{ color: active ? '#059669' : 'var(--tm-text-3)' }}
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-colors"
+              style={{
+                color: active ? '#059669' : 'var(--tm-text-3)',
+                backgroundColor: active ? 'rgba(5,150,105,0.1)' : 'transparent',
+              }}
             >
-              {item.icon(22)}
-              <span className="text-[10px] font-medium leading-none">{item.label}</span>
+              {item.icon(20)}
+              <span className="text-[10px] font-semibold leading-none">{item.label}</span>
             </Link>
           );
         })}

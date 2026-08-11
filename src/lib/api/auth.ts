@@ -36,3 +36,11 @@ export async function apiSignup(input: {
 export async function apiGetMe(): Promise<ApiUser> {
   return apiFetch<ApiUser>("/users/me");
 }
+
+export async function apiForgotPassword(email: string): Promise<void> {
+  await apiFetch<void>("/auth/forgot-password", {
+    method: "POST",
+    auth: false,
+    body: { email },
+  });
+}

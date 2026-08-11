@@ -1,13 +1,13 @@
 const LIGHT = {
-  '--tm-bg': '#F8FAFC',
+  '--tm-bg': '#F4F7F5',
   '--tm-surface': '#ffffff',
-  '--tm-border': '#E5E7EB',
-  '--tm-border-s': '#E2E8F0',
-  '--tm-border-i': '#D1D5DB',
-  '--tm-text': '#0F172A',
-  '--tm-text-2': '#475569',
-  '--tm-text-3': '#6B7280',
-  '--tm-subtle': '#F3F4F6',
+  '--tm-border': '#E3E9E5',
+  '--tm-border-s': '#E3E9E5',
+  '--tm-border-i': '#D8E0DB',
+  '--tm-text': '#0C1A14',
+  '--tm-text-2': '#3D5248',
+  '--tm-text-3': '#7C8983',
+  '--tm-subtle': '#EEF2EF',
 }
 
 const DARK = {

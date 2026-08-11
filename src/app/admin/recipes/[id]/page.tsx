@@ -31,7 +31,7 @@ import type {
   ApiRecipeTranslation,
   RecipeVisibility,
 } from "@/lib/api/types";
-import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 const LOCALES = ["en", "vi"] as const;
 

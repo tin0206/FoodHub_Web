@@ -11,27 +11,12 @@ import {
   needsAdminViewChooser,
   type CurrentUser,
 } from '@/lib/auth'
-import { ChefHat, LayoutDashboard, User } from 'lucide-react'
+import { ChefHat, LayoutDashboard, Mail, Lock, User } from 'lucide-react'
+import { AuthField, AuthPrimaryButton, AuthDivider, AuthSocialButton } from '@/components/auth/auth-widgets'
+import { authDisplay, authSans } from '../auth-fonts'
+import '../auth.css'
 
-function MailIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="20" height="16" x="2" y="4" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0110 0v4" />
-    </svg>
-  )
-}
-
-const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
+const isValidEmail = (v: string) => v.includes('@')
 
 type Errors = { email: string; password: string }
 
@@ -41,6 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [errors, setErrors] = useState<Errors>({ email: '', password: '' })
   const [chooserUser, setChooserUser] = useState<CurrentUser | null>(null)
@@ -63,6 +49,7 @@ export default function LoginPage() {
 
   function getPasswordError(val = password) {
     if (!val) return 'Please enter your password.'
+    if (val.length < 6) return 'Password must be at least 6 characters.'
     return ''
   }
 
@@ -97,38 +84,30 @@ export default function LoginPage() {
     }
   }
 
-  function inputBorder(hasError: boolean) {
-    return hasError ? '#f87171' : '#D1D5DB'
+  function handleGoogleSignIn() {
+    setAuthError('Google sign-in is not available yet.')
   }
 
-  function iconColor(hasError: boolean) {
-    return hasError ? '#f87171' : '#9ca3af'
-  }
+  const isLoading = loading || googleLoading
 
   if (chooserUser) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ backgroundColor: '#F3F4F6' }}>
-        <div className="w-full max-w-90">
-          <div className="flex items-center justify-center gap-2 mb-5">
-            <ChefHat size={28} color="#059669" />
-            <span className="text-[17px] font-bold" style={{ color: '#0F172A' }}>FoodHub</span>
-          </div>
+      <div className={`${authDisplay.variable} ${authSans.variable} auth-root`}>
+        <Link href="/" className="auth-brand">
+          <ChefHat size={22} color="#059669" />
+          <span>FoodHub</span>
+        </Link>
 
-          <div className="text-center mb-6">
-            <h1 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>
-              Choose a view
-            </h1>
-            <p className="text-base" style={{ color: '#475569' }}>
-              Signed in as {chooserUser.name || chooserUser.email}
-            </p>
-          </div>
+        <div className="auth-card">
+          <h1 className="auth-heading">Choose a view</h1>
+          <p className="auth-sub">Signed in as {chooserUser.name || chooserUser.email}</p>
 
-          <div className="bg-white p-5 rounded-[14px] border space-y-3" style={{ borderColor: '#D1D5DB' }}>
+          <div className="flex flex-col gap-2.5">
             <button
               type="button"
               onClick={() => router.replace('/home')}
-              className="w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-colors hover:bg-emerald-50"
-              style={{ borderColor: '#D1D5DB' }}
+              className="w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-colors hover:bg-emerald-50"
+              style={{ borderColor: 'var(--a-line)' }}
             >
               <span
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -137,10 +116,10 @@ export default function LoginPage() {
                 <User size={20} />
               </span>
               <span>
-                <span className="block text-sm font-bold" style={{ color: '#0F172A' }}>
+                <span className="block text-sm font-bold" style={{ color: 'var(--a-ink)' }}>
                   User view
                 </span>
-                <span className="block text-xs mt-0.5" style={{ color: '#64748B' }}>
+                <span className="block text-xs mt-0.5" style={{ color: 'var(--a-muted)' }}>
                   App người dùng — home, recs, favorites…
                 </span>
               </span>
@@ -149,8 +128,8 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => router.replace('/admin')}
-              className="w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-colors hover:bg-blue-50"
-              style={{ borderColor: '#D1D5DB' }}
+              className="w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-colors hover:bg-blue-50"
+              style={{ borderColor: 'var(--a-line)' }}
             >
               <span
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -159,10 +138,10 @@ export default function LoginPage() {
                 <LayoutDashboard size={20} />
               </span>
               <span>
-                <span className="block text-sm font-bold" style={{ color: '#0F172A' }}>
+                <span className="block text-sm font-bold" style={{ color: 'var(--a-ink)' }}>
                   Admin dashboard
                 </span>
-                <span className="block text-xs mt-0.5" style={{ color: '#64748B' }}>
+                <span className="block text-xs mt-0.5" style={{ color: 'var(--a-muted)' }}>
                   Quản lý recipes, analytics…
                 </span>
               </span>
@@ -174,114 +153,69 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ backgroundColor: '#F3F4F6' }}>
-      <div className="w-full max-w-90">
+    <div className={`${authDisplay.variable} ${authSans.variable} auth-root`}>
+      <Link href="/" className="auth-brand">
+        <ChefHat size={22} color="#059669" />
+        <span>FoodHub</span>
+      </Link>
 
-        <div className="flex items-center justify-center gap-2 mb-5">
-          <ChefHat size={28} color="#059669" />
-          <span className="text-[17px] font-bold" style={{ color: '#0F172A' }}>FoodHub</span>
-        </div>
+      <div className="auth-card">
+        <h1 className="auth-heading">Welcome back</h1>
+        <p className="auth-sub">Sign in to continue to your account</p>
 
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-bold mb-2" style={{ color: '#0F172A' }}>Welcome back</h1>
-          <p className="text-base" style={{ color: '#475569' }}>Sign in to your account to continue</p>
-        </div>
+        <AuthSocialButton label="Continue with Google" onClick={handleGoogleSignIn} loading={googleLoading} disabled={isLoading} />
+        <AuthDivider />
 
-        <div className="bg-white p-5 rounded-[14px] border" style={{ borderColor: '#D1D5DB' }}>
-          <form onSubmit={handleSubmit} noValidate>
-            {authError && (
-              <p className="text-red-400 text-sm text-center mb-4">{authError}</p>
-            )}
+        <form onSubmit={handleSubmit} noValidate className="auth-form">
+          {authError && <p className="auth-error-banner">{authError}</p>}
 
-            {/* Email */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2" style={{ color: '#0F172A' }}>
-                Email address
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none" style={{ color: iconColor(!!errors.email) }}>
-                  <MailIcon />
-                </span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => {
-                    setEmail(e.target.value)
-                    if (errors.email) setErrors(prev => ({ ...prev, email: getEmailError(e.target.value) }))
-                  }}
-                  onBlur={() => setErrors(prev => ({ ...prev, email: getEmailError() }))}
-                  placeholder="you@example.com"
-                  className="w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-                  style={{ borderColor: inputBorder(!!errors.email) }}
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-1.5 text-xs" style={{ color: '#f87171' }}>{errors.email}</p>
-              )}
-            </div>
+          <AuthField
+            label="Email address"
+            icon={Mail}
+            type="email"
+            value={email}
+            onChange={e => {
+              setEmail(e.target.value)
+              if (errors.email) setErrors(prev => ({ ...prev, email: getEmailError(e.target.value) }))
+            }}
+            onBlur={() => setErrors(prev => ({ ...prev, email: getEmailError() }))}
+            placeholder="you@example.com"
+            error={errors.email}
+          />
 
-            {/* Password */}
-            <div className="mb-3">
-              <label className="block text-sm font-medium mb-2" style={{ color: '#0F172A' }}>
-                Password
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none" style={{ color: iconColor(!!errors.password) }}>
-                  <LockIcon />
-                </span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => {
-                    setPassword(e.target.value)
-                    if (errors.password) setErrors(prev => ({ ...prev, password: getPasswordError(e.target.value) }))
-                  }}
-                  onBlur={() => setErrors(prev => ({ ...prev, password: getPasswordError() }))}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-                  style={{ borderColor: inputBorder(!!errors.password) }}
-                />
-              </div>
-              {errors.password && (
-                <p className="mt-1.5 text-xs" style={{ color: '#f87171' }}>{errors.password}</p>
-              )}
-            </div>
+          <AuthField
+            label="Password"
+            icon={Lock}
+            isPassword
+            value={password}
+            onChange={e => {
+              setPassword(e.target.value)
+              if (errors.password) setErrors(prev => ({ ...prev, password: getPasswordError(e.target.value) }))
+            }}
+            onBlur={() => setErrors(prev => ({ ...prev, password: getPasswordError() }))}
+            placeholder="••••••••"
+            error={errors.password}
+          />
 
-            {/* Remember + Forgot */}
-            <div className="flex items-center justify-between mb-3">
-              <label className="flex items-center gap-2 text-[15px] cursor-pointer select-none" style={{ color: '#0F172A' }}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="rounded border-gray-300"
-                  style={{ accentColor: '#059669' }}
-                />
-                Remember me
-              </label>
-              <Link href="/forgot-password" className="text-sm hover:underline" style={{ color: '#059669' }}>
-                Forgot password?
-              </Link>
-            </div>
+          <div className="auth-row-between">
+            <label className="auth-checkbox">
+              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
+              Remember me
+            </label>
+            <Link href="/forgot-password" className="auth-link">
+              Forgot password?
+            </Link>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 text-white text-base font-semibold rounded-lg transition-opacity disabled:opacity-60 disabled:cursor-not-allowed mb-3"
-              style={{ backgroundColor: '#059669' }}
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
+          <AuthPrimaryButton label="Sign in" loading={loading} disabled={isLoading} />
+        </form>
 
-            <div className="flex items-center justify-center gap-1 text-[15px]">
-              <span style={{ color: '#475569' }}>Don&apos;t have an account?</span>
-              <Link href="/signup" className="font-medium hover:underline" style={{ color: '#059669' }}>
-                Sign up
-              </Link>
-            </div>
-          </form>
-        </div>
-
+        <p className="auth-switch">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="auth-link">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   )

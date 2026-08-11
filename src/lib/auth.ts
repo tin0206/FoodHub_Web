@@ -1,5 +1,5 @@
 import { ApiError, setAccessToken, getAccessToken } from "@/lib/api-client";
-import { apiLogin, apiSignup } from "@/lib/api/auth";
+import { apiLogin, apiSignup, apiForgotPassword } from "@/lib/api/auth";
 import type { ApiUser } from "@/lib/api/types";
 
 export interface LoginCredentials {
@@ -110,6 +110,15 @@ export async function signup({
     return persistSession(res.access_token, res.user);
   } catch (err) {
     mapAuthError(err);
+  }
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  try {
+    await apiForgotPassword(email);
+  } catch (err) {
+    if (err instanceof ApiError) throw new Error(err.message || "Unable to send reset link.");
+    throw err instanceof Error ? err : new Error("Unable to send reset link.");
   }
 }
 
