@@ -1,224 +1,583 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, Clock, Flame, ChevronRight, Filter } from 'lucide-react'
-import { useDarkMode } from '@/lib/use-dark-mode'
-import { toSlug, storeRecipe } from '@/lib/recipe-slug'
+import { useEffect, useState } from "react";
+import {
+  Search,
+  Heart,
+  ArrowLeft,
+  Clock,
+  Flame,
+  ShoppingBasket,
+  ListOrdered,
+  Tag,
+  Utensils,
+} from "lucide-react";
+import { useDarkMode } from "@/lib/use-dark-mode";
+import { hasAccessToken, getCurrentUser } from "@/lib/auth";
+import { ApiError, resolveMediaUrl } from "@/lib/api-client";
+import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
+import {
+  listFavorites,
+  addFavorite,
+  deleteFavorite,
+} from "@/lib/api/favorites";
+import type { ApiRecipe } from "@/lib/api/types";
+import { getOrEstimateMeta } from "@/lib/recipe-meta";
+import { recipeCardTheme } from "@/components/recipe/recipe-card-theme";
+import {
+  RecipeCard,
+  type RecipeCardData,
+} from "@/components/recipe/recipe-card";
 
-interface SearchRecipe {
-  id: string
-  name: string
-  ingredients: string
-  steps: string
-  tags: string[]
-  categories: string[]
-  cookingMinutes: number
-  calories: number
+// ─── Constants (mirrors mobile SearchScreen) ─────────────────────────────────
+
+const MEAL_TYPE_CATEGORIES: [string, string][] = [
+  ["🌅", "Breakfast"],
+  ["🥗", "Lunch"],
+  ["🍝", "Dinner"],
+  ["⚡", "Quick Meals"],
+];
+
+const DIETARY_EMOJI: Record<string, string> = {
+  Alcoholic: "🍸",
+  Beverage: "🥤",
+  "Dairy Free": "🥛",
+  "Gluten Free": "🌾",
+  "Nut Free": "🥜",
+  Pescetarian: "🐟",
+  Vegan: "🌱",
+  Vegetarian: "🥦",
+};
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) return err.message || fallback;
+  if (err instanceof TypeError && /fetch/i.test(err.message)) {
+    return "Could not reach the server. Please try again.";
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
 }
 
-const CARD_COLORS = ['#FFF7ED', '#EFF6FF', '#F0FDF4', '#FFF1F2']
+function toCardData(recipe: ApiRecipe): RecipeCardData {
+  const meta = getOrEstimateMeta(recipe);
+  return {
+    id: recipe.id,
+    name: recipe.title,
+    imageUrl: recipe.image_url,
+    labels: recipe.dietary_restrictions,
+    cookingMinutes: meta.cookingMinutes,
+    calories: meta.calories,
+  };
+}
 
-const CATEGORIES = [
-  'Breakfast', 'Lunch', 'Dinner', 'Vegan',
-  'Quick Meals', 'High Protein', 'Gluten Free', 'Keto',
-]
+// ─── Shared bits (mirrors home/page.tsx styling) ─────────────────────────────
 
-const RECIPES: SearchRecipe[] = [
-  {
-    id: 's1',
-    name: 'Quinoa Buddha Bowl',
-    ingredients: '2 cups quinoa\n1 cup chickpeas\n1/2 avocado\nTahini dressing\nMixed greens',
-    steps: 'Cook quinoa per package.\nRoast chickpeas at 200°C for 20 min.\nAssemble bowl with greens, quinoa, chickpeas.\nTop with avocado and tahini.',
-    tags: ['Vegetarian', 'Healthy'],
-    categories: ['Lunch', 'Vegan', 'Quick Meals'],
-    cookingMinutes: 25,
-    calories: 420,
-  },
-  {
-    id: 's2',
-    name: 'Classic Italian Pasta',
-    ingredients: '200g pasta\nTomato sauce\nGarlic\nParmesan\nFresh basil',
-    steps: 'Boil pasta until al dente.\nSimmer sauce with garlic.\nToss pasta with sauce.\nTop with parmesan and basil.',
-    tags: ['Italian'],
-    categories: ['Dinner'],
-    cookingMinutes: 30,
-    calories: 580,
-  },
-  {
-    id: 's3',
-    name: 'Grilled Chicken & Veggies',
-    ingredients: '2 chicken breasts\nBell pepper\nZucchini\nOlive oil\nSalt and pepper',
-    steps: 'Season the chicken.\nGrill chicken and vegetables.\nSlice chicken.\nServe warm with veggies.',
-    tags: ['High Protein'],
-    categories: ['Lunch', 'High Protein', 'Keto'],
-    cookingMinutes: 35,
-    calories: 450,
-  },
-  {
-    id: 's4',
-    name: 'Fresh Garden Salad',
-    ingredients: 'Lettuce\nCucumber\nCherry tomatoes\nOlive oil\nLemon juice',
-    steps: 'Wash vegetables.\nChop all ingredients.\nMix dressing.\nToss and serve.',
-    tags: ['Vegan'],
-    categories: ['Lunch', 'Quick Meals', 'Gluten Free'],
-    cookingMinutes: 15,
-    calories: 280,
-  },
-]
+function panelShadow(dark: boolean) {
+  return dark
+    ? "0 8px 20px rgba(0,0,0,0.28)"
+    : "0 3px 10px rgba(12,26,20,0.06)";
+}
 
-
-function SearchRecipeCard({ recipe, index, onView }: { recipe: SearchRecipe; index: number; onView: () => void }) {
-  const dark = useDarkMode()
-  const cardBg = dark ? '#07152D' : CARD_COLORS[index % CARD_COLORS.length]
-  const cardBorder = dark ? '#274A73' : 'var(--tm-border)'
-  const tagBg = dark ? '#102647' : 'var(--tm-subtle)'
-  const tagBorder = dark ? '#274A73' : 'var(--tm-border)'
-  const tagText = dark ? '#CBD5E1' : 'var(--tm-text-3)'
+function SectionCard({
+  icon,
+  title,
+  accent,
+  children,
+}: {
+  icon?: React.ReactNode;
+  title?: string;
+  accent: string;
+  children: React.ReactNode;
+}) {
+  const dark = useDarkMode();
   return (
     <div
-      className="p-3.5 rounded-[14px] border cursor-pointer hover:shadow-sm transition-shadow"
-      style={{ backgroundColor: cardBg, borderColor: cardBorder }}
-      onClick={onView}
+      className="rounded-xl p-3"
+      style={{
+        backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
+        border: `1px solid ${dark ? "#2E2E2E" : "var(--tm-border-i)"}`,
+        boxShadow: panelShadow(dark),
+      }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm mb-1.5" style={{ color: '#059669' }}>{recipe.name}</p>
-          <div className="flex items-center gap-4 mb-2">
-            <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--tm-text-3)' }}>
-              <Clock size={11} /> {recipe.cookingMinutes} min
-            </span>
-            <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--tm-text-3)' }}>
-              <Flame size={11} /> {recipe.calories} cal
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {recipe.tags.map(tag => (
-              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full border" style={{ backgroundColor: tagBg, color: tagText, borderColor: tagBorder }}>{tag}</span>
-            ))}
-          </div>
+      {(icon || title) && (
+        <div className="flex items-center gap-1.5 mb-2">
+          {icon && <span style={{ color: accent }}>{icon}</span>}
+          {title && (
+            <p
+              className="text-[13px] font-bold"
+              style={{ color: "var(--tm-text)" }}
+            >
+              {title}
+            </p>
+          )}
         </div>
-        <ChevronRight size={18} color="var(--tm-text-3)" className="shrink-0 mt-0.5" />
-      </div>
+      )}
+      {children}
     </div>
-  )
+  );
 }
 
+// ─── Recipe detail (view + save) ─────────────────────────────────────────────
+
+function SearchRecipeDetail({
+  recipe,
+  isSaved,
+  onToggleSave,
+  onBack,
+}: {
+  recipe: ApiRecipe;
+  isSaved: boolean;
+  onToggleSave: () => void;
+  onBack: () => void;
+}) {
+  const dark = useDarkMode();
+  const theme = recipeCardTheme(recipe.id, recipe.dietary_restrictions);
+  const meta = getOrEstimateMeta(recipe);
+  const image = resolveMediaUrl(recipe.image_url);
+  const panelBg = dark ? "#1E1E1E" : "#F3F4F6";
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
+        <button
+          onClick={onBack}
+          className="p-1"
+          style={{ color: "var(--tm-text-2)" }}
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <p
+          className="text-sm font-semibold truncate flex-1"
+          style={{ color: "var(--tm-text)" }}
+        >
+          {recipe.title}
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-1 pb-3">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={recipe.title}
+            className="w-full h-44 object-cover rounded-xl mb-3"
+          />
+        ) : (
+          <div
+            className="w-full h-44 rounded-xl mb-3 flex items-center justify-center"
+            style={{
+              background: `linear-gradient(135deg, ${theme.start}, ${theme.end})`,
+            }}
+          >
+            <Utensils size={32} color="rgba(255,255,255,0.9)" />
+          </div>
+        )}
+
+        <h1
+          className="text-xl font-bold mb-2"
+          style={{ color: "var(--tm-text)" }}
+        >
+          {recipe.title}
+        </h1>
+
+        <div
+          className="flex items-center gap-4 mb-3 text-sm"
+          style={{ color: "var(--tm-text-2)" }}
+        >
+          <span className="flex items-center gap-1.5">
+            <Clock size={14} color={theme.start} /> {meta.cookingMinutes} min
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Flame size={14} color={theme.start} /> {meta.calories} cal
+          </span>
+        </div>
+
+        <div className="space-y-2.5">
+          <SectionCard
+            icon={<ShoppingBasket size={15} />}
+            title="Ingredients"
+            accent={theme.start}
+          >
+            <div className="space-y-2">
+              {recipe.ingredients.map((item, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: theme.start }}
+                  />
+                  <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>
+                    {item}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            icon={<ListOrdered size={15} />}
+            title="Instructions"
+            accent={theme.start}
+          >
+            <div className="space-y-3">
+              {recipe.directions.map((step, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span
+                    className="shrink-0 w-5.5 h-5.5 rounded-full flex items-center justify-center text-[11px] font-bold"
+                    style={{
+                      backgroundColor: `${theme.start}${dark ? "2E" : "1A"}`,
+                      color: theme.start,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <p
+                    className="text-sm pt-0.5"
+                    style={{ color: "var(--tm-text-2)" }}
+                  >
+                    {step}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {recipe.dietary_restrictions.length > 0 && (
+            <SectionCard
+              icon={<Tag size={15} />}
+              title="Labels"
+              accent={theme.start}
+            >
+              <div className="flex flex-wrap gap-2">
+                {recipe.dietary_restrictions.map((label) => (
+                  <span
+                    key={label}
+                    className="text-xs px-2.5 py-1 rounded-full"
+                    style={{
+                      backgroundColor: `${theme.start}${dark ? "26" : "14"}`,
+                      color: dark ? `${theme.start}E6` : theme.end,
+                    }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+        </div>
+      </div>
+
+      <div
+        className="border-t px-1 pt-3 shrink-0"
+        style={{ borderColor: "var(--tm-border)" }}
+      >
+        <button
+          onClick={onToggleSave}
+          className="w-full py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2"
+          style={
+            isSaved
+              ? { backgroundColor: panelBg, color: "#DC2626" }
+              : { backgroundColor: theme.start, color: "white" }
+          }
+        >
+          <Heart
+            size={16}
+            fill={isSaved ? "#DC2626" : "none"}
+            color={isSaved ? "#DC2626" : "white"}
+          />
+          {isSaved ? "Saved" : "Save Recipe"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function SearchPage() {
-  const router = useRouter()
-  const dark = useDarkMode()
-  const [query, setQuery] = useState('')
-  const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set())
+  const dark = useDarkMode();
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
+  const [favoriteIdByRecipe, setFavoriteIdByRecipe] = useState<
+    Record<number, number>
+  >({});
+  const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [selected, setSelected] = useState<ApiRecipe | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const [dietaryReady, setDietaryReady] = useState(false);
 
-  function toggleCategory(cat: string) {
-    setActiveCategories(prev => {
-      const next = new Set(prev)
-      next.has(cat) ? next.delete(cat) : next.add(cat)
-      return next
-    })
+  const hasFilter = debouncedQuery.trim() !== "" || selectedCategory !== null;
+
+  useEffect(() => {
+    let cancelled = false;
+    getDietaryRestrictions()
+      .then((opts) => {
+        if (!cancelled) setDietaryOptions(opts);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setDietaryReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function loadFavoriteIds() {
+    if (!hasAccessToken()) return;
+    try {
+      const favs = await listFavorites();
+      setFavoriteIdByRecipe(
+        Object.fromEntries(favs.map((f) => [f.recipe_id, f.id])),
+      );
+    } catch {}
   }
 
-  function openDetail(recipe: SearchRecipe, index: number) {
-    storeRecipe({
-      name: recipe.name,
-      ingredients: recipe.ingredients,
-      steps: recipe.steps,
-      labels: recipe.tags,
-      cookingMinutes: recipe.cookingMinutes,
-      calories: recipe.calories,
-      cardColor: CARD_COLORS[index % CARD_COLORS.length],
-      source: 'search',
-    })
-    router.push(`/recipe/${toSlug(recipe.name)}`)
+  useEffect(() => {
+    loadFavoriteIds();
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    if (!dietaryReady) return;
+    if (!hasAccessToken()) {
+      setRecipes([]);
+      setLoading(false);
+      setLoadError("No API token. Please sign in again.");
+      return;
+    }
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const dietary =
+          selectedCategory && dietaryOptions.includes(selectedCategory)
+            ? selectedCategory
+            : undefined;
+        const q =
+          debouncedQuery ||
+          (selectedCategory && !dietary ? selectedCategory : undefined);
+        const result = await searchRecipes({
+          q,
+          dietaryRestriction: dietary,
+          limit: hasFilter ? 100 : 50,
+        });
+        if (cancelled) return;
+        const currentUserId = getCurrentUser()?.id;
+        const catalogOnly = result.recipes.filter(
+          (r) => r.created_by == null || String(r.created_by) !== currentUserId,
+        );
+        setRecipes(catalogOnly);
+        setTotalCount(
+          result.totalCount - (result.recipes.length - catalogOnly.length),
+        );
+      } catch (err) {
+        if (cancelled) return;
+        setRecipes([]);
+        setLoadError(errorMessage(err, "Unable to search recipes."));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedQuery,
+    selectedCategory,
+    dietaryOptions,
+    retryToken,
+    dietaryReady,
+  ]);
+
+  function toggleCategory(category: string) {
+    setSelectedCategory((prev) => (prev === category ? null : category));
   }
 
-  const isFiltering = !!query.trim() || activeCategories.size > 0
+  function openDetail(recipe: ApiRecipe) {
+    setSelected(recipe);
+  }
 
-  const filtered = RECIPES.filter(r => {
-    const q = query.trim().toLowerCase()
-    const matchesQuery = !q || r.name.toLowerCase().includes(q) || r.ingredients.toLowerCase().includes(q)
-    const matchesCat = activeCategories.size === 0 || r.categories.some(c => activeCategories.has(c))
-    return matchesQuery && matchesCat
-  })
+  async function toggleSave() {
+    if (!selected) return;
+    const recipe = selected;
+    const favId = favoriteIdByRecipe[recipe.id];
+    try {
+      if (favId != null) {
+        await deleteFavorite(favId);
+        setFavoriteIdByRecipe((prev) => {
+          const next = { ...prev };
+          delete next[recipe.id];
+          return next;
+        });
+      } else {
+        const fav = await addFavorite(recipe.id);
+        setFavoriteIdByRecipe((prev) => ({ ...prev, [recipe.id]: fav.id }));
+      }
+    } catch (err) {
+      setLoadError(errorMessage(err, "Unable to update favorites."));
+    }
+  }
+
+  if (selected) {
+    return (
+      <div className="h-full p-3">
+        <SearchRecipeDetail
+          recipe={selected}
+          isSaved={favoriteIdByRecipe[selected.id] != null}
+          onToggleSave={toggleSave}
+          onBack={() => setSelected(null)}
+        />
+      </div>
+    );
+  }
+
+  const mealTypeLabels = new Set(
+    MEAL_TYPE_CATEGORIES.map(([, label]) => label),
+  );
+  const categoryChips: [string, string][] = [
+    ...MEAL_TYPE_CATEGORIES,
+    ...dietaryOptions
+      .filter((d) => !mealTypeLabels.has(d))
+      .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
+  ];
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6">
-      <h1 className="text-xl font-bold mb-0.5" style={{ color: 'var(--tm-text)' }}>Search Recipes</h1>
-      <p className="text-sm mb-4" style={{ color: 'var(--tm-text-2)' }}>Find the perfect recipe for your next meal</p>
+      <h1
+        className="text-xl font-bold mb-0.5"
+        style={{ color: "var(--tm-text)" }}
+      >
+        Search Recipes
+      </h1>
+      <p className="text-sm mb-4" style={{ color: "var(--tm-text-2)" }}>
+        Find the perfect recipe for your next meal
+      </p>
 
       {/* Search bar */}
       <div className="relative mb-5">
-        <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none" style={{ color: 'var(--tm-text-3)' }}>
+        <span
+          className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none"
+          style={{ color: "var(--tm-text-3)" }}
+        >
           <Search size={16} />
         </span>
         <input
           type="text"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search by recipe name, ingredients, or cuisine..."
-          className="w-full pl-10 pr-10 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-          style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border)', color: 'var(--tm-text)' }}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by recipe name or ingredient…"
+          className="w-full pl-10 pr-3 py-2.5 rounded-xl text-sm focus:outline-none"
+          style={{
+            backgroundColor: dark ? "#1E1E1E" : "white",
+            boxShadow: panelShadow(dark),
+            color: "var(--tm-text)",
+          }}
         />
-        <span className="absolute inset-y-0 right-3.5 flex items-center pointer-events-none" style={{ color: 'var(--tm-text-3)' }}>
-          <Filter size={15} />
-        </span>
       </div>
 
       {/* Category chips */}
-      <div className="mb-5">
-        <p className="text-xs mb-2.5" style={{ color: 'var(--tm-text-3)' }}>Popular categories</p>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(cat => {
-            const active = activeCategories.has(cat)
-            return (
-              <button
-                key={cat}
-                onClick={() => toggleCategory(cat)}
-                className="text-[11px] px-3 py-1.5 rounded-full border transition-colors"
-                style={{
-                  backgroundColor: active ? '#059669' : (dark ? '#102647' : 'var(--tm-surface)'),
-                  color: active ? 'white' : (dark ? '#CBD5E1' : 'var(--tm-text-2)'),
-                  borderColor: active ? '#059669' : (dark ? '#274A73' : 'var(--tm-border)'),
-                }}
-              >
-                {cat}
-              </button>
-            )
-          })}
-        </div>
+      <p className="text-xs mb-2.5" style={{ color: "var(--tm-text-3)" }}>
+        Popular categories
+      </p>
+      <div className="flex flex-wrap gap-2 mb-5">
+        {categoryChips.map(([emoji, label]) => {
+          const active = selectedCategory === label;
+          return (
+            <button
+              key={label}
+              onClick={() => toggleCategory(label)}
+              className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
+              style={
+                active
+                  ? {
+                      backgroundColor: "#059669",
+                      color: "white",
+                      boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
+                    }
+                  : {
+                      backgroundColor: dark ? "#1E1E1E" : "white",
+                      color: "var(--tm-text-2)",
+                      boxShadow: panelShadow(dark),
+                    }
+              }
+            >
+              <span>{emoji}</span>
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Results header */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>
-          {isFiltering ? 'Results' : 'Recent recipes'}
+        <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+          {hasFilter ? "Results" : "Recent recipes"}
         </p>
-        {isFiltering && (
-          <p className="text-xs font-medium" style={{ color: '#059669' }}>
-            Showing {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+        {hasFilter && (
+          <p className="text-xs font-medium" style={{ color: "#059669" }}>
+            {totalCount} result{totalCount !== 1 ? "s" : ""}
           </p>
         )}
       </div>
 
-      {/* Cards */}
-      {filtered.length === 0 ? (
+      {loadError && (
+        <div
+          className="rounded-xl px-3.5 py-2.5 mb-3 text-xs flex items-center justify-between gap-2"
+          style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+        >
+          <span>{loadError}</span>
+          <button
+            onClick={() => setRetryToken((t) => t + 1)}
+            className="font-semibold shrink-0 underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <p
+          className="text-sm py-10 text-center"
+          style={{ color: "var(--tm-text-2)" }}
+        >
+          Searching…
+        </p>
+      ) : recipes && recipes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Search size={32} color="#D1D5DB" className="mb-3" />
-          <p className="text-sm font-medium mb-1" style={{ color: 'var(--tm-text)' }}>No recipes found</p>
-          <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>Try a different search term or category</p>
+          <Search size={32} color="var(--tm-text-3)" className="mb-3" />
+          <p
+            className="text-sm font-medium mb-1"
+            style={{ color: "var(--tm-text)" }}
+          >
+            No recipes found
+          </p>
+          <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+            Try a different search term or category
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {filtered.map((recipe, index) => (
-            <SearchRecipeCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {(recipes ?? []).map((recipe) => (
+            <RecipeCard
               key={recipe.id}
-              recipe={recipe}
-              index={index}
-              onView={() => openDetail(recipe, RECIPES.indexOf(recipe))}
+              recipe={toCardData(recipe)}
+              onTap={() => openDetail(recipe)}
+              onAction={() => openDetail(recipe)}
             />
           ))}
         </div>
       )}
     </div>
-  )
+  );
 }

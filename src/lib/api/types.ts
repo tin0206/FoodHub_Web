@@ -63,6 +63,20 @@ export interface RecipeTranslationUpsert {
   directions: string[];
 }
 
+export interface RecipeSearchResult {
+  totalCount: number;
+  recipes: ApiRecipe[];
+}
+
+export interface ApiFavorite {
+  id: number;
+  recipe_id: number;
+  note: string | null;
+  recipe: ApiRecipe;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ChatHistoryMessage {
   role: "user" | "assistant";
   content: string;

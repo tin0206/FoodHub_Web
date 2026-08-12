@@ -35,11 +35,7 @@ import {
   recipeCardTheme,
   type RecipeCardTheme,
 } from "@/components/recipe/recipe-card-theme";
-import {
-  getRecipeMeta,
-  setRecipeMeta,
-  type RecipeMeta,
-} from "@/lib/recipe-meta";
+import { setRecipeMeta, getOrEstimateMeta } from "@/lib/recipe-meta";
 
 const DEFAULT_ACCENT = "#059669";
 
@@ -74,24 +70,8 @@ function greeting(): string {
   return "Good evening";
 }
 
-// The API has no cooking-time/calorie fields (confirmed against the live backend —
-// only estimated_servings). Recipes created in this app cache the real values the
-// user typed (see recipe-meta.ts); anything else (catalog recipes, other devices)
-// falls back to a rough estimate so the card still reads like the mobile design.
-function estimateStats(recipe: ApiRecipe): RecipeMeta {
-  const steps = recipe.directions.length || 1;
-  const ingredientCount = recipe.ingredients.length || 1;
-  const cookingMinutes = Math.min(
-    120,
-    Math.max(10, 8 * steps + 2 * ingredientCount),
-  );
-  const servings =
-    recipe.estimated_servings ?? Math.max(1, Math.round(ingredientCount / 3));
-  return { cookingMinutes, calories: servings * 200 };
-}
-
 function toCardData(recipe: ApiRecipe): RecipeCardData {
-  const meta = getRecipeMeta(recipe.id) ?? estimateStats(recipe);
+  const meta = getOrEstimateMeta(recipe);
   return {
     id: recipe.id,
     name: recipe.title,
@@ -699,7 +679,7 @@ function RecipeDetailPanel({
   const [deleting, setDeleting] = useState(false);
 
   const image = resolveMediaUrl(recipe.image_url);
-  const meta = getRecipeMeta(recipe.id) ?? estimateStats(recipe);
+  const meta = getOrEstimateMeta(recipe);
   const theme = recipeCardTheme(recipe.id, recipe.dietary_restrictions);
   const panelBg = dark ? "#1E1E1E" : "#F3F4F6";
   const panelBorder = dark ? "#3A3A3A" : "var(--tm-border-i)";

@@ -27,3 +27,23 @@ export function setRecipeMeta(id: string | number, meta: RecipeMeta): void {
   all[String(id)] = meta
   localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
 }
+
+interface RecipeLike {
+  id: string | number
+  directions: string[]
+  ingredients: string[]
+  estimated_servings?: number | null
+}
+
+/** Rough stand-in for recipes with no cached meta (catalog recipes, other devices). */
+export function estimateStats(recipe: RecipeLike): RecipeMeta {
+  const steps = recipe.directions.length || 1
+  const ingredientCount = recipe.ingredients.length || 1
+  const cookingMinutes = Math.min(120, Math.max(10, 8 * steps + 2 * ingredientCount))
+  const servings = recipe.estimated_servings ?? Math.max(1, Math.round(ingredientCount / 3))
+  return { cookingMinutes, calories: servings * 200 }
+}
+
+export function getOrEstimateMeta(recipe: RecipeLike): RecipeMeta {
+  return getRecipeMeta(recipe.id) ?? estimateStats(recipe)
+}

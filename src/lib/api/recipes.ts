@@ -1,5 +1,5 @@
 import { apiFetch, apiUpload } from "@/lib/api-client";
-import type { ApiRecipe } from "@/lib/api/types";
+import type { ApiRecipe, RecipeSearchResult } from "@/lib/api/types";
 
 export {
   getRecipe,
@@ -25,6 +25,38 @@ export async function listRecipes(params?: {
       lang: params?.lang,
     },
   });
+}
+
+export async function searchRecipes(params?: {
+  q?: string;
+  dietaryRestriction?: string;
+  skip?: number;
+  limit?: number;
+  mine?: boolean;
+  lang?: string;
+}): Promise<RecipeSearchResult> {
+  const res = await apiFetch<{ total_count: number; recipes: ApiRecipe[] }>(
+    "/recipes/search",
+    {
+      query: {
+        q: params?.q?.trim() || undefined,
+        dietary_restriction: params?.dietaryRestriction || undefined,
+        skip: params?.skip ?? 0,
+        limit: params?.limit ?? 50,
+        mine: params?.mine,
+        lang: params?.lang,
+      },
+    },
+  );
+  return { totalCount: res.total_count, recipes: res.recipes };
+}
+
+export async function getDietaryRestrictions(): Promise<string[]> {
+  const res = await apiFetch<{ dietary_restrictions: string[] }>(
+    "/recipes/dietary-restrictions",
+    { auth: false },
+  );
+  return res.dietary_restrictions;
 }
 
 /** Uploads a recipe photo. Endpoint/response shape inferred from REST convention — verify against the API. */
