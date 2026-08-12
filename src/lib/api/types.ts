@@ -50,7 +50,6 @@ export interface ApiRecipe {
   directions: string[];
   ner: string[];
   estimated_servings?: number | null;
-  mapped_ingredients?: unknown[];
   dietary_restrictions: string[];
   image_url?: string | null;
   visibility: RecipeVisibility;
