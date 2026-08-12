@@ -27,6 +27,20 @@ export interface TokenResponse {
   user: ApiUser;
 }
 
+export interface UserProfileUpdate {
+  full_name?: string | null;
+  age?: number | null;
+  weight?: number | null;
+  calorie_target?: number | null;
+  protein_target?: number | null;
+  dietary_restrictions?: string[] | null;
+  primary_goal?: string | null;
+  language?: string | null;
+  notify_recommendations?: boolean | null;
+  notify_new_features?: boolean | null;
+  notify_weekly_summary?: boolean | null;
+}
+
 export type RecipeVisibility = "private" | "public";
 
 export interface ApiRecipe {

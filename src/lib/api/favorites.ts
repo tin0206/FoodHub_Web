@@ -18,3 +18,13 @@ export async function addFavorite(
 export async function deleteFavorite(favoriteId: number): Promise<void> {
   await apiFetch<void>(`/favorites/${favoriteId}`, { method: "DELETE" });
 }
+
+export async function updateFavorite(
+  favoriteId: number,
+  note: string | null,
+): Promise<ApiFavorite> {
+  return apiFetch<ApiFavorite>(`/favorites/${favoriteId}`, {
+    method: "PATCH",
+    body: { note },
+  });
+}

@@ -1,272 +1,281 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Heart, Clock, Flame, MessageSquare, Eye } from 'lucide-react'
-import { useDarkMode } from '@/lib/use-dark-mode'
-import { toSlug, storeRecipe } from '@/lib/recipe-slug'
-import LoadingOverlay from '@/components/loading-overlay'
+import { type ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Heart, MessageSquare } from "lucide-react";
+import { useDarkMode } from "@/lib/use-dark-mode";
+import { hasAccessToken } from "@/lib/auth";
+import { ApiError } from "@/lib/api-client";
+import { listFavorites, deleteFavorite, updateFavorite } from "@/lib/api/favorites";
+import type { ApiFavorite } from "@/lib/api/types";
+import { getOrEstimateMeta } from "@/lib/recipe-meta";
+import { buildRecipeSlug } from "@/lib/recipe-slug";
+import { RecipeCard, type RecipeCardData } from "@/components/recipe/recipe-card";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { NoteDialog } from "@/components/note-dialog";
+import { recipeCardTheme } from "@/components/recipe/recipe-card-theme";
+import LoadingOverlay from "@/components/loading-overlay";
 
-interface FavoriteRecipe {
-  id: string
-  name: string
-  tags: string[]
-  cookingMinutes: number
-  calories: number
-  note?: string
-  ingredients?: string
-  steps?: string
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) return err.message || fallback;
+  if (err instanceof TypeError && /fetch/i.test(err.message)) {
+    return "Could not reach the server. Please try again.";
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
 }
 
-const CARD_COLORS = ['#FFF7ED', '#EFF6FF', '#F0FDF4', '#FFF1F2']
-
-const INITIAL_FAVORITES: FavoriteRecipe[] = [
-  {
-    id: 'f1',
-    name: 'Quinoa Buddha Bowl',
-    tags: ['Vegetarian', 'Healthy'],
-    cookingMinutes: 25,
-    calories: 420,
-    note: 'Great for meal prep! Double the tahini dressing.',
-    ingredients: '2 cups quinoa\n1 cup chickpeas\n1/2 avocado\nTahini dressing\nMixed greens',
-    steps: 'Cook quinoa per package.\nRoast chickpeas at 200°C for 20 min.\nAssemble bowl with greens, quinoa, chickpeas.\nTop with avocado and tahini.',
-  },
-  {
-    id: 'f2',
-    name: 'Grilled Chicken & Veggies',
-    tags: ['High Protein', 'Keto'],
-    cookingMinutes: 35,
-    calories: 450,
-    ingredients: '2 chicken breasts\nBell pepper\nZucchini\nOlive oil\nSalt and pepper',
-    steps: 'Season the chicken.\nGrill chicken and vegetables.\nSlice chicken.\nServe warm with veggies.',
-  },
-  {
-    id: 'f3',
-    name: 'Berry Oatmeal Bowl',
-    tags: ['Breakfast', 'Healthy'],
-    cookingMinutes: 10,
-    calories: 320,
-    ingredients: 'Rolled oats\nMixed berries\nHoney\nAlmond milk\nChia seeds',
-    steps: 'Cook oats with almond milk.\nTop with berries and chia seeds.\nDrizzle honey and serve.',
-  },
-]
-
-function StatCard({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="border rounded-xl p-3.5" style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border)' }}>
-      <p className="text-xl font-bold mb-0.5" style={{ color: 'var(--tm-text)' }}>{value}</p>
-      <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{label}</p>
-    </div>
-  )
+function toCardData(favorite: ApiFavorite): RecipeCardData {
+  const meta = getOrEstimateMeta(favorite.recipe);
+  return {
+    id: favorite.recipe.id,
+    name: favorite.recipe.title,
+    imageUrl: favorite.recipe.image_url,
+    labels: favorite.recipe.dietary_restrictions,
+    cookingMinutes: meta.cookingMinutes,
+    calories: meta.calories,
+  };
 }
 
-function FavoriteCard({
-  recipe,
-  index,
-  isEditing,
-  onView,
-  onStartEdit,
-  onSaveNote,
-  onCancelEdit,
-  onRemove,
+function SummaryCard({
+  value, label, icon, iconBg, iconColor,
 }: {
-  recipe: FavoriteRecipe
-  index: number
-  isEditing: boolean
-  onView: () => void
-  onStartEdit: () => void
-  onSaveNote: (note: string) => void
-  onCancelEdit: () => void
-  onRemove: () => void
+  value: number; label: string; icon: ReactNode; iconBg: string; iconColor: string;
 }) {
-  const dark = useDarkMode()
-  const cardBg = dark ? '#0B1B38' : CARD_COLORS[index % CARD_COLORS.length]
-  const cardBorder = dark ? '#274A73' : 'var(--tm-border)'
-  const tagBg = dark ? '#102647' : 'var(--tm-surface)'
-  const tagBorder = dark ? '#274A73' : 'var(--tm-border)'
-  const tagText = dark ? '#CBD5E1' : 'var(--tm-text-2)'
-  const [noteInput, setNoteInput] = useState(recipe.note ?? '')
-  const [savingNote, setSavingNote] = useState(false)
-
-  useEffect(() => {
-    if (isEditing) setNoteInput(recipe.note ?? '')
-  }, [isEditing, recipe.note])
-
   return (
-    <div className="border rounded-xl p-4" style={{ backgroundColor: cardBg, borderColor: cardBorder }}>
-      <div className="flex items-start justify-between mb-1.5">
-        <p className="font-bold text-sm flex-1 mr-2" style={{ color: 'var(--tm-text)' }}>{recipe.name}</p>
-        <div className="flex items-center gap-1 shrink-0">
-          <button onClick={onView} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors" style={{ color: '#059669' }}>
-            <Eye size={13} /> View
-          </button>
-          <button onClick={onRemove} className="hover:opacity-70 transition-opacity">
-            <Heart size={18} fill="#EF4444" color="#EF4444" />
-          </button>
-        </div>
+    <div
+      className="flex items-center gap-3.5 rounded-xl px-5 py-4"
+      style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border)" }}
+    >
+      <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: iconBg }}>
+        <span style={{ color: iconColor }}>{icon}</span>
       </div>
-
-      <div className="flex items-center gap-4 mb-2.5">
-        <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--tm-text-3)' }}>
-          <Clock size={11} /> {recipe.cookingMinutes} min
-        </span>
-        <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--tm-text-3)' }}>
-          <Flame size={11} /> {recipe.calories} cal
-        </span>
+      <div>
+        <p className="text-2xl font-bold leading-none" style={{ color: "var(--tm-text)" }}>{value}</p>
+        <p className="text-xs mt-1" style={{ color: "var(--tm-text-3)" }}>{label}</p>
       </div>
-
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {recipe.tags.map(tag => (
-          <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full border" style={{ backgroundColor: tagBg, color: tagText, borderColor: tagBorder }}>{tag}</span>
-        ))}
-      </div>
-
-      {/* Note bubble */}
-      {recipe.note && !isEditing && (
-        <div
-          className="rounded-lg px-3 py-2 mb-2.5 text-xs leading-relaxed"
-          style={{ backgroundColor: '#FEF9C3', color: '#92400E', border: '1px solid #FDE68A' }}
-        >
-          {recipe.note}
-        </div>
-      )}
-
-      {/* Inline note editor */}
-      {isEditing ? (
-        <div>
-          <textarea
-            value={noteInput}
-            onChange={e => setNoteInput(e.target.value)}
-            rows={2}
-            placeholder="Add a personal note..."
-            className="w-full px-2.5 py-2 border rounded-lg text-xs resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border-i)', color: 'var(--tm-text-2)' }}
-          />
-          <div className="flex gap-2 mt-1.5">
-            <button
-              onClick={onCancelEdit}
-              className="flex-1 py-1.5 border rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
-              style={{ borderColor: 'var(--tm-border-i)', color: 'var(--tm-text-2)' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => { setSavingNote(true); setTimeout(() => { onSaveNote(noteInput); setSavingNote(false) }, 700) }}
-              className="flex-1 py-1.5 rounded-lg text-xs font-medium text-white"
-              style={{ backgroundColor: '#059669' }}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          onClick={onStartEdit}
-          className="flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-colors"
-          style={{ backgroundColor: 'var(--tm-surface)', borderColor: 'var(--tm-border)', color: 'var(--tm-text-2)' }}
-        >
-          <MessageSquare size={12} />
-          {recipe.note ? 'Edit Note' : 'Add Note'}
-        </button>
-      )}
-      {savingNote && <LoadingOverlay />}
     </div>
-  )
+  );
 }
-
 
 export default function FavoritesPage() {
-  const router = useRouter()
-  const [favorites, setFavorites] = useState<FavoriteRecipe[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-
-  function openDetail(recipe: FavoriteRecipe, index: number) {
-    storeRecipe({
-      id: recipe.id,
-      name: recipe.name,
-      ingredients: recipe.ingredients ?? '',
-      steps: recipe.steps ?? '',
-      labels: recipe.tags,
-      cookingMinutes: recipe.cookingMinutes,
-      calories: recipe.calories,
-      cardColor: CARD_COLORS[index % CARD_COLORS.length],
-      source: 'favorites',
-    })
-    router.push(`/recipe/${toSlug(recipe.name)}`)
-  }
+  const dark = useDarkMode();
+  const router = useRouter();
+  const [favorites, setFavorites] = useState<ApiFavorite[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryToken, setRetryToken] = useState(0);
+  const [noteTarget, setNoteTarget] = useState<ApiFavorite | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<ApiFavorite | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('fh_favorites')
-      setFavorites(stored ? JSON.parse(stored) : INITIAL_FAVORITES)
-    } catch {
-      setFavorites(INITIAL_FAVORITES)
+    if (!hasAccessToken()) {
+      setFavorites([]);
+      setLoading(false);
+      setLoadError("No API token. Please sign in again.");
+      return;
     }
-    setLoaded(true)
-  }, [])
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+    listFavorites()
+      .then((favs) => {
+        if (!cancelled) setFavorites(favs);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFavorites([]);
+        setLoadError(errorMessage(err, "Unable to load favorites."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [retryToken]);
 
-  useEffect(() => {
-    if (loaded) localStorage.setItem('fh_favorites', JSON.stringify(favorites))
-  }, [favorites, loaded])
-
-  function saveNote(id: string, note: string) {
-    setFavorites(prev => prev.map(f => f.id === id ? { ...f, note: note.trim() || undefined } : f))
-    setEditingId(null)
+  function openDetail(favorite: ApiFavorite) {
+    router.push(`/favorites/${buildRecipeSlug(favorite.recipe.id, favorite.recipe.title)}`);
   }
 
-  function removeFavorite(id: string) {
-    setFavorites(prev => prev.filter(f => f.id !== id))
-    if (editingId === id) setEditingId(null)
+  async function saveNote(note: string) {
+    if (!noteTarget) return;
+    setSavingNote(true);
+    try {
+      const updated = await updateFavorite(noteTarget.id, note.trim() || null);
+      setFavorites((prev) => prev?.map((f) => (f.id === updated.id ? updated : f)) ?? prev);
+      setNoteTarget(null);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to save note."));
+    } finally {
+      setSavingNote(false);
+    }
   }
 
-  if (!loaded) return null
-
-  const stats = {
-    total: favorites.length,
-    withNotes: favorites.filter(f => f.note).length,
+  async function handleRemove() {
+    if (!removeTarget) return;
+    setRemoving(true);
+    try {
+      await deleteFavorite(removeTarget.id);
+      setFavorites((prev) => prev?.filter((f) => f.id !== removeTarget.id) ?? prev);
+      setRemoveTarget(null);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to remove favorite."));
+    } finally {
+      setRemoving(false);
+    }
   }
+
+  const savedCount = favorites?.length ?? 0;
+  const noteCount = favorites?.filter((f) => (f.note ?? "").trim() !== "").length ?? 0;
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <Heart size={20} fill="#EF4444" color="#EF4444" />
-        <h1 className="text-xl font-bold" style={{ color: 'var(--tm-text)' }}>Favorite Recipes</h1>
+      <div className="flex items-center gap-2 mb-0.5">
+        <Heart size={20} fill="#E11D48" color="#E11D48" />
+        <h1 className="text-xl font-bold" style={{ color: "var(--tm-text)" }}>Favorites</h1>
       </div>
-      <p className="text-sm mb-5" style={{ color: 'var(--tm-text-2)' }}>Your saved recipes with personal notes</p>
+      <p className="text-sm mb-4" style={{ color: "var(--tm-text-2)" }}>
+        Saved recipes with your personal notes
+      </p>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <StatCard value={stats.total} label="Total Saved" />
-        <StatCard value={stats.withNotes} label="With Notes" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+        <SummaryCard
+          value={savedCount}
+          label="Saved"
+          icon={<Heart size={18} fill="#E11D48" color="#E11D48" />}
+          iconBg={dark ? "#3A1420" : "#FEF2F2"}
+          iconColor="#E11D48"
+        />
+        <SummaryCard
+          value={noteCount}
+          label="With notes"
+          icon={<MessageSquare size={18} />}
+          iconBg={dark ? "#2F2A18" : "#FFFBEB"}
+          iconColor={dark ? "#FDE68A" : "#92400E"}
+        />
       </div>
 
-      {/* Cards */}
-      {favorites.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Heart size={40} color="#E5E7EB" className="mb-3" />
-          <p className="text-sm font-medium mb-1" style={{ color: 'var(--tm-text)' }}>No favorites yet</p>
-          <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>Save recipes from the Search page to see them here</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {favorites.map((recipe, index) => (
-            <FavoriteCard
-              key={recipe.id}
-              recipe={recipe}
-              index={index}
-              isEditing={editingId === recipe.id}
-              onView={() => openDetail(recipe, index)}
-              onStartEdit={() => setEditingId(recipe.id)}
-              onSaveNote={note => saveNote(recipe.id, note)}
-              onCancelEdit={() => setEditingId(null)}
-              onRemove={() => removeFavorite(recipe.id)}
-            />
-          ))}
+      {(loadError || actionError) && (
+        <div
+          className="rounded-xl px-3.5 py-2.5 mb-3 text-xs flex items-center justify-between gap-2"
+          style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+        >
+          <span>{loadError || actionError}</span>
+          <button
+            onClick={() => {
+              setActionError("");
+              if (loadError) setRetryToken((t) => t + 1);
+            }}
+            className="font-semibold shrink-0 underline"
+          >
+            {loadError ? "Try again" : "Dismiss"}
+          </button>
         </div>
       )}
 
+      {loading ? (
+        <p className="text-sm py-10 text-center" style={{ color: "var(--tm-text-2)" }}>
+          Loading favorites…
+        </p>
+      ) : favorites && favorites.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Heart size={32} color="var(--tm-text-3)" className="mb-3" />
+          <p className="text-sm font-medium mb-1" style={{ color: "var(--tm-text)" }}>
+            No favorites yet
+          </p>
+          <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+            Save recipes from Search to see them here
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {(favorites ?? []).map((favorite) => {
+            const hasNote = (favorite.note ?? "").trim() !== "";
+            return (
+              <RecipeCard
+                key={favorite.id}
+                recipe={toCardData(favorite)}
+                onTap={() => openDetail(favorite)}
+                onAction={() => openDetail(favorite)}
+                footer={
+                  <div>
+                    {hasNote && (
+                      <div
+                        className="flex items-start gap-1.5 rounded-lg px-2.5 py-2 mb-2.5 text-xs leading-relaxed"
+                        style={{
+                          backgroundColor: dark ? "#2F2A18" : "#FFFBEB",
+                          border: `1px solid ${dark ? "#6B5C2B" : "#F2C94C"}`,
+                          color: dark ? "#FDE68A" : "#92400E",
+                        }}
+                      >
+                        <MessageSquare size={13} className="mt-0.5 shrink-0" />
+                        <span>{favorite.note}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNoteTarget(favorite);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border rounded-lg py-2"
+                        style={{
+                          backgroundColor: dark ? "#1E1E1E" : "#F3F4F6",
+                          borderColor: dark ? "#2E2E2E" : "var(--tm-border-i)",
+                          color: "var(--tm-text-2)",
+                        }}
+                      >
+                        <MessageSquare size={13} />
+                        {hasNote ? "Edit Note" : "Add Note"}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRemoveTarget(favorite);
+                        }}
+                        className="w-9 h-9 flex items-center justify-center border rounded-lg shrink-0"
+                        style={{
+                          backgroundColor: dark ? "#1E1E1E" : "#F9FAFB",
+                          borderColor: dark ? "#2E2E2E" : "var(--tm-border-i)",
+                        }}
+                        aria-label="Remove from favorites"
+                      >
+                        <Heart size={15} fill="#E11D48" color="#E11D48" />
+                      </button>
+                    </div>
+                  </div>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {noteTarget && (
+        <NoteDialog
+          title="My Note"
+          initialNote={noteTarget.note ?? ""}
+          accentColor={recipeCardTheme(noteTarget.recipe.id, noteTarget.recipe.dietary_restrictions).start}
+          onSave={saveNote}
+          onCancel={() => setNoteTarget(null)}
+        />
+      )}
+      {removeTarget && (
+        <ConfirmDialog
+          title="Remove from favorites?"
+          message={`Remove "${removeTarget.recipe.title}" from your favorites?`}
+          confirmLabel="Remove"
+          confirmColor="#DC2626"
+          onConfirm={handleRemove}
+          onCancel={() => setRemoveTarget(null)}
+        />
+      )}
+      {(savingNote || removing) && <LoadingOverlay />}
     </div>
-  )
+  );
 }

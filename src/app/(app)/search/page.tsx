@@ -1,29 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Search,
-  Heart,
-  ArrowLeft,
-  Clock,
-  Flame,
-  ShoppingBasket,
-  ListOrdered,
-  Tag,
-  Utensils,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { hasAccessToken, getCurrentUser } from "@/lib/auth";
-import { ApiError, resolveMediaUrl } from "@/lib/api-client";
+import { ApiError } from "@/lib/api-client";
 import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
-import {
-  listFavorites,
-  addFavorite,
-  deleteFavorite,
-} from "@/lib/api/favorites";
 import type { ApiRecipe } from "@/lib/api/types";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
-import { recipeCardTheme } from "@/components/recipe/recipe-card-theme";
+import { buildRecipeSlug } from "@/lib/recipe-slug";
 import {
   RecipeCard,
   type RecipeCardData,
@@ -78,235 +64,19 @@ function panelShadow(dark: boolean) {
     : "0 3px 10px rgba(12,26,20,0.06)";
 }
 
-function SectionCard({
-  icon,
-  title,
-  accent,
-  children,
-}: {
-  icon?: React.ReactNode;
-  title?: string;
-  accent: string;
-  children: React.ReactNode;
-}) {
-  const dark = useDarkMode();
-  return (
-    <div
-      className="rounded-xl p-3"
-      style={{
-        backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
-        border: `1px solid ${dark ? "#2E2E2E" : "var(--tm-border-i)"}`,
-        boxShadow: panelShadow(dark),
-      }}
-    >
-      {(icon || title) && (
-        <div className="flex items-center gap-1.5 mb-2">
-          {icon && <span style={{ color: accent }}>{icon}</span>}
-          {title && (
-            <p
-              className="text-[13px] font-bold"
-              style={{ color: "var(--tm-text)" }}
-            >
-              {title}
-            </p>
-          )}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
-// ─── Recipe detail (view + save) ─────────────────────────────────────────────
-
-function SearchRecipeDetail({
-  recipe,
-  isSaved,
-  onToggleSave,
-  onBack,
-}: {
-  recipe: ApiRecipe;
-  isSaved: boolean;
-  onToggleSave: () => void;
-  onBack: () => void;
-}) {
-  const dark = useDarkMode();
-  const theme = recipeCardTheme(recipe.id, recipe.dietary_restrictions);
-  const meta = getOrEstimateMeta(recipe);
-  const image = resolveMediaUrl(recipe.image_url);
-  const panelBg = dark ? "#1E1E1E" : "#F3F4F6";
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
-        <button
-          onClick={onBack}
-          className="p-1"
-          style={{ color: "var(--tm-text-2)" }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <p
-          className="text-sm font-semibold truncate flex-1"
-          style={{ color: "var(--tm-text)" }}
-        >
-          {recipe.title}
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-1 pb-3">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image}
-            alt={recipe.title}
-            className="w-full h-44 object-cover rounded-xl mb-3"
-          />
-        ) : (
-          <div
-            className="w-full h-44 rounded-xl mb-3 flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${theme.start}, ${theme.end})`,
-            }}
-          >
-            <Utensils size={32} color="rgba(255,255,255,0.9)" />
-          </div>
-        )}
-
-        <h1
-          className="text-xl font-bold mb-2"
-          style={{ color: "var(--tm-text)" }}
-        >
-          {recipe.title}
-        </h1>
-
-        <div
-          className="flex items-center gap-4 mb-3 text-sm"
-          style={{ color: "var(--tm-text-2)" }}
-        >
-          <span className="flex items-center gap-1.5">
-            <Clock size={14} color={theme.start} /> {meta.cookingMinutes} min
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Flame size={14} color={theme.start} /> {meta.calories} cal
-          </span>
-        </div>
-
-        <div className="space-y-2.5">
-          <SectionCard
-            icon={<ShoppingBasket size={15} />}
-            title="Ingredients"
-            accent={theme.start}
-          >
-            <div className="space-y-2">
-              {recipe.ingredients.map((item, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: theme.start }}
-                  />
-                  <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>
-                    {item}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            icon={<ListOrdered size={15} />}
-            title="Instructions"
-            accent={theme.start}
-          >
-            <div className="space-y-3">
-              {recipe.directions.map((step, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <span
-                    className="shrink-0 w-5.5 h-5.5 rounded-full flex items-center justify-center text-[11px] font-bold"
-                    style={{
-                      backgroundColor: `${theme.start}${dark ? "2E" : "1A"}`,
-                      color: theme.start,
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <p
-                    className="text-sm pt-0.5"
-                    style={{ color: "var(--tm-text-2)" }}
-                  >
-                    {step}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          {recipe.dietary_restrictions.length > 0 && (
-            <SectionCard
-              icon={<Tag size={15} />}
-              title="Labels"
-              accent={theme.start}
-            >
-              <div className="flex flex-wrap gap-2">
-                {recipe.dietary_restrictions.map((label) => (
-                  <span
-                    key={label}
-                    className="text-xs px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: `${theme.start}${dark ? "26" : "14"}`,
-                      color: dark ? `${theme.start}E6` : theme.end,
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-        </div>
-      </div>
-
-      <div
-        className="border-t px-1 pt-3 shrink-0"
-        style={{ borderColor: "var(--tm-border)" }}
-      >
-        <button
-          onClick={onToggleSave}
-          className="w-full py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2"
-          style={
-            isSaved
-              ? { backgroundColor: panelBg, color: "#DC2626" }
-              : { backgroundColor: theme.start, color: "white" }
-          }
-        >
-          <Heart
-            size={16}
-            fill={isSaved ? "#DC2626" : "none"}
-            color={isSaved ? "#DC2626" : "white"}
-          />
-          {isSaved ? "Saved" : "Save Recipe"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SearchPage() {
   const dark = useDarkMode();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
-  const [favoriteIdByRecipe, setFavoriteIdByRecipe] = useState<
-    Record<number, number>
-  >({});
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [selected, setSelected] = useState<ApiRecipe | null>(null);
   const [retryToken, setRetryToken] = useState(0);
   const [dietaryReady, setDietaryReady] = useState(false);
 
@@ -325,20 +95,6 @@ export default function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  async function loadFavoriteIds() {
-    if (!hasAccessToken()) return;
-    try {
-      const favs = await listFavorites();
-      setFavoriteIdByRecipe(
-        Object.fromEntries(favs.map((f) => [f.recipe_id, f.id])),
-      );
-    } catch {}
-  }
-
-  useEffect(() => {
-    loadFavoriteIds();
   }, []);
 
   useEffect(() => {
@@ -405,41 +161,7 @@ export default function SearchPage() {
   }
 
   function openDetail(recipe: ApiRecipe) {
-    setSelected(recipe);
-  }
-
-  async function toggleSave() {
-    if (!selected) return;
-    const recipe = selected;
-    const favId = favoriteIdByRecipe[recipe.id];
-    try {
-      if (favId != null) {
-        await deleteFavorite(favId);
-        setFavoriteIdByRecipe((prev) => {
-          const next = { ...prev };
-          delete next[recipe.id];
-          return next;
-        });
-      } else {
-        const fav = await addFavorite(recipe.id);
-        setFavoriteIdByRecipe((prev) => ({ ...prev, [recipe.id]: fav.id }));
-      }
-    } catch (err) {
-      setLoadError(errorMessage(err, "Unable to update favorites."));
-    }
-  }
-
-  if (selected) {
-    return (
-      <div className="h-full p-3">
-        <SearchRecipeDetail
-          recipe={selected}
-          isSaved={favoriteIdByRecipe[selected.id] != null}
-          onToggleSave={toggleSave}
-          onBack={() => setSelected(null)}
-        />
-      </div>
-    );
+    router.push(`/search/${buildRecipeSlug(recipe.id, recipe.title)}`);
   }
 
   const mealTypeLabels = new Set(

@@ -122,6 +122,13 @@ export async function forgotPassword(email: string): Promise<void> {
   }
 }
 
+/** Refreshes the cached session (name/role) after a profile update, without touching the token. */
+export function updateCachedUser(user: ApiUser): CurrentUser {
+  const current = mapApiUser(user);
+  localStorage.setItem("fh_current_user", JSON.stringify(current));
+  return current;
+}
+
 export function getCurrentUser(): CurrentUser | null {
   if (typeof window === "undefined") return null;
   try {

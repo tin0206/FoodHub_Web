@@ -1,15 +1,3 @@
-export interface RecipeForDetail {
-  id?: string
-  name: string
-  ingredients: string
-  steps: string
-  labels: string[]
-  cookingMinutes: number
-  calories: number
-  cardColor: string
-  source?: 'home' | 'search' | 'favorites'
-}
-
 export function toSlug(name: string): string {
   return name
     .toLowerCase()
@@ -18,15 +6,14 @@ export function toSlug(name: string): string {
     .replace(/\s+/g, '-')
 }
 
-export function storeRecipe(recipe: RecipeForDetail): void {
-  sessionStorage.setItem('fh_recipe_detail', JSON.stringify(recipe))
+/** id-suffixed slug (`vegan-thai-curry-42`) — the trailing id makes the route
+ * resolvable by direct API lookup, the title prefix just makes the URL readable. */
+export function buildRecipeSlug(id: number | string, title: string): string {
+  const base = toSlug(title)
+  return base ? `${base}-${id}` : String(id)
 }
 
-export function loadRecipe(): RecipeForDetail | null {
-  try {
-    const s = sessionStorage.getItem('fh_recipe_detail')
-    return s ? (JSON.parse(s) as RecipeForDetail) : null
-  } catch {
-    return null
-  }
+export function parseRecipeIdFromSlug(slug: string): number | null {
+  const match = /(?:^|-)(\d+)$/.exec(slug)
+  return match ? Number(match[1]) : null
 }

@@ -1,0 +1,17 @@
+export const AVAILABLE_LABELS = [
+  'Dairy Free',
+  'Egg Free',
+  'Gluten Free',
+  'Nut Free',
+  'Vegan',
+  'Vegetarian',
+  'Pescetarian',
+  'Healthy',
+  'Italian',
+  'Comfort Food',
+  'High Protein',
+  'Keto',
+  'Quick Meal',
+  'Meal Prep',
+  'Breakfast',
+]
