@@ -8,12 +8,16 @@ export function NoteDialog({
   accentColor,
   onSave,
   onCancel,
+  confirmLabel = "Save Note",
+  placeholder = "Write a note…",
 }: {
   title: string;
   initialNote: string;
   accentColor: string;
   onSave: (note: string) => void;
   onCancel: () => void;
+  confirmLabel?: string;
+  placeholder?: string;
 }) {
   const [note, setNote] = useState(initialNote);
 
@@ -38,7 +42,7 @@ export function NoteDialog({
           onChange={(e) => setNote(e.target.value)}
           rows={4}
           autoFocus
-          placeholder="Write a note…"
+          placeholder={placeholder}
           className="w-full px-2.5 py-2 rounded-xl text-xs resize-none focus:outline-none"
           style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
         />
@@ -57,7 +61,7 @@ export function NoteDialog({
             className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
             style={{ backgroundColor: accentColor }}
           >
-            Save Note
+            {confirmLabel}
           </button>
         </div>
       </div>

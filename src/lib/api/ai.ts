@@ -1,4 +1,4 @@
-import { apiFetch, ApiError } from "@/lib/api-client";
+import { apiFetch, apiUpload, ApiError } from "@/lib/api-client";
 import type {
   AiJobAccepted,
   AiRequestDetail,
@@ -158,4 +158,56 @@ export async function aiChat(input: {
 
   const detail = await waitForResult(accepted.task_id, { token: input.token });
   return parseChatPayload(detail, accepted.session_id ?? input.sessionId);
+}
+
+export interface DishMatch {
+  rank: number;
+  dishName: string;
+  confidence: number;
+}
+
+export interface DishRecognitionResult {
+  dishName: string;
+  results: DishMatch[];
+  suggestedRecipes: string[];
+  /** Relative `/media/...` path of the uploaded photo — resolve with `resolveMediaUrl`. */
+  imageUrl: string;
+}
+
+export async function aiDetectDish(file: File): Promise<DishRecognitionResult> {
+  const accepted = await apiUpload<AiJobAccepted>("/ai/dish-recognition", file);
+  const detail = await waitForResult(accepted.task_id);
+  const payload = (detail.output_payload ?? {}) as Record<string, unknown>;
+  const results = Array.isArray(payload.results)
+    ? (payload.results as Record<string, unknown>[]).map((r) => ({
+        rank: Number(r.rank ?? 0),
+        dishName: String(r.dish_name ?? ""),
+        confidence: Number(r.confidence ?? 0),
+      }))
+    : [];
+  return {
+    dishName: String(payload.dish_name ?? results[0]?.dishName ?? ""),
+    results,
+    suggestedRecipes: asStringList(payload.suggested_recipes),
+    imageUrl: typeof payload.image_url === "string" ? payload.image_url : "",
+  };
+}
+
+export interface IngredientsDetectionResult {
+  ingredients: string[];
+  /** Relative `/media/...` path of the uploaded photo — resolve with `resolveMediaUrl`. */
+  imageUrl: string;
+  /** Same photo with detected ingredients annotated, when the backend provides one. */
+  annotatedImageUrl: string;
+}
+
+export async function aiDetectIngredients(file: File): Promise<IngredientsDetectionResult> {
+  const accepted = await apiUpload<AiJobAccepted>("/ai/ingredients/detect", file);
+  const detail = await waitForResult(accepted.task_id);
+  const payload = (detail.output_payload ?? {}) as Record<string, unknown>;
+  return {
+    ingredients: asStringList(payload.ingredients),
+    imageUrl: typeof payload.image_url === "string" ? payload.image_url : "",
+    annotatedImageUrl: typeof payload.annotated_image_url === "string" ? payload.annotated_image_url : "",
+  };
 }

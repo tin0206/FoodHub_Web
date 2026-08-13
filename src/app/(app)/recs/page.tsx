@@ -1,458 +1,587 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { Send, ShoppingBasket, ImageIcon } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  Camera,
+  Pencil,
+  RefreshCw,
+  Send,
+  ShoppingBasket,
+  Sparkles,
+  UtensilsCrossed,
+} from "lucide-react";
+import { apiGetMe } from "@/lib/api/auth";
+import { aiWelcome, aiChat, aiDetectDish, aiDetectIngredients } from "@/lib/api/ai";
+import { ApiError, resolveMediaUrl } from "@/lib/api-client";
+import type { ChatHistoryMessage, RagRecipe } from "@/lib/api/types";
+import { MarkdownReply } from "@/components/chat/markdown-reply";
+import { TypingIndicator } from "@/components/chat/typing-indicator";
+import { NoteDialog } from "@/components/note-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useDarkMode } from "@/lib/use-dark-mode";
 
-function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
+interface UiMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  recipes?: RagRecipe[];
+}
+
+interface UserProfileForChat {
+  dietaryRestrictions: string[];
+  primaryGoal: string;
+}
+
+function newSessionId(): string {
+  return `fh-${Date.now()}-${Math.abs(Math.floor(Math.random() * 1_000_000_000))}`;
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) return err.message || fallback;
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
+function ComposeDetectionRow({
+  text, icon, disabled, onEdit,
+}: { text: string; icon: ReactNode; disabled: boolean; onEdit: () => void }) {
+  const dark = useDarkMode();
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
+    <div
+      className="flex items-start gap-2 rounded-xl px-3 py-2.5 mb-2"
+      style={{ backgroundColor: dark ? "#1E1E1E" : "#F3F4F6", border: "1px solid rgba(5,150,105,0.35)" }}
     >
-      <path
-        fill="white"
-        d="m19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zm0 6l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25zm-7.5-5.5L9 4L6.5 9.5L1 12l5.5 2.5L9 20l2.5-5.5L17 12zm-1.51 3.49L9 15.17l-.99-2.18L5.83 12l2.18-.99L9 8.83l.99 2.18l2.18.99z"
-      />
-    </svg>
+      {icon}
+      <p className="flex-1 text-[13px] leading-snug" style={{ color: "var(--tm-text)" }}>{text}</p>
+      <button
+        type="button"
+        onClick={onEdit}
+        disabled={disabled}
+        className="shrink-0 disabled:opacity-40"
+        style={{ color: "var(--tm-text-3)" }}
+        aria-label="Edit"
+      >
+        <Pencil size={15} />
+      </button>
+    </div>
   );
 }
 
-interface ChatMessage {
-  id: string;
-  role: "bot" | "user";
+function DetectionConfirmDialog({
+  title, text, inputImageUrl, outputImageUrl, onSave, onCancel,
+}: {
+  title: string;
   text: string;
-}
+  inputImageUrl?: string;
+  outputImageUrl?: string;
+  onSave: (text: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(text);
+  const detectedImageUrl = outputImageUrl || inputImageUrl;
 
-const SUGGESTIONS = [
-  "High protein meals under 500 calories",
-  "Vegetarian dinner ideas",
-  "Quick 15-minute breakfast",
-  "Keto-friendly lunch options",
-  "Gluten-free dinner recipes",
-  "Vegan meal prep ideas",
-];
-
-const GREETING: ChatMessage = {
-  id: "init",
-  role: "bot",
-  text: "Hello! I'm your AI recipe recommendation assistant. Tell me what you're in the mood for, choose your dietary preferences, or upload a photo using one of the buttons below.",
-};
-
-function mockReply(prompt: string, filters: Set<string> = new Set()): string {
-  const filterList = [...filters];
-  if (filterList.length > 0 && !prompt.trim()) {
-    return `Got it! I'll prioritize recipes that are ${filterList.join(", ")} friendly:\n\n• Zucchini Noodles with Pesto (15 min, 310 cal)\n• Stuffed Bell Peppers (40 min, 420 cal)\n• Roasted Veggie Grain Bowl (30 min, 390 cal)\n\nShould I generate more options?`;
-  }
-  const lower = prompt.toLowerCase();
-  if (
-    lower.includes("quick") ||
-    lower.includes("15") ||
-    lower.includes("fast") ||
-    lower.includes("minute")
-  ) {
-    return "Great choice! Here are 3 quick recipes under 20 minutes:\n\n• Avocado Toast with Egg (10 min, 320 cal)\n• Greek Yogurt Parfait (5 min, 280 cal)\n• Stir-Fry Veggies with Rice (15 min, 390 cal)\n\nWould you like full ingredients and steps for any of these?";
-  }
-  if (
-    lower.includes("protein") ||
-    lower.includes("muscle") ||
-    lower.includes("chicken") ||
-    lower.includes("keto")
-  ) {
-    return "Here are some high-protein options perfect for your goals:\n\n• Grilled Salmon with Broccoli (25 min, 480 cal, 42g protein)\n• Chicken & Quinoa Bowl (30 min, 520 cal, 48g protein)\n• Turkey Meatballs (35 min, 440 cal, 38g protein)\n\nShall I detail any of these?";
-  }
-  if (
-    lower.includes("vegan") ||
-    lower.includes("vegetarian") ||
-    lower.includes("plant")
-  ) {
-    return "Lovely plant-based picks coming up:\n\n• Quinoa Buddha Bowl (25 min, 420 cal)\n• Lentil Soup (40 min, 350 cal)\n• Chickpea Curry (30 min, 460 cal)\n\nAll are nutrient-rich and satisfying. Want the full recipe for any?";
-  }
-  if (lower.includes("breakfast")) {
-    return "Here are some energizing breakfast ideas:\n\n• Overnight Oats with Berries (5 min prep, 340 cal)\n• Spinach Omelette (10 min, 290 cal)\n• Banana Pancakes (15 min, 380 cal)\n\nWant the full recipe for any of these?";
-  }
-  if (
-    lower.includes("dinner") ||
-    lower.includes("pasta") ||
-    lower.includes("italian")
-  ) {
-    return "Here are some hearty dinner options:\n\n• Classic Spaghetti Bolognese (45 min, 620 cal)\n• Baked Salmon with Asparagus (25 min, 510 cal)\n• Mushroom Risotto (35 min, 490 cal)\n\nWhich one catches your eye?";
-  }
-  return `Based on your request, here are some ideas:\n\n• Garlic Butter Chicken Bowl (30 min, 520 cal)\n• One-pan Veggie Stir-fry (20 min, 380 cal)\n• Tomato Herb Rice (25 min, 410 cal)\n\nTell me your preferred meal type or cooking time for more tailored suggestions.`;
-}
-
-function mockIngredientsReply(filename: string): string {
-  const lower = filename.toLowerCase();
-  const detected: string[] = [];
-  if (lower.includes("egg")) detected.push("Egg");
-  if (lower.includes("tomato")) detected.push("Tomato");
-  if (lower.includes("chicken")) detected.push("Chicken");
-  if (lower.includes("rice")) detected.push("Rice");
-  if (lower.includes("milk") || lower.includes("cheese"))
-    detected.push("Dairy");
-  if (lower.includes("onion")) detected.push("Onion");
-  if (lower.includes("carrot")) detected.push("Carrot");
-  if (detected.length === 0) detected.push("Tomato", "Onion", "Garlic");
-  return `Awesome! I detected ${detected.length} ingredient${detected.length > 1 ? "s" : ""} from your photo: ${detected.join(", ")}.\n\nHere are some recipe ideas:\n\n• Tomato Basil Soup (20 min, 280 cal)\n• Shakshuka (25 min, 350 cal)\n• Roasted Veggie Pasta (30 min, 420 cal)\n\nWant quick recipes or full meal prep ideas?`;
-}
-
-function mockDishPhotoReply(filename: string): string {
-  const lower = filename.toLowerCase();
-  if (lower.includes("pizza"))
-    return "This looks like pizza! Recommended recipes: Margherita Pizza, Mushroom Pizza, and Spicy Pepperoni Pizza. Want the easiest one first?";
-  if (lower.includes("salad"))
-    return "This dish looks like a fresh salad. You can try Greek Salad, Chicken Caesar Salad, or Quinoa Avocado Salad.";
-  if (lower.includes("pasta") || lower.includes("spaghetti"))
-    return "This looks like a pasta dish. Recipe ideas: Creamy Mushroom Pasta, Aglio e Olio, and Tomato Basil Spaghetti.";
-  if (lower.includes("chicken"))
-    return "Looks like a chicken dish! Try: Grilled Lemon Chicken, Chicken Stir-fry, or Butter Chicken Curry.";
-  return "Dish recognized. Suggested matching recipes:\n\n• Garlic Butter Chicken Bowl\n• One-pan Veggie Stir-fry\n• Tomato Herb Rice with Protein\n\nIf you want, I can narrow these by calories or cooking time.";
-}
-
-function ChatBubble({ message }: { message: ChatMessage }) {
-  if (message.role === "user") {
-    return (
-      <div className="flex justify-end mb-3">
-        <div
-          className="max-w-[75%] px-3 py-2.5 rounded-xl text-sm leading-relaxed whitespace-pre-line"
-          style={{
-            backgroundColor: "#D1FAE5",
-            color: "#065F46",
-            border: "1px solid #A7F3D0",
-          }}
-        >
-          {message.text}
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className="flex items-start gap-2 mb-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+      onClick={onCancel}
+    >
       <div
-        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-        style={{ backgroundColor: "#059669" }}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl p-4 max-h-[85vh] overflow-y-auto"
+        style={{ backgroundColor: "var(--tm-surface)" }}
       >
-        <AutoAwesomeIcon size={15} />
-      </div>
-      <div
-        className="max-w-[80%] px-3 py-2.5 rounded-xl text-sm leading-relaxed whitespace-pre-line"
-        style={{
-          backgroundColor: "var(--tm-surface)",
-          color: "var(--tm-text-2)",
-          border: "1px solid #D1D5DB",
-        }}
-      >
-        {message.text}
+        <p className="text-sm font-bold mb-3" style={{ color: "var(--tm-text)" }}>{title}</p>
+
+        {detectedImageUrl && (
+          <div className="w-full rounded-lg mb-3 flex items-center justify-center overflow-hidden" style={{ backgroundColor: "var(--tm-subtle)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={resolveMediaUrl(detectedImageUrl)}
+              alt="Detection result"
+              className="w-full max-h-80 object-contain"
+            />
+          </div>
+        )}
+
+        <textarea
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          rows={4}
+          autoFocus
+          placeholder="Edit before adding to your message…"
+          className="w-full px-2.5 py-2 rounded-xl text-xs resize-none focus:outline-none"
+          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+        />
+
+        <div className="flex gap-2 mt-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-lg text-xs font-semibold"
+            style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(value)}
+            className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
+            style={{ backgroundColor: "#059669" }}
+          >
+            Use this
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function RecsPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [profileFilters, setProfileFilters] = useState<string[]>([]);
-  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(
-    new Set(),
-  );
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const dishInputRef = useRef<HTMLInputElement>(null);
   const ingredientsInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const startedRef = useRef(false);
 
-  const hasUserMessage = messages.some((m) => m.role === "user");
+  const [profile, setProfile] = useState<UserProfileForChat>({ dietaryRestrictions: [], primaryGoal: "" });
+  const [messages, setMessages] = useState<UiMessage[]>([]);
+  const [history, setHistory] = useState<ChatHistoryMessage[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [composeDishText, setComposeDishText] = useState<string | null>(null);
+  const [composeIngredientsText, setComposeIngredientsText] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<"dish" | "ingredients" | null>(null);
+  const [pendingDetection, setPendingDetection] = useState<{
+    kind: "dish" | "ingredients";
+    text: string;
+    inputImageUrl?: string;
+    outputImageUrl?: string;
+  } | null>(null);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [error, setError] = useState("");
+  const [lastSentMessage, setLastSentMessage] = useState<string | null>(null);
+  const [lastSentIngredients, setLastSentIngredients] = useState<string[]>([]);
+  const [confirmReset, setConfirmReset] = useState(false);
 
-  useEffect(() => {
-    try {
-      const profile = JSON.parse(localStorage.getItem("fh_profile") ?? "{}");
-      const filters: string[] = [];
-      if (profile.primaryGoal) filters.push(profile.primaryGoal);
-      if (Array.isArray(profile.dietaryRestrictions))
-        filters.push(...profile.dietaryRestrictions);
-      setProfileFilters(filters);
-    } catch {}
-  }, []);
+  const busy = isBootstrapping || isSending;
 
-  function toggleFilter(f: string) {
-    setSelectedFilters((prev) => {
-      const next = new Set(prev);
-      next.has(f) ? next.delete(f) : next.add(f);
-      return next;
+  function scrollToBottom() {
+    requestAnimationFrame(() => {
+      const el = listRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
     });
   }
 
+  async function bootstrapWelcome(dietaryRestrictions: string[], primaryGoal: string) {
+    setIsBootstrapping(true);
+    setError("");
+    setMessages([]);
+    setHistory([]);
+    setLastSentMessage(null);
+    setLastSentIngredients([]);
+    setComposeDishText(null);
+    setComposeIngredientsText(null);
+    const sid = newSessionId();
+    setSessionId(sid);
+    try {
+      const response = await aiWelcome({
+        sessionId: sid,
+        dietaryRestrictions,
+        primaryGoal: primaryGoal || undefined,
+      });
+      setSessionId(response.session_id || sid);
+      const reply = response.reply.trim() || "Hello! I'm your culinary companion. Tell me what you'd like to cook.";
+      setMessages([{ id: `a-${Date.now()}`, role: "assistant", text: reply, recipes: response.recipes }]);
+      if (response.reply.trim()) setHistory([{ role: "assistant", content: response.reply }]);
+    } catch (err) {
+      const msg = errorMessage(err, "Unable to reach the AI companion.");
+      setError(msg);
+      setMessages([{ id: `err-${Date.now()}`, role: "assistant", text: msg }]);
+    } finally {
+      setIsBootstrapping(false);
+      scrollToBottom();
+    }
+  }
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
+    if (startedRef.current) return;
+    startedRef.current = true;
+    let cancelled = false;
+    apiGetMe()
+      .then((u) => {
+        if (cancelled) return;
+        const p: UserProfileForChat = {
+          dietaryRestrictions: u.dietary_restrictions ?? [],
+          primaryGoal: u.primary_goal ?? "",
+        };
+        setProfile(p);
+        void bootstrapWelcome(p.dietaryRestrictions, p.primaryGoal);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        void bootstrapWelcome([], "");
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function sendMessage(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || sending) return;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, busy]);
+
+  function ingredientsForApi(): string[] {
+    const text = composeIngredientsText?.trim();
+    if (!text) return [];
+    let values = text;
+    const prefix = "Ingredients detected:";
+    if (values.toLowerCase().startsWith(prefix.toLowerCase())) values = values.slice(prefix.length);
+    return values.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function buildMergedPrompt(userQuery: string): string {
+    const parts: string[] = [];
+    if (composeDishText?.trim()) parts.push(composeDishText.trim());
+    if (composeIngredientsText?.trim()) parts.push(composeIngredientsText.trim());
+    const trimmed = userQuery.trim();
+    if (trimmed) parts.push(trimmed);
+    return parts.join("\n");
+  }
+
+  async function sendToAi(merged: string, ingredients: string[], baseHistory: ChatHistoryMessage[]) {
+    try {
+      const response = await aiChat({
+        message: merged,
+        sessionId: sessionId!,
+        conversationHistory: baseHistory,
+        dietaryRestrictions: profile.dietaryRestrictions,
+        primaryGoal: profile.primaryGoal || undefined,
+        ingredients,
+      });
+      if (response.session_id) setSessionId(response.session_id);
+      const reply = response.reply.trim() || "(Empty reply)";
+      setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: reply, recipes: response.recipes }]);
+      setHistory([...baseHistory, { role: "user", content: merged }, { role: "assistant", content: reply }]);
+    } catch (err) {
+      const msg = errorMessage(err, "Unable to reach the AI companion.");
+      setError(msg);
+      setMessages((prev) => [...prev, { id: `err-${Date.now()}`, role: "assistant", text: msg }]);
+    } finally {
+      setIsSending(false);
+      scrollToBottom();
+    }
+  }
+
+  async function handleSubmit() {
+    if (busy || isDetecting) return;
+    const userQuery = input.trim();
+    const merged = buildMergedPrompt(userQuery);
+    if (!merged) return;
+
+    if (!sessionId) {
+      await bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal);
+    }
+
+    const ingredients = ingredientsForApi();
+    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", text: merged }]);
+    setLastSentMessage(merged);
+    setLastSentIngredients(ingredients);
+    setIsSending(true);
+    setComposeDishText(null);
+    setComposeIngredientsText(null);
     setInput("");
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      text: trimmed,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setSending(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: (Date.now() + 1).toString(),
-        role: "bot",
-        text: mockReply(trimmed, selectedFilters),
-      },
-    ]);
-    setSending(false);
+    setError("");
+    scrollToBottom();
+    await sendToAi(merged, ingredients, history);
   }
 
-  async function handleFileUpload(file: File, type: "ingredients" | "dish") {
-    const userText =
-      type === "ingredients"
-        ? `Ingredients photo: ${file.name}`
-        : `Dish photo: ${file.name}`;
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      text: userText,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setSending(true);
-    await new Promise((r) => setTimeout(r, 900));
-    const reply =
-      type === "ingredients"
-        ? mockIngredientsReply(file.name)
-        : mockDishPhotoReply(file.name);
-    setMessages((prev) => [
-      ...prev,
-      { id: (Date.now() + 1).toString(), role: "bot", text: reply },
-    ]);
-    setSending(false);
+  async function handleRerun() {
+    if (busy || !lastSentMessage) return;
+    let baseHistory = history;
+    setMessages((prev) => {
+      const copy = [...prev];
+      if (copy.length && copy[copy.length - 1].role === "assistant") copy.pop();
+      return copy;
+    });
+    if (baseHistory.length && baseHistory[baseHistory.length - 1].role === "assistant") {
+      baseHistory = baseHistory.slice(0, -1);
+    }
+    if (
+      baseHistory.length &&
+      baseHistory[baseHistory.length - 1].role === "user" &&
+      baseHistory[baseHistory.length - 1].content === lastSentMessage
+    ) {
+      baseHistory = baseHistory.slice(0, -1);
+    }
+    setHistory(baseHistory);
+    setIsSending(true);
+    setError("");
+    scrollToBottom();
+    await sendToAi(lastSentMessage, lastSentIngredients, baseHistory);
   }
 
-  function onFileChange(
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "ingredients" | "dish",
-  ) {
+  async function handleReset() {
+    setConfirmReset(false);
+    await bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal);
+  }
+
+  async function handleDetect(file: File, kind: "dish" | "ingredients") {
+    setIsDetecting(true);
+    setError("");
+    try {
+      if (kind === "dish") {
+        const result = await aiDetectDish(file);
+        const names = result.results.length
+          ? result.results.slice(0, 5).map((r) => r.dishName).filter(Boolean)
+          : result.dishName
+            ? [result.dishName]
+            : result.suggestedRecipes.slice(0, 5);
+        if (names.length) {
+          setPendingDetection({
+            kind: "dish",
+            text: `Dishes detected: ${names[0]}`,
+            inputImageUrl: result.imageUrl || undefined,
+          });
+        } else {
+          setError("Could not recognize a dish in that photo.");
+        }
+      } else {
+        const result = await aiDetectIngredients(file);
+        if (result.ingredients.length) {
+          setPendingDetection({
+            kind: "ingredients",
+            text: `Ingredients detected: ${result.ingredients.join(", ")}`,
+            inputImageUrl: result.imageUrl || undefined,
+            outputImageUrl: result.annotatedImageUrl || undefined,
+          });
+        } else {
+          setError("No ingredients detected in that photo.");
+        }
+      }
+    } catch (err) {
+      setError(errorMessage(err, "Unable to analyze the photo."));
+    } finally {
+      setIsDetecting(false);
+    }
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>, kind: "dish" | "ingredients") {
     const file = e.target.files?.[0];
-    if (!file) return;
     e.target.value = "";
-    handleFileUpload(file, type);
+    if (file) void handleDetect(file, kind);
   }
+
+  const dishText = composeDishText?.trim();
+  const ingredientsText = composeIngredientsText?.trim();
+  const hasDish = !!dishText;
+  const hasIngredients = !!ingredientsText;
+
+  const lastAssistantIndex = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "assistant") return i;
+    return -1;
+  })();
 
   return (
-    <div
-      className="flex flex-col h-full"
-      style={{ backgroundColor: "var(--tm-subtle)" }}
-    >
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {/* Header */}
-        <div className="flex items-start gap-2.5 mb-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-            style={{ backgroundColor: "#059669" }}
-          >
-            <AutoAwesomeIcon size={17} />
-          </div>
-          <div>
-            <p
-              className="text-base font-bold"
-              style={{ color: "var(--tm-text)" }}
-            >
-              AI Recipe Recommendations
-            </p>
-            <p className="text-[10.5px]" style={{ color: "#6B7280" }}>
-              Powered by Large Language Model
-            </p>
-          </div>
+    <div className="flex flex-col h-full" style={{ backgroundColor: "var(--tm-bg)" }}>
+      {/* Header */}
+      <div
+        className="flex items-center gap-2.5 px-4 h-14 border-b shrink-0"
+        style={{ backgroundColor: "var(--tm-surface)", borderColor: "var(--tm-border-s)" }}
+      >
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#059669" }}>
+          <Sparkles size={16} color="white" />
         </div>
-
-        <Link
-          href="/demo/chat"
-          className="mb-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold"
-          style={{
-            backgroundColor: "rgba(5,150,105,0.1)",
-            color: "#059669",
-            border: "1px solid rgba(5,150,105,0.25)",
-          }}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold truncate" style={{ color: "var(--tm-text)" }}>AI Companion</p>
+          <p className="text-[11px] truncate" style={{ color: "var(--tm-text-3)" }}>Personalized recipe recommendations</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setConfirmReset(true)}
+          disabled={busy}
+          className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40"
+          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+          aria-label="Reset conversation"
+          title="Reset conversation"
         >
-          <span>Try live AI Companion demo (API)</span>
-          <span aria-hidden>→</span>
-        </Link>
-
-        {/* Profile nutrition filters */}
-        {profileFilters.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {profileFilters.map((f) => {
-              const active = selectedFilters.has(f);
-              return (
-                <button
-                  key={f}
-                  onClick={() => toggleFilter(f)}
-                  className="text-[10.5px] px-2.5 py-1 rounded-full border transition-colors"
-                  style={{
-                    backgroundColor: active ? "#D1FAE5" : "var(--tm-subtle)",
-                    color: active ? "#065F46" : "var(--tm-text-2)",
-                    borderColor: active ? "#059669" : "var(--tm-border-i)",
-                    fontWeight: active ? 600 : 400,
-                  }}
-                >
-                  {f}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Try asking suggestions */}
-        {!hasUserMessage && (
-          <div className="mb-5">
-            <p className="text-xs mb-2.5" style={{ color: "#059669" }}>
-              Try asking:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => sendMessage(s)}
-                  className="text-left text-xs px-3 py-2.5 rounded-lg border transition-colors"
-                  style={{
-                    backgroundColor: "var(--tm-surface)",
-                    color: "#059669",
-                    borderColor: "var(--tm-border)",
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Chat messages */}
-        {messages.map((m) => (
-          <ChatBubble key={m.id} message={m} />
-        ))}
-
-        {/* Typing indicator */}
-        {sending && (
-          <div className="flex items-center gap-2 mb-3">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "#059669" }}
-            >
-              <AutoAwesomeIcon size={15} />
-            </div>
-            <div
-              className="px-3 py-2.5 rounded-xl"
-              style={{
-                backgroundColor: "var(--tm-surface)",
-                border: "1px solid #D1D5DB",
-              }}
-            >
-              <span className="text-sm" style={{ color: "var(--tm-text-3)" }}>
-                Thinking…
-              </span>
-            </div>
-          </div>
-        )}
-        <div ref={endRef} />
+          <RefreshCw size={16} />
+        </button>
       </div>
 
-      {/* Bottom input bar */}
+      {/* Messages */}
+      <div ref={listRef} className="flex-1 overflow-y-auto py-3 space-y-3 min-h-0">
+        {messages.map((m, index) => {
+          const isUser = m.role === "user";
+          const showRerun = !busy && !isUser && index === lastAssistantIndex && !!lastSentMessage;
+          return (
+            <div key={m.id} className={`px-3 flex ${isUser ? "justify-end" : "justify-start"}`}>
+              <div className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
+                {!isUser && (
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: "#059669" }}>
+                    <Sparkles size={14} color="white" />
+                  </div>
+                )}
+                <div>
+                  <div
+                    className={`rounded-2xl px-3.5 py-2.5 ${isUser ? "rounded-tr-md" : "rounded-tl-md"}`}
+                    style={
+                      isUser
+                        ? { background: "linear-gradient(135deg, #059669 0%, #047857 100%)", color: "#fff" }
+                        : { backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }
+                    }
+                  >
+                    {isUser ? (
+                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                    ) : (
+                      <MarkdownReply text={m.text} recipes={m.recipes} />
+                    )}
+                  </div>
+                  {showRerun && (
+                    <button
+                      type="button"
+                      onClick={() => void handleRerun()}
+                      className="mt-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg"
+                      style={{ color: "#059669", backgroundColor: "rgba(5,150,105,0.12)" }}
+                    >
+                      Rerun
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {busy && <TypingIndicator label={isBootstrapping ? "Starting session…" : "Thinking…"} />}
+      </div>
+
+      {error && (
+        <div className="mx-3 mb-2 rounded-xl px-3 py-2 text-[12px]" style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}>
+          {error}
+        </div>
+      )}
+
+      {/* Compose */}
       <div
-        className="border-t px-4 py-3 shrink-0"
-        style={{
-          backgroundColor: "var(--tm-surface)",
-          borderColor: "var(--tm-border-i)",
-        }}
+        className="shrink-0 px-3 pb-3 pt-2 border-t"
+        style={{ backgroundColor: "var(--tm-surface)", borderColor: "var(--tm-border-i)" }}
       >
-        <div className="flex gap-2 mb-2.5">
+        {hasDish && (
+          <ComposeDetectionRow
+            text={dishText!}
+            icon={<UtensilsCrossed size={16} color="#059669" />}
+            disabled={busy}
+            onEdit={() => setEditingField("dish")}
+          />
+        )}
+        {hasIngredients && (
+          <ComposeDetectionRow
+            text={ingredientsText!}
+            icon={<ShoppingBasket size={16} color="#059669" />}
+            disabled={busy}
+            onEdit={() => setEditingField("ingredients")}
+          />
+        )}
+
+        <div className="flex gap-2 mb-2">
           <button
-            onClick={() => ingredientsInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium transition-colors hover:bg-gray-50"
-            style={{
-              borderColor: "var(--tm-border-i)",
-              color: "var(--tm-text-2)",
-              backgroundColor: "var(--tm-subtle)",
-            }}
+            type="button"
+            onClick={() => dishInputRef.current?.click()}
+            disabled={busy || isDetecting}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium disabled:opacity-50"
+            style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
           >
-            <ShoppingBasket size={15} />
-            Ingredients
+            <Camera size={14} /> Dish photo
           </button>
           <button
-            onClick={() => photoInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium transition-colors hover:bg-gray-50"
-            style={{
-              borderColor: "var(--tm-border-i)",
-              color: "var(--tm-text-2)",
-              backgroundColor: "var(--tm-subtle)",
-            }}
+            type="button"
+            onClick={() => ingredientsInputRef.current?.click()}
+            disabled={busy || isDetecting}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium disabled:opacity-50"
+            style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
           >
-            <ImageIcon size={15} />
-            Dish photo
+            <ShoppingBasket size={14} /> Ingredients photo
           </button>
         </div>
+
         <div
-          className="flex items-center gap-2 h-10 rounded-full border px-3"
-          style={{
-            borderColor: "var(--tm-border-i)",
-            backgroundColor: "var(--tm-subtle)",
-          }}
+          className="flex items-center gap-2 h-11 rounded-full border px-3"
+          style={{ borderColor: "var(--tm-border-i)", backgroundColor: "var(--tm-subtle)" }}
         >
           <input
-            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage(input);
+                void handleSubmit();
               }
             }}
-            placeholder="Ask for recommendations..."
-            className="flex-1 bg-transparent text-xs focus:outline-none"
+            disabled={busy}
+            placeholder={isDetecting ? "Analyzing photo…" : "Ask for recipes…"}
+            className="flex-1 bg-transparent text-sm focus:outline-none"
             style={{ color: "var(--tm-text)" }}
           />
           <button
-            onClick={() => sendMessage(input)}
-            disabled={!input.trim() || sending}
-            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-opacity disabled:opacity-40"
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={busy || isDetecting || (!input.trim() && !hasDish && !hasIngredients)}
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40"
             style={{ backgroundColor: "#059669" }}
           >
-            <Send size={12} color="var(--tm-surface)" />
+            <Send size={14} color="white" />
           </button>
         </div>
-        <p
-          className="text-center text-[10px] mt-1.5"
-          style={{ color: "var(--tm-text-3)" }}
-        >
-          <span style={{ color: "#059669" }}>Ingredients</span> — detect what
-          you have · <span style={{ color: "#A855F7" }}>Dish photo</span> — find
-          recipes for a dish you see
-        </p>
       </div>
 
-      {/* Hidden file inputs */}
-      <input
-        ref={ingredientsInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => onFileChange(e, "ingredients")}
-      />
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => onFileChange(e, "dish")}
-      />
+      <input ref={dishInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFileChange(e, "dish")} />
+      <input ref={ingredientsInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFileChange(e, "ingredients")} />
+
+      {pendingDetection && (
+        <DetectionConfirmDialog
+          title={pendingDetection.kind === "dish" ? "Dish recognized — is this right?" : "Ingredients detected — is this right?"}
+          text={pendingDetection.text}
+          inputImageUrl={pendingDetection.inputImageUrl}
+          outputImageUrl={pendingDetection.outputImageUrl}
+          onSave={(text) => {
+            const trimmed = text.trim();
+            if (pendingDetection.kind === "dish") setComposeDishText(trimmed || null);
+            else setComposeIngredientsText(trimmed || null);
+            setPendingDetection(null);
+          }}
+          onCancel={() => setPendingDetection(null)}
+        />
+      )}
+
+      {editingField && (
+        <NoteDialog
+          title={editingField === "dish" ? "Edit detected dish" : "Edit detected ingredients"}
+          initialNote={(editingField === "dish" ? composeDishText : composeIngredientsText) ?? ""}
+          accentColor="#059669"
+          onSave={(text) => {
+            const trimmed = text.trim();
+            if (editingField === "dish") setComposeDishText(trimmed || null);
+            else setComposeIngredientsText(trimmed || null);
+            setEditingField(null);
+          }}
+          onCancel={() => setEditingField(null)}
+        />
+      )}
+
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset chat?"
+          message="This clears your current conversation and starts a new session."
+          confirmLabel="Reset"
+          confirmColor="#059669"
+          onConfirm={() => void handleReset()}
+          onCancel={() => setConfirmReset(false)}
+        />
+      )}
     </div>
   );
 }
