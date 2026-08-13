@@ -11,7 +11,7 @@ import { authDisplay, authSans } from '../auth-fonts'
 import '../auth.css'
 
 const NAME_PATTERN = /^[a-zA-ZÀ-ỹ\s'-]+$/
-const EMAIL_PATTERN = /^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$/
+const EMAIL_PATTERN = /^[\w.+-]+@[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}$/
 
 type Errors = { name: string; email: string; password: string }
 
