@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { hasAccessToken, getCurrentUser } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
@@ -16,6 +16,8 @@ import {
 } from "@/components/recipe/recipe-card";
 
 // ─── Constants (mirrors mobile SearchScreen) ─────────────────────────────────
+
+const PAGE_SIZE = 30;
 
 const MEAL_TYPE_CATEGORIES: [string, string][] = [
   ["🌅", "Breakfast"],
@@ -34,6 +36,32 @@ const DIETARY_EMOJI: Record<string, string> = {
   Vegan: "🌱",
   Vegetarian: "🥦",
 };
+
+// ─── Persisted filter/pagination state (survives navigating to a recipe and back) ──
+
+const SEARCH_STATE_KEY = "fh_search_state";
+
+interface StoredSearchState {
+  query: string;
+  selectedCategory: string | null;
+  page: number;
+}
+
+function loadSearchState(): StoredSearchState {
+  if (typeof window === "undefined") return { query: "", selectedCategory: null, page: 0 };
+  try {
+    const raw = sessionStorage.getItem(SEARCH_STATE_KEY);
+    if (!raw) return { query: "", selectedCategory: null, page: 0 };
+    const parsed = JSON.parse(raw) as Partial<StoredSearchState>;
+    return {
+      query: typeof parsed.query === "string" ? parsed.query : "",
+      selectedCategory: typeof parsed.selectedCategory === "string" ? parsed.selectedCategory : null,
+      page: typeof parsed.page === "number" && parsed.page >= 0 ? parsed.page : 0,
+    };
+  } catch {
+    return { query: "", selectedCategory: null, page: 0 };
+  }
+}
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback;
@@ -69,18 +97,28 @@ function panelShadow(dark: boolean) {
 export default function SearchPage() {
   const dark = useDarkMode();
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [query, setQuery] = useState(() => loadSearchState().query);
+  const [debouncedQuery, setDebouncedQuery] = useState(() => loadSearchState().query.trim());
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => loadSearchState().selectedCategory);
   const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [page, setPage] = useState(() => loadSearchState().page);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryToken, setRetryToken] = useState(0);
   const [dietaryReady, setDietaryReady] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const hasFilter = debouncedQuery.trim() !== "" || selectedCategory !== null;
+
+  // Persist filter + pagination so returning from a recipe detail (or a fresh
+  // tab reopen within the same session) restores exactly where the user left off.
+  useEffect(() => {
+    const state: StoredSearchState = { query, selectedCategory, page };
+    sessionStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(state));
+  }, [query, selectedCategory, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +163,8 @@ export default function SearchPage() {
         const result = await searchRecipes({
           q,
           dietaryRestriction: dietary,
-          limit: hasFilter ? 100 : 50,
+          skip: page * PAGE_SIZE,
+          limit: PAGE_SIZE,
         });
         if (cancelled) return;
         const currentUserId = getCurrentUser()?.id;
@@ -133,12 +172,12 @@ export default function SearchPage() {
           (r) => r.created_by == null || String(r.created_by) !== currentUserId,
         );
         setRecipes(catalogOnly);
-        setTotalCount(
-          result.totalCount - (result.recipes.length - catalogOnly.length),
-        );
+        setTotalCount(result.totalCount);
+        setHasNextPage(page * PAGE_SIZE + result.recipes.length < result.totalCount);
       } catch (err) {
         if (cancelled) return;
         setRecipes([]);
+        setHasNextPage(false);
         setLoadError(errorMessage(err, "Unable to search recipes."));
       } finally {
         if (!cancelled) setLoading(false);
@@ -154,9 +193,16 @@ export default function SearchPage() {
     dietaryOptions,
     retryToken,
     dietaryReady,
+    page,
   ]);
 
+  // Scroll results back into view whenever the page changes.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
+
   function toggleCategory(category: string) {
+    setPage(0);
     setSelectedCategory((prev) => (prev === category ? null : category));
   }
 
@@ -175,7 +221,7 @@ export default function SearchPage() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6">
+    <div ref={scrollRef} className="h-full overflow-y-auto p-4 md:p-6">
       <h1
         className="text-xl font-bold mb-0.5"
         style={{ color: "var(--tm-text)" }}
@@ -197,7 +243,10 @@ export default function SearchPage() {
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(0);
+          }}
           placeholder="Search by recipe name or ingredient…"
           className="w-full pl-10 pr-3 py-2.5 rounded-xl text-sm focus:outline-none"
           style={{
@@ -246,11 +295,9 @@ export default function SearchPage() {
         <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
           {hasFilter ? "Results" : "Recent recipes"}
         </p>
-        {hasFilter && (
-          <p className="text-xs font-medium" style={{ color: "#059669" }}>
-            {totalCount} result{totalCount !== 1 ? "s" : ""}
-          </p>
-        )}
+        <p className="text-xs font-medium" style={{ color: "#059669" }}>
+          {totalCount} result{totalCount !== 1 ? "s" : ""}
+        </p>
       </div>
 
       {loadError && (
@@ -289,16 +336,44 @@ export default function SearchPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {(recipes ?? []).map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
-              recipe={toCardData(recipe)}
-              onTap={() => openDetail(recipe)}
-              onAction={() => openDetail(recipe)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {(recipes ?? []).map((recipe) => (
+              <RecipeCard
+                key={recipe.id}
+                recipe={toCardData(recipe)}
+                onTap={() => openDetail(recipe)}
+                onAction={() => openDetail(recipe)}
+              />
+            ))}
+          </div>
+
+          {(page > 0 || hasNextPage) && (
+            <div className="flex items-center justify-between mt-5">
+              <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
+                Page {page + 1} of {Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0 || loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3.5 py-2 rounded-full disabled:opacity-40"
+                  style={{ backgroundColor: dark ? "#1E1E1E" : "white", color: "var(--tm-text-2)", boxShadow: panelShadow(dark) }}
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!hasNextPage || loading}
+                  className="flex items-center gap-1 text-xs font-semibold px-3.5 py-2 rounded-full text-white disabled:opacity-40"
+                  style={{ backgroundColor: "#059669" }}
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

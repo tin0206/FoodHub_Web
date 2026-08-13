@@ -15,33 +15,37 @@ export function RecipeViewContent({
   const image = resolveMediaUrl(recipe.image_url)
 
   return (
-    <div>
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt={recipe.title} className="w-full h-44 object-cover rounded-xl mb-3" />
-      ) : (
-        <div
-          className="w-full h-44 rounded-xl mb-3 flex items-center justify-center"
-          style={{ background: `linear-gradient(135deg, ${theme.start}, ${theme.end})` }}
-        >
-          <Utensils size={32} color="rgba(255,255,255,0.9)" />
+    <div className="lg:grid lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-6 lg:items-start">
+      {/* Image + title/stats — capped width on wide screens so the photo scales by
+          aspect ratio instead of stretching full-bleed and looking pixelated. */}
+      <div className="lg:sticky lg:top-0">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt={recipe.title} className="w-full aspect-4/3 object-cover rounded-2xl mb-3" />
+        ) : (
+          <div
+            className="w-full aspect-4/3 rounded-2xl mb-3 flex items-center justify-center"
+            style={{ background: `linear-gradient(135deg, ${theme.start}, ${theme.end})` }}
+          >
+            <Utensils size={40} color="rgba(255,255,255,0.9)" />
+          </div>
+        )}
+
+        <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--tm-text)' }}>
+          {recipe.title}
+        </h1>
+
+        <div className="flex items-center gap-4 mb-3 lg:mb-0 text-sm" style={{ color: 'var(--tm-text-2)' }}>
+          <span className="flex items-center gap-1.5">
+            <Clock size={14} color={theme.start} /> {meta.cookingMinutes} min
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Flame size={14} color={theme.start} /> {meta.calories} cal
+          </span>
         </div>
-      )}
-
-      <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--tm-text)' }}>
-        {recipe.title}
-      </h1>
-
-      <div className="flex items-center gap-4 mb-3 text-sm" style={{ color: 'var(--tm-text-2)' }}>
-        <span className="flex items-center gap-1.5">
-          <Clock size={14} color={theme.start} /> {meta.cookingMinutes} min
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Flame size={14} color={theme.start} /> {meta.calories} cal
-        </span>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 mt-3 lg:mt-0">
         <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients" accent={theme.start}>
           <div className="space-y-2">
             {recipe.ingredients.map((item, i) => (
