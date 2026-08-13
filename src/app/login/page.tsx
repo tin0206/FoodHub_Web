@@ -1,94 +1,103 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   login,
   FieldError,
   getCurrentUser,
   needsAdminViewChooser,
   type CurrentUser,
-} from '@/lib/auth'
-import { ChefHat, LayoutDashboard, Mail, Lock, User } from 'lucide-react'
-import { AuthField, AuthPrimaryButton, AuthDivider, AuthSocialButton } from '@/components/auth/auth-widgets'
-import { authDisplay, authSans } from '../auth-fonts'
-import '../auth.css'
+} from "@/lib/auth";
+import { ChefHat, LayoutDashboard, Mail, Lock, User } from "lucide-react";
+import {
+  AuthField,
+  AuthPrimaryButton,
+  AuthDivider,
+  AuthSocialButton,
+} from "@/components/auth/auth-widgets";
+import { authDisplay, authSans } from "../auth-fonts";
+import "../auth.css";
 
-const isValidEmail = (v: string) => v.includes('@')
+const isValidEmail = (v: string) => v.includes("@");
 
-type Errors = { email: string; password: string }
+type Errors = { email: string; password: string };
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [authError, setAuthError] = useState('')
-  const [errors, setErrors] = useState<Errors>({ email: '', password: '' })
-  const [chooserUser, setChooserUser] = useState<CurrentUser | null>(null)
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [errors, setErrors] = useState<Errors>({ email: "", password: "" });
+  const [chooserUser, setChooserUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
-    const existing = getCurrentUser()
-    if (!existing) return
+    const existing = getCurrentUser();
+    if (!existing) return;
     if (needsAdminViewChooser(existing)) {
-      setChooserUser(existing)
-      return
+      setChooserUser(existing);
+      return;
     }
-    router.replace('/home')
-  }, [router])
+    router.replace("/home");
+  }, [router]);
 
   function getEmailError(val = email) {
-    if (!val.trim()) return 'Please enter your email.'
-    if (!isValidEmail(val)) return 'Please enter a valid email.'
-    return ''
+    if (!val.trim()) return "Please enter your email.";
+    if (!isValidEmail(val)) return "Please enter a valid email.";
+    return "";
   }
 
   function getPasswordError(val = password) {
-    if (!val) return 'Please enter your password.'
-    if (val.length < 6) return 'Password must be at least 6 characters.'
-    return ''
+    if (!val) return "Please enter your password.";
+    if (val.length < 6) return "Password must be at least 6 characters.";
+    return "";
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+    e.preventDefault();
 
-    const emailValue = email.trim()
-    const passwordValue = password
+    const emailValue = email.trim();
+    const passwordValue = password;
 
-    const emailErr = getEmailError(emailValue)
-    const passwordErr = getPasswordError(passwordValue)
-    setErrors({ email: emailErr, password: passwordErr })
-    if (emailErr || passwordErr) return
+    const emailErr = getEmailError(emailValue);
+    const passwordErr = getPasswordError(passwordValue);
+    setErrors({ email: emailErr, password: passwordErr });
+    if (emailErr || passwordErr) return;
 
     try {
-      setLoading(true)
-      setAuthError('')
-      const user = await login({ email: emailValue, password: passwordValue, rememberMe })
+      setLoading(true);
+      setAuthError("");
+      const user = await login({
+        email: emailValue,
+        password: passwordValue,
+        rememberMe,
+      });
       if (needsAdminViewChooser(user)) {
-        setChooserUser(user)
-        return
+        setChooserUser(user);
+        return;
       }
-      router.replace('/home')
+      router.replace("/home");
     } catch (err: unknown) {
       if (err instanceof FieldError) {
-        setErrors(prev => ({ ...prev, [err.field]: err.message }))
+        setErrors((prev) => ({ ...prev, [err.field]: err.message }));
       } else {
-        setAuthError(err instanceof Error ? err.message : 'Login failed')
+        setAuthError(err instanceof Error ? err.message : "Login failed");
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   function handleGoogleSignIn() {
-    setAuthError('Google sign-in is not available yet.')
+    setAuthError("Google sign-in is not available yet.");
   }
 
-  const isLoading = loading || googleLoading
+  const isLoading = loading || googleLoading;
 
   if (chooserUser) {
     return (
@@ -100,26 +109,34 @@ export default function LoginPage() {
 
         <div className="auth-card">
           <h1 className="auth-heading">Choose a view</h1>
-          <p className="auth-sub">Signed in as {chooserUser.name || chooserUser.email}</p>
+          <p className="auth-sub">
+            Signed in as {chooserUser.name || chooserUser.email}
+          </p>
 
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
-              onClick={() => router.replace('/home')}
+              onClick={() => router.replace("/home")}
               className="w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-colors hover:bg-emerald-50"
-              style={{ borderColor: 'var(--a-line)' }}
+              style={{ borderColor: "var(--a-line)" }}
             >
               <span
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: '#ECFDF5', color: '#059669' }}
+                style={{ backgroundColor: "#ECFDF5", color: "#059669" }}
               >
                 <User size={20} />
               </span>
               <span>
-                <span className="block text-sm font-bold" style={{ color: 'var(--a-ink)' }}>
+                <span
+                  className="block text-sm font-bold"
+                  style={{ color: "var(--a-ink)" }}
+                >
                   User view
                 </span>
-                <span className="block text-xs mt-0.5" style={{ color: 'var(--a-muted)' }}>
+                <span
+                  className="block text-xs mt-0.5"
+                  style={{ color: "var(--a-muted)" }}
+                >
                   App người dùng — home, recs, favorites…
                 </span>
               </span>
@@ -127,21 +144,27 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => router.replace('/admin')}
+              onClick={() => router.replace("/admin")}
               className="w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-colors hover:bg-blue-50"
-              style={{ borderColor: 'var(--a-line)' }}
+              style={{ borderColor: "var(--a-line)" }}
             >
               <span
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: '#EFF6FF', color: '#2a78d6' }}
+                style={{ backgroundColor: "#EFF6FF", color: "#2a78d6" }}
               >
                 <LayoutDashboard size={20} />
               </span>
               <span>
-                <span className="block text-sm font-bold" style={{ color: 'var(--a-ink)' }}>
+                <span
+                  className="block text-sm font-bold"
+                  style={{ color: "var(--a-ink)" }}
+                >
                   Admin dashboard
                 </span>
-                <span className="block text-xs mt-0.5" style={{ color: 'var(--a-muted)' }}>
+                <span
+                  className="block text-xs mt-0.5"
+                  style={{ color: "var(--a-muted)" }}
+                >
                   Quản lý recipes, analytics…
                 </span>
               </span>
@@ -149,7 +172,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -163,7 +186,12 @@ export default function LoginPage() {
         <h1 className="auth-heading">Welcome back</h1>
         <p className="auth-sub">Sign in to continue to your account</p>
 
-        <AuthSocialButton label="Continue with Google" onClick={handleGoogleSignIn} loading={googleLoading} disabled={isLoading} />
+        <AuthSocialButton
+          label="Continue with Google"
+          onClick={handleGoogleSignIn}
+          loading={googleLoading}
+          disabled={isLoading}
+        />
         <AuthDivider />
 
         <form onSubmit={handleSubmit} noValidate className="auth-form">
@@ -174,11 +202,17 @@ export default function LoginPage() {
             icon={Mail}
             type="email"
             value={email}
-            onChange={e => {
-              setEmail(e.target.value)
-              if (errors.email) setErrors(prev => ({ ...prev, email: getEmailError(e.target.value) }))
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errors.email)
+                setErrors((prev) => ({
+                  ...prev,
+                  email: getEmailError(e.target.value),
+                }));
             }}
-            onBlur={() => setErrors(prev => ({ ...prev, email: getEmailError() }))}
+            onBlur={() =>
+              setErrors((prev) => ({ ...prev, email: getEmailError() }))
+            }
             placeholder="you@example.com"
             error={errors.email}
           />
@@ -188,18 +222,28 @@ export default function LoginPage() {
             icon={Lock}
             isPassword
             value={password}
-            onChange={e => {
-              setPassword(e.target.value)
-              if (errors.password) setErrors(prev => ({ ...prev, password: getPasswordError(e.target.value) }))
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password)
+                setErrors((prev) => ({
+                  ...prev,
+                  password: getPasswordError(e.target.value),
+                }));
             }}
-            onBlur={() => setErrors(prev => ({ ...prev, password: getPasswordError() }))}
+            onBlur={() =>
+              setErrors((prev) => ({ ...prev, password: getPasswordError() }))
+            }
             placeholder="••••••••"
             error={errors.password}
           />
 
           <div className="auth-row-between">
             <label className="auth-checkbox">
-              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
               Remember me
             </label>
             <Link href="/forgot-password" className="auth-link">
@@ -207,22 +251,26 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <AuthPrimaryButton label="Sign in" loading={loading} disabled={isLoading} />
+          <AuthPrimaryButton
+            label="Sign in"
+            loading={loading}
+            disabled={isLoading}
+          />
         </form>
 
         <p className="auth-switch">
-          Don&apos;t have an account?{' '}
+          Don&apos;t have an account?{" "}
           <Link href="/signup" className="auth-link">
             Sign up
           </Link>
         </p>
         <p className="auth-switch">
-          Just looking around?{' '}
-          <Link href="/demo/chat" className="auth-link">
+          Just looking around?{" "}
+          <Link href="/#demo" className="auth-link">
             Try the demo
           </Link>
         </p>
       </div>
     </div>
-  )
+  );
 }
