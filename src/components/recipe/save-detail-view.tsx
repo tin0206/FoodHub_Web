@@ -119,11 +119,11 @@ export function SaveDetailView({
           style={
             isSaved
               ? { backgroundColor: dark ? "#2A1416" : "#FEF2F2", borderColor: "#DC262640", color: "#DC2626" }
-              : { backgroundColor: theme.start, borderColor: theme.start, color: "white" }
+              : { backgroundColor: dark ? "#1E1E1E" : "#F3F4F6", borderColor: dark ? "#3A3A3A" : "var(--tm-border-i)", color: "var(--tm-text-2)" }
           }
         >
-          <Heart size={16} fill={isSaved ? "#DC2626" : "none"} color={isSaved ? "#DC2626" : "white"} />
-          {isSaved ? "Saved" : "Save Recipe"}
+          <Heart size={16} fill={isSaved ? "#DC2626" : "none"} color={isSaved ? "#DC2626" : "var(--tm-text-2)"} />
+          {isSaved ? "Saved" : "Save"}
         </button>
       </div>
     </div>
