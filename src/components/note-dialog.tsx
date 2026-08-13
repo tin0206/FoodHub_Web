@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useStrings } from "@/lib/use-strings";
 
 export function NoteDialog({
   title,
@@ -8,8 +9,8 @@ export function NoteDialog({
   accentColor,
   onSave,
   onCancel,
-  confirmLabel = "Save Note",
-  placeholder = "Write a note…",
+  confirmLabel,
+  placeholder,
 }: {
   title: string;
   initialNote: string;
@@ -19,6 +20,7 @@ export function NoteDialog({
   confirmLabel?: string;
   placeholder?: string;
 }) {
+  const t = useStrings();
   const [note, setNote] = useState(initialNote);
 
   return (
@@ -42,7 +44,7 @@ export function NoteDialog({
           onChange={(e) => setNote(e.target.value)}
           rows={4}
           autoFocus
-          placeholder={placeholder}
+          placeholder={placeholder ?? t.writeNoteHint}
           className="w-full px-2.5 py-2 rounded-xl text-xs resize-none focus:outline-none"
           style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
         />
@@ -53,7 +55,7 @@ export function NoteDialog({
             className="flex-1 py-2 rounded-lg text-xs font-semibold"
             style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -61,7 +63,7 @@ export function NoteDialog({
             className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
             style={{ backgroundColor: accentColor }}
           >
-            {confirmLabel}
+            {confirmLabel ?? t.saveNote}
           </button>
         </div>
       </div>

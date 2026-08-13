@@ -216,6 +216,12 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+        <p className="auth-switch">
+          Just looking around?{' '}
+          <Link href="/demo/chat" className="auth-link">
+            Try the demo
+          </Link>
+        </p>
       </div>
     </div>
   )

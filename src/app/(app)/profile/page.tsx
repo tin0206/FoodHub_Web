@@ -9,6 +9,8 @@ import { ApiError } from "@/lib/api-client";
 import type { ApiUser, UserProfileUpdate } from "@/lib/api/types";
 import { applyTheme } from "@/lib/theme";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { setLang, type Lang } from "@/lib/i18n";
+import { useStrings } from "@/lib/use-strings";
 import LoadingOverlay from "@/components/loading-overlay";
 import { FlagIcon } from "@/components/flag-icon";
 
@@ -105,6 +107,7 @@ function SectionCard({
 const inputCls = "w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent";
 
 function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
+  const t = useStrings();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -114,15 +117,15 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
 
   async function submit() {
     if (!current || !next) {
-      setError("Please fill in both fields.");
+      setError(t.fillAllFields);
       return;
     }
     if (next.length < 6) {
-      setError("New password must be at least 6 characters.");
+      setError(t.mustBeAtLeast6);
       return;
     }
     if (next !== confirm) {
-      setError("Passwords do not match.");
+      setError(t.passwordsDoNotMatch);
       return;
     }
     setError("");
@@ -132,7 +135,7 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
       setDone(true);
       setTimeout(onClose, 1200);
     } catch (err) {
-      setError(errorMessage(err, "Unable to change password."));
+      setError(errorMessage(err, t.unableToUpdatePassword));
     } finally {
       setSaving(false);
     }
@@ -147,32 +150,32 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
         className="w-full max-w-sm rounded-2xl p-5"
         style={{ backgroundColor: "var(--tm-surface)" }}
       >
-        <p className="text-base font-extrabold mb-4" style={{ color: "var(--tm-text)" }}>Change Password</p>
+        <p className="text-base font-extrabold mb-4" style={{ color: "var(--tm-text)" }}>{t.changePasswordTitle}</p>
         {done ? (
-          <p className="text-sm" style={{ color: "#059669" }}>Password changed successfully.</p>
+          <p className="text-sm" style={{ color: "#059669" }}>{t.passwordUpdated}</p>
         ) : (
           <>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>Current password</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{t.currentPassword}</label>
                 <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputCls} style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)" }} />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>New password</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{t.newPassword}</label>
                 <input type="password" value={next} onChange={(e) => setNext(e.target.value)} className={inputCls} style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)" }} />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>Confirm new password</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{t.confirmNewPassword}</label>
                 <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)" }} />
               </div>
             </div>
             {error && <p className="mt-3 text-xs" style={{ color: "#f87171" }}>{error}</p>}
             <div className="flex justify-end gap-2 mt-5">
               <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ color: "var(--tm-text-2)" }}>
-                Cancel
+                {t.cancel}
               </button>
               <button type="button" onClick={submit} disabled={saving} className="px-4 py-2 rounded-lg text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: "#059669" }}>
-                {saving ? "Saving…" : "Change Password"}
+                {saving ? "…" : t.changePasswordTitle}
               </button>
             </div>
           </>
@@ -185,6 +188,7 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
 export default function ProfilePage() {
   const dark = useDarkMode();
   const router = useRouter();
+  const t = useStrings();
 
   const [user, setUser] = useState<ApiUser | null | undefined>(undefined);
   const [loadError, setLoadError] = useState("");
@@ -208,15 +212,18 @@ export default function ProfilePage() {
         const form = toForm(u);
         setSavedData(form);
         setFormData(form);
+        // Backend is the source of truth for the saved preference — sync the live app language to it.
+        setLang(u.language === "vi" ? "vi" : "en");
       })
       .catch((err) => {
         if (cancelled) return;
         setUser(null);
-        setLoadError(errorMessage(err, "Unable to load profile."));
+        setLoadError(errorMessage(err, t.unableToSaveProfile));
       });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Mirrors the mobile app's scroll-tracking: the floating Cancel/Save bar only
@@ -260,13 +267,18 @@ export default function ProfilePage() {
     localStorage.setItem("fh_profile", JSON.stringify({ theme: next ? "dark" : "light" }));
   }
 
+  function selectLanguage(code: Lang) {
+    set("language", code);
+    setLang(code); // switch the live UI immediately, independent of Save
+  }
+
   async function handleSave() {
     if (!formData) return;
     const errors: FieldErrors = {
-      age: !isPositiveNumber(formData.age) ? "Please enter a valid positive number." : "",
-      weight: !isPositiveNumber(formData.weight) ? "Please enter a valid positive number." : "",
-      calorieTarget: !isPositiveNumber(formData.calorieTarget) ? "Please enter a valid positive number." : "",
-      proteinTarget: !isPositiveNumber(formData.proteinTarget) ? "Please enter a valid positive number." : "",
+      age: !isPositiveNumber(formData.age) ? t.mustBePositiveNumber : "",
+      weight: !isPositiveNumber(formData.weight) ? t.mustBePositiveNumber : "",
+      calorieTarget: !isPositiveNumber(formData.calorieTarget) ? t.mustBePositiveNumber : "",
+      proteinTarget: !isPositiveNumber(formData.proteinTarget) ? t.mustBePositiveNumber : "",
     };
     setFieldErrors(errors);
     if (Object.values(errors).some(Boolean)) return;
@@ -296,14 +308,17 @@ export default function ProfilePage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1500);
     } catch (err) {
-      setSaveError(errorMessage(err, "Unable to save profile."));
+      setSaveError(errorMessage(err, t.unableToSaveProfile));
     } finally {
       setSaving(false);
     }
   }
 
   function handleCancel() {
-    if (savedData) setFormData(savedData);
+    if (savedData) {
+      setFormData(savedData);
+      setLang(savedData.language === "vi" ? "vi" : "en");
+    }
     setFieldErrors(NO_ERRORS);
     setSaveError("");
   }
@@ -324,7 +339,7 @@ export default function ProfilePage() {
   if (!user || !formData) {
     return (
       <div className="p-4">
-        <p className="text-sm" style={{ color: "#DC2626" }}>{loadError || "Unable to load profile."}</p>
+        <p className="text-sm" style={{ color: "#DC2626" }}>{loadError || t.unableToSaveProfile}</p>
       </div>
     );
   }
@@ -353,7 +368,7 @@ export default function ProfilePage() {
               <UserRound size={32} color="white" />
             </div>
             <p className="text-base font-bold mt-2.5" style={{ color: "var(--tm-text)" }}>
-              {formData.fullName || "Your Profile"}
+              {formData.fullName || t.yourProfile}
             </p>
             <p className="text-xs mt-0.5" style={{ color: "var(--tm-text-3)" }}>{user.email}</p>
           </div>
@@ -365,26 +380,26 @@ export default function ProfilePage() {
           )}
 
           {/* Appearance */}
-          <SectionCard icon={<Palette size={18} color="#7C3AED" />} iconBg="#EDE9FE" title="Appearance" subtitle="Theme & display preferences">
+          <SectionCard icon={<Palette size={18} color="#7C3AED" />} iconBg="#EDE9FE" title={t.appearance} subtitle={t.settingsPreferences}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>Theme</p>
+                <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>{t.themeLabel}</p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--tm-text-3)" }}>
-                  {dark ? "Dark mode active" : "Light mode active"}
+                  {dark ? t.darkMode : t.lightMode}
                 </p>
               </div>
               <Toggle checked={dark} onChange={toggleTheme} />
             </div>
             <div className="pt-3" style={{ borderTop: "1px solid var(--tm-border)" }}>
-              <p className="text-sm mb-2" style={{ color: "var(--tm-text-2)" }}>Language</p>
+              <p className="text-sm mb-2" style={{ color: "var(--tm-text-2)" }}>{t.languageLabel}</p>
               <div className="flex gap-2">
-                {([["vi", "vn", "Tiếng Việt"], ["en", "us", "English"]] as const).map(([code, country, label]) => {
+                {([["vi", "vn", t.langVietnamese], ["en", "us", t.langEnglish]] as const).map(([code, country, label]) => {
                   const active = formData.language === code;
                   return (
                     <button
                       key={code}
                       type="button"
-                      onClick={() => set("language", code)}
+                      onClick={() => selectLanguage(code)}
                       className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border text-sm transition-colors"
                       style={{
                         backgroundColor: active ? "#ECFDF5" : "var(--tm-surface)",
@@ -403,18 +418,18 @@ export default function ProfilePage() {
           </SectionCard>
 
           {/* Personal Information */}
-          <SectionCard icon={<User size={18} color="#059669" />} iconBg="#ECFDF5" title="Personal Information" subtitle="Update your profile details">
+          <SectionCard icon={<User size={18} color="#059669" />} iconBg="#ECFDF5" title={t.personalInformation} subtitle={t.updateProfileDetails}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>Full Name</label>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.fullNameLabel}</label>
                 <input value={formData.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputCls} style={inputStyle} placeholder="John Doe" />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>Email</label>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.emailLabel}</label>
                 <input value={user.email} readOnly className={inputCls} style={{ ...inputStyle, backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-3)" }} />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>Age</label>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.ageLabel}</label>
                 <input
                   type="text"
                   value={formData.age}
@@ -426,7 +441,7 @@ export default function ProfilePage() {
                 {fieldErrors.age && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.age}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>Weight (kg)</label>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.weightLabel}</label>
                 <input
                   type="text"
                   value={formData.weight}
@@ -444,14 +459,14 @@ export default function ProfilePage() {
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border"
               style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
             >
-              <KeyRound size={13} /> Change Password
+              <KeyRound size={13} /> {t.changePasswordLabel}
             </button>
           </SectionCard>
 
           {/* Nutrition Goals */}
-          <SectionCard icon={<Target size={18} color="#7C3AED" />} iconBg="#EDE9FE" title="Nutrition Goals" subtitle="Set your dietary objectives">
+          <SectionCard icon={<Target size={18} color="#7C3AED" />} iconBg="#EDE9FE" title={t.nutritionGoals} subtitle={t.setDietaryObjectives}>
             <div className="mb-4">
-              <p className="text-xs font-medium mb-2" style={labelStyle}>Primary Goal</p>
+              <p className="text-xs font-medium mb-2" style={labelStyle}>{t.primaryGoalLabel}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {PRIMARY_GOALS.map((goal) => {
                   const active = formData.primaryGoal === goal;
@@ -468,7 +483,7 @@ export default function ProfilePage() {
                         fontWeight: active ? 500 : 400,
                       }}
                     >
-                      {goal}
+                      {t.goalDisplay(goal)}
                     </button>
                   );
                 })}
@@ -476,7 +491,7 @@ export default function ProfilePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>Daily Calorie Target</label>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.dailyCalorieTarget}</label>
                 <input
                   type="text"
                   value={formData.calorieTarget}
@@ -488,7 +503,7 @@ export default function ProfilePage() {
                 {fieldErrors.calorieTarget && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.calorieTarget}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>Target Protein (g/day)</label>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.targetProtein}</label>
                 <input
                   type="text"
                   value={formData.proteinTarget}
@@ -501,7 +516,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium mb-2" style={labelStyle}>Dietary Restrictions</p>
+              <p className="text-xs font-medium mb-2" style={labelStyle}>{t.dietaryRestrictionsLabel}</p>
               <div className="flex flex-wrap gap-2">
                 {DIETARY_TAGS.map((tag) => {
                   const active = formData.dietaryRestrictions.includes(tag);
@@ -517,7 +532,7 @@ export default function ProfilePage() {
                         color: active ? "#059669" : "var(--tm-text-2)",
                       }}
                     >
-                      {tag}
+                      {t.dietaryTagDisplay(tag)}
                     </button>
                   );
                 })}
@@ -526,13 +541,13 @@ export default function ProfilePage() {
           </SectionCard>
 
           {/* Notifications */}
-          <SectionCard icon={<Bell size={18} color="#2563EB" />} iconBg="#DBEAFE" title="Notifications" subtitle="Manage your notification preferences">
+          <SectionCard icon={<Bell size={18} color="#2563EB" />} iconBg="#DBEAFE" title={t.notifications} subtitle={t.manageNotificationPrefs}>
             <div className="space-y-4">
               {(
                 [
-                  ["notifyRecommendations", "Recipe recommendations"],
-                  ["notifyNewFeatures", "New features & updates"],
-                  ["notifyWeeklySummary", "Weekly nutrition summary"],
+                  ["notifyRecommendations", t.notifyRecipeRecommendations],
+                  ["notifyNewFeatures", t.notifyFeaturesUpdates],
+                  ["notifyWeeklySummary", t.notifyWeeklyNutritionSummary],
                 ] as const
               ).map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between">
@@ -551,7 +566,7 @@ export default function ProfilePage() {
               className="flex-1 h-11 border rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
               style={{ borderColor: "var(--tm-border)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
             >
-              Cancel
+              {t.cancel}
             </button>
             <button
               onClick={handleSave}
@@ -559,7 +574,7 @@ export default function ProfilePage() {
               className="flex-1 h-11 rounded-full text-sm font-bold text-white transition-opacity disabled:opacity-40"
               style={{ backgroundColor: saveSuccess ? "#10B981" : "#059669" }}
             >
-              {saveSuccess ? "Saved!" : "Save changes"}
+              {saveSuccess ? t.saved + "!" : t.saveChanges}
             </button>
           </div>
 
@@ -570,7 +585,7 @@ export default function ProfilePage() {
             style={{ backgroundColor: "#FFF1F2", borderColor: "#FCA5A5", color: "#DC2626" }}
           >
             <LogOut size={16} />
-            Log out
+            {t.logOut}
           </button>
         </div>
 
@@ -597,7 +612,7 @@ export default function ProfilePage() {
               className="px-6 h-12 rounded-full text-sm font-semibold"
               style={{ color: "var(--tm-text-2)" }}
             >
-              Cancel
+              {t.cancel}
             </button>
             <button
               onClick={handleSave}
@@ -605,7 +620,7 @@ export default function ProfilePage() {
               className="px-7 h-12 rounded-full text-sm font-bold text-white disabled:opacity-60"
               style={{ backgroundColor: saveSuccess ? "#10B981" : "#059669" }}
             >
-              {saveSuccess ? "Saved!" : "Save changes"}
+              {saveSuccess ? t.saved + "!" : t.saveChanges}
             </button>
           </div>
         </div>

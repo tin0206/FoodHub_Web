@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken, getCurrentUser } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
 import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
@@ -97,6 +98,7 @@ function panelShadow(dark: boolean) {
 export default function SearchPage() {
   const dark = useDarkMode();
   const router = useRouter();
+  const t = useStrings();
   const [query, setQuery] = useState(() => loadSearchState().query);
   const [debouncedQuery, setDebouncedQuery] = useState(() => loadSearchState().query.trim());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => loadSearchState().selectedCategory);
@@ -178,7 +180,7 @@ export default function SearchPage() {
         if (cancelled) return;
         setRecipes([]);
         setHasNextPage(false);
-        setLoadError(errorMessage(err, "Unable to search recipes."));
+        setLoadError(errorMessage(err, t.unableToSearch));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -226,7 +228,7 @@ export default function SearchPage() {
         className="text-xl font-bold mb-0.5"
         style={{ color: "var(--tm-text)" }}
       >
-        Search Recipes
+        {t.searchRecipesTitle}
       </h1>
       <p className="text-sm mb-4" style={{ color: "var(--tm-text-2)" }}>
         Find the perfect recipe for your next meal
@@ -247,7 +249,7 @@ export default function SearchPage() {
             setQuery(e.target.value);
             setPage(0);
           }}
-          placeholder="Search by recipe name or ingredient…"
+          placeholder={t.searchHint}
           className="w-full pl-10 pr-3 py-2.5 rounded-xl text-sm focus:outline-none"
           style={{
             backgroundColor: dark ? "#1E1E1E" : "white",
@@ -259,7 +261,7 @@ export default function SearchPage() {
 
       {/* Category chips */}
       <p className="text-xs mb-2.5" style={{ color: "var(--tm-text-3)" }}>
-        Popular categories
+        {t.popularCategories}
       </p>
       <div className="flex flex-wrap gap-2 mb-5">
         {categoryChips.map(([emoji, label]) => {
@@ -284,7 +286,7 @@ export default function SearchPage() {
               }
             >
               <span>{emoji}</span>
-              {label}
+              {t.categoryDisplay(label)}
             </button>
           );
         })}
@@ -293,10 +295,10 @@ export default function SearchPage() {
       {/* Results header */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
-          {hasFilter ? "Results" : "Recent recipes"}
+          {hasFilter ? "Results" : t.recentRecipes}
         </p>
         <p className="text-xs font-medium" style={{ color: "#059669" }}>
-          {totalCount} result{totalCount !== 1 ? "s" : ""}
+          {t.resultCount(totalCount)}
         </p>
       </div>
 
@@ -307,10 +309,10 @@ export default function SearchPage() {
         >
           <span>{loadError}</span>
           <button
-            onClick={() => setRetryToken((t) => t + 1)}
+            onClick={() => setRetryToken((n) => n + 1)}
             className="font-semibold shrink-0 underline"
           >
-            Try again
+            {t.retry}
           </button>
         </div>
       )}

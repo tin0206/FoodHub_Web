@@ -1,6 +1,7 @@
 'use client'
 
 import { AVAILABLE_LABELS } from '@/lib/dietary-labels'
+import { useStrings } from '@/lib/use-strings'
 import { DEFAULT_ACCENT } from './form-styles'
 
 export function LabelChips({
@@ -12,6 +13,7 @@ export function LabelChips({
   onToggle: (label: string) => void
   accent?: string
 }) {
+  const t = useStrings()
   return (
     <div className="flex flex-wrap gap-1.5">
       {AVAILABLE_LABELS.map(label => {
@@ -28,7 +30,7 @@ export function LabelChips({
               borderColor: active ? accent : 'var(--tm-border-i)',
             }}
           >
-            {label}
+            {t.dietaryTagDisplay(label)}
           </button>
         )
       })}

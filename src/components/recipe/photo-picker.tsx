@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { ImagePlus, X } from 'lucide-react'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useStrings } from '@/lib/use-strings'
 import type { RecipeCardTheme } from './recipe-card-theme'
 
 export function PhotoPicker({
@@ -17,6 +18,7 @@ export function PhotoPicker({
   theme?: RecipeCardTheme
 }) {
   const dark = useDarkMode()
+  const t = useStrings()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -41,7 +43,7 @@ export function PhotoPicker({
             style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}
           >
             <ImagePlus size={15} color="white" />
-            <span className="text-xs font-semibold text-white">Change Photo</span>
+            <span className="text-xs font-semibold text-white">{t.changePhoto}</span>
           </span>
           <span
             onClick={e => {
@@ -73,7 +75,7 @@ export function PhotoPicker({
           }
         >
           <ImagePlus size={26} />
-          <span className="text-xs">Add photo</span>
+          <span className="text-xs">{t.addPhoto}</span>
         </button>
       )}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />

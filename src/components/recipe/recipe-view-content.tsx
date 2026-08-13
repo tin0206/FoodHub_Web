@@ -2,6 +2,7 @@
 
 import { Clock, Flame, ShoppingBasket, ListOrdered, Tag, Utensils } from 'lucide-react'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useStrings } from '@/lib/use-strings'
 import { resolveMediaUrl } from '@/lib/api-client'
 import type { ApiRecipe } from '@/lib/api/types'
 import type { RecipeMeta } from '@/lib/recipe-meta'
@@ -12,6 +13,7 @@ export function RecipeViewContent({
   recipe, theme, meta,
 }: { recipe: ApiRecipe; theme: RecipeCardTheme; meta: RecipeMeta }) {
   const dark = useDarkMode()
+  const t = useStrings()
   const image = resolveMediaUrl(recipe.image_url)
 
   return (
@@ -37,16 +39,16 @@ export function RecipeViewContent({
 
         <div className="flex items-center gap-4 mb-3 lg:mb-0 text-sm" style={{ color: 'var(--tm-text-2)' }}>
           <span className="flex items-center gap-1.5">
-            <Clock size={14} color={theme.start} /> {meta.cookingMinutes} min
+            <Clock size={14} color={theme.start} /> {meta.cookingMinutes} {t.minSuffix}
           </span>
           <span className="flex items-center gap-1.5">
-            <Flame size={14} color={theme.start} /> {meta.calories} cal
+            <Flame size={14} color={theme.start} /> {meta.calories} {t.calSuffix}
           </span>
         </div>
       </div>
 
       <div className="space-y-2.5 mt-3 lg:mt-0">
-        <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients" accent={theme.start}>
+        <SectionCard icon={<ShoppingBasket size={15} />} title={t.ingredientsLabel} accent={theme.start}>
           <div className="space-y-2">
             {recipe.ingredients.map((item, i) => (
               <div key={i} className="flex items-center gap-2.5">
@@ -57,7 +59,7 @@ export function RecipeViewContent({
           </div>
         </SectionCard>
 
-        <SectionCard icon={<ListOrdered size={15} />} title="Instructions" accent={theme.start}>
+        <SectionCard icon={<ListOrdered size={15} />} title={t.instructionsLabel} accent={theme.start}>
           <div className="space-y-3">
             {recipe.directions.map((step, i) => (
               <div key={i} className="flex items-start gap-2.5">
@@ -74,7 +76,7 @@ export function RecipeViewContent({
         </SectionCard>
 
         {recipe.dietary_restrictions.length > 0 && (
-          <SectionCard icon={<Tag size={15} />} title="Labels" accent={theme.start}>
+          <SectionCard icon={<Tag size={15} />} title={t.labelsLabel} accent={theme.start}>
             <div className="flex flex-wrap gap-2">
               {recipe.dietary_restrictions.map(label => (
                 <span
@@ -82,7 +84,7 @@ export function RecipeViewContent({
                   className="text-xs px-2.5 py-1 rounded-full"
                   style={{ backgroundColor: `${theme.start}${dark ? '26' : '14'}`, color: dark ? `${theme.start}E6` : theme.end }}
                 >
-                  {label}
+                  {t.dietaryTagDisplay(label)}
                 </span>
               ))}
             </div>

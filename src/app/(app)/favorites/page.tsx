@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, MessageSquare } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
 import { listFavorites, deleteFavorite, updateFavorite } from "@/lib/api/favorites";
@@ -61,6 +62,7 @@ function SummaryCard({
 export default function FavoritesPage() {
   const dark = useDarkMode();
   const router = useRouter();
+  const t = useStrings();
   const [favorites, setFavorites] = useState<ApiFavorite[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -88,7 +90,7 @@ export default function FavoritesPage() {
       .catch((err) => {
         if (cancelled) return;
         setFavorites([]);
-        setLoadError(errorMessage(err, "Unable to load favorites."));
+        setLoadError(errorMessage(err, t.unableToLoadFavorites));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -137,23 +139,23 @@ export default function FavoritesPage() {
     <div className="h-full overflow-y-auto p-4 md:p-6">
       <div className="flex items-center gap-2 mb-0.5">
         <Heart size={20} fill="#E11D48" color="#E11D48" />
-        <h1 className="text-xl font-bold" style={{ color: "var(--tm-text)" }}>Favorites</h1>
+        <h1 className="text-xl font-bold" style={{ color: "var(--tm-text)" }}>{t.favoritesTitle}</h1>
       </div>
       <p className="text-sm mb-4" style={{ color: "var(--tm-text-2)" }}>
-        Saved recipes with your personal notes
+        {t.savedRecipesWithNotes}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
         <SummaryCard
           value={savedCount}
-          label="Saved"
+          label={t.savedLabel}
           icon={<Heart size={18} fill="#E11D48" color="#E11D48" />}
           iconBg={dark ? "#3A1420" : "#FEF2F2"}
           iconColor="#E11D48"
         />
         <SummaryCard
           value={noteCount}
-          label="With notes"
+          label={t.withNotesLabel}
           icon={<MessageSquare size={18} />}
           iconBg={dark ? "#2F2A18" : "#FFFBEB"}
           iconColor={dark ? "#FDE68A" : "#92400E"}
@@ -169,11 +171,11 @@ export default function FavoritesPage() {
           <button
             onClick={() => {
               setActionError("");
-              if (loadError) setRetryToken((t) => t + 1);
+              if (loadError) setRetryToken((n) => n + 1);
             }}
             className="font-semibold shrink-0 underline"
           >
-            {loadError ? "Try again" : "Dismiss"}
+            {loadError ? t.retry : "Dismiss"}
           </button>
         </div>
       )}
@@ -186,7 +188,7 @@ export default function FavoritesPage() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Heart size={32} color="var(--tm-text-3)" className="mb-3" />
           <p className="text-sm font-medium mb-1" style={{ color: "var(--tm-text)" }}>
-            No favorites yet
+            {t.noFavoritesYet}
           </p>
           <p className="text-xs" style={{ color: "var(--tm-text-3)" }}>
             Save recipes from Search to see them here
@@ -231,7 +233,7 @@ export default function FavoritesPage() {
                         }}
                       >
                         <MessageSquare size={13} />
-                        {hasNote ? "Edit Note" : "Add Note"}
+                        {hasNote ? t.editNote : t.addNote}
                       </button>
                       <button
                         onClick={(e) => {
@@ -258,18 +260,20 @@ export default function FavoritesPage() {
 
       {noteTarget && (
         <NoteDialog
-          title="My Note"
+          title={t.myNote}
           initialNote={noteTarget.note ?? ""}
           accentColor={recipeCardTheme(noteTarget.recipe.id, noteTarget.recipe.dietary_restrictions).start}
+          confirmLabel={t.saveNote}
+          placeholder={t.writeNoteHint}
           onSave={saveNote}
           onCancel={() => setNoteTarget(null)}
         />
       )}
       {removeTarget && (
         <ConfirmDialog
-          title="Remove from favorites?"
-          message={`Remove "${removeTarget.recipe.title}" from your favorites?`}
-          confirmLabel="Remove"
+          title={t.removeFromFavorites}
+          message={t.removeConfirm(removeTarget.recipe.title)}
+          confirmLabel={t.unfavoriteLabel}
           confirmColor="#DC2626"
           onConfirm={handleRemove}
           onCancel={() => setRemoveTarget(null)}

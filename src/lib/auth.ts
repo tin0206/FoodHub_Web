@@ -19,6 +19,7 @@ export interface CurrentUser {
   name: string;
   email: string;
   role?: "admin" | "user";
+  language?: string;
 }
 
 export class FieldError extends Error {
@@ -42,6 +43,7 @@ function mapApiUser(user: ApiUser): CurrentUser {
     name: user.full_name || user.username || user.email,
     email: user.email,
     role,
+    language: user.language,
   };
 }
 

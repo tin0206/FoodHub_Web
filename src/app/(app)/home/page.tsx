@@ -12,6 +12,8 @@ import { RecipeCard, type RecipeCardData } from '@/components/recipe/recipe-card
 import { setRecipeMeta, getOrEstimateMeta } from '@/lib/recipe-meta'
 import { buildRecipeSlug } from '@/lib/recipe-slug'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useStrings } from '@/lib/use-strings'
+import type { Strings } from '@/lib/strings'
 import { SectionCard } from '@/components/recipe/section-card'
 import { LabelChips } from '@/components/recipe/label-chips'
 import { LineListEditor } from '@/components/recipe/line-list-editor'
@@ -22,11 +24,11 @@ type View = 'list' | 'add'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function greeting(): string {
+function greeting(t: Strings): string {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 12) return t.goodMorning
+  if (h < 17) return t.goodAfternoon
+  return t.goodEvening
 }
 
 function toCardData(recipe: ApiRecipe): RecipeCardData {
@@ -60,6 +62,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   const dark = useDarkMode()
+  const t = useStrings()
   return (
     <div className="flex-1 flex flex-col items-center justify-center">
       <div
@@ -68,9 +71,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       >
         <BookOpen size={34} color={dark ? '#94A3B8' : '#6B7280'} />
       </div>
-      <p className="text-[17px] font-bold mb-1" style={{ color: 'var(--tm-text)' }}>No recipes yet</p>
+      <p className="text-[17px] font-bold mb-1" style={{ color: 'var(--tm-text)' }}>{t.noRecipesYet}</p>
       <p className="text-xs text-center mb-3.5 max-w-60" style={{ color: 'var(--tm-text-3)' }}>
-        Add your own recipes and share your culinary creations
+        {t.noRecipesDesc}
       </p>
       <button
         onClick={onAdd}
@@ -78,7 +81,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         style={{ backgroundColor: '#10B981' }}
       >
         <Plus size={16} />
-        Add your first recipe
+        {t.addFirstRecipe}
       </button>
     </div>
   )
@@ -90,6 +93,7 @@ function AddRecipePanel({
   onCancel, onSave,
 }: { onCancel: () => void; onSave: (r: ApiRecipe) => void }) {
   const dark = useDarkMode()
+  const t = useStrings()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState('')
   const [name, setName] = useState('')
@@ -129,7 +133,7 @@ function AddRecipePanel({
 
     if (!trimmedName || cleanIngredients.length === 0 || cleanSteps.length === 0 ||
       !Number.isFinite(mins) || mins <= 0 || !Number.isFinite(cals) || cals <= 0) {
-      setError('Please fill in all required fields.')
+      setError(t.fillAllFields)
       return
     }
 
@@ -157,7 +161,7 @@ function AddRecipePanel({
       }
       onSave(finalRecipe)
     } catch (err) {
-      setError(errorMessage(err, 'Unable to save recipe.'))
+      setError(errorMessage(err, t.unableToSaveRecipe))
     } finally {
       setSaving(false)
     }
@@ -173,7 +177,7 @@ function AddRecipePanel({
         <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#0596691F' }}>
           <Plus size={16} color="#059669" />
         </span>
-        <p className="text-[15px] font-extrabold tracking-tight flex-1" style={{ color: 'var(--tm-text)' }}>New Recipe</p>
+        <p className="text-[15px] font-extrabold tracking-tight flex-1" style={{ color: 'var(--tm-text)' }}>{t.newRecipeTitle}</p>
         <button
           onClick={onCancel}
           className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -195,7 +199,7 @@ function AddRecipePanel({
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="Recipe name…"
+            placeholder={t.recipeNameHint}
             className={`text-[17px] font-bold tracking-tight ${inlineInputClass}`}
             style={{ color: 'var(--tm-text)' }}
           />
@@ -212,7 +216,7 @@ function AddRecipePanel({
               className={inlineInputClass}
               style={{ width: 56, color: 'var(--tm-text)' }}
             />
-            <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>min</span>
+            <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{t.minSuffix}</span>
             <span className="w-3" />
             <Flame size={16} color="#059669" />
             <input
@@ -223,19 +227,19 @@ function AddRecipePanel({
               className={inlineInputClass}
               style={{ width: 56, color: 'var(--tm-text)' }}
             />
-            <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>cal</span>
+            <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{t.calSuffix}</span>
           </div>
         </SectionCard>
 
-        <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients">
-          <LineListEditor values={ingredients} onChange={setIngredients} placeholder={i => `Ingredient ${i + 1}`} addLabel="Add ingredient" />
+        <SectionCard icon={<ShoppingBasket size={15} />} title={t.ingredientsLabel}>
+          <LineListEditor values={ingredients} onChange={setIngredients} placeholder={t.ingredientHint} addLabel={t.addIngredient} />
         </SectionCard>
 
-        <SectionCard icon={<ListOrdered size={15} />} title="Instructions">
-          <LineListEditor values={steps} onChange={setSteps} placeholder={i => `Step ${i + 1}…`} variant="number" addLabel="Add step" />
+        <SectionCard icon={<ListOrdered size={15} />} title={t.instructionsLabel}>
+          <LineListEditor values={steps} onChange={setSteps} placeholder={t.stepHint} variant="number" addLabel={t.addStep} />
         </SectionCard>
 
-        <SectionCard icon={<Tag size={15} />} title="Labels">
+        <SectionCard icon={<Tag size={15} />} title={t.labelsLabel}>
           <LabelChips selected={labels} onToggle={toggleLabel} />
         </SectionCard>
       </div>
@@ -247,7 +251,7 @@ function AddRecipePanel({
           className="flex-1 h-11 rounded-xl text-sm font-semibold transition-colors"
           style={{ backgroundColor: dark ? '#1E1E1E' : '#F3F4F6', border: `1px solid ${dark ? '#3A3A3A' : 'var(--tm-border-i)'}`, color: 'var(--tm-text)' }}
         >
-          Cancel
+          {t.cancel}
         </button>
         <button
           onClick={handleSave}
@@ -255,7 +259,7 @@ function AddRecipePanel({
           className="flex-1 h-11 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: '#059669', boxShadow: '0 6px 16px rgba(5,150,105,0.3)' }}
         >
-          Save Recipe
+          {t.saveRecipe}
         </button>
       </div>
       {saving && <LoadingOverlay />}
@@ -267,6 +271,7 @@ function AddRecipePanel({
 
 export default function HomePage() {
   const router = useRouter()
+  const t = useStrings()
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null)
   const [loadError, setLoadError] = useState('')
   const [view, setView] = useState<View>('list')
@@ -283,7 +288,7 @@ export default function HomePage() {
       setRecipes(mine)
     } catch (err) {
       setRecipes([])
-      setLoadError(errorMessage(err, 'Unable to load recipes.'))
+      setLoadError(errorMessage(err, t.unableToLoadRecipes))
     }
   }
 
@@ -324,10 +329,10 @@ export default function HomePage() {
         style={{ background: 'linear-gradient(135deg, #059669, #047857)', boxShadow: '0 6px 16px rgba(5,150,105,0.3)' }}
       >
         <div>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>{greeting()}</p>
-          <p className="text-xl font-extrabold text-white tracking-tight">My Recipes</p>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>{greeting(t)}</p>
+          <p className="text-xl font-extrabold text-white tracking-tight">{t.myRecipes}</p>
           <span className="inline-block mt-2.5 text-xs font-semibold text-white px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}>
-            {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
+            {t.recipeCount(recipes.length)}
           </span>
         </div>
         <button

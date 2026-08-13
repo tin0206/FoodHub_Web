@@ -6,6 +6,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme } from "@/lib/theme";
+import { setLang } from "@/lib/i18n";
+import { useStrings } from "@/lib/use-strings";
 import { ChefHat, Home, Search, Heart, User, LogOut, ShieldCheck } from "lucide-react";
 import { authDisplay, authSans } from "../auth-fonts";
 
@@ -19,18 +21,19 @@ function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
 
 type NavItem = { href: string; label: string; icon: (size?: number) => ReactNode };
 
-const NAV: NavItem[] = [
-  { href: "/home",      label: "Home",      icon: (s = 16) => <Home size={s} /> },
-  { href: "/search",    label: "Search",    icon: (s = 16) => <Search size={s} /> },
-  { href: "/recs",      label: "Recs",      icon: (s = 16) => <AutoAwesomeIcon size={s} /> },
-  { href: "/favorites", label: "Favorites", icon: (s = 16) => <Heart size={s} /> },
-  { href: "/profile",   label: "Profile",   icon: (s = 16) => <User size={s} /> },
-];
-
 export default function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useStrings();
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const NAV: NavItem[] = [
+    { href: "/home",      label: t.navHome,      icon: (s = 16) => <Home size={s} /> },
+    { href: "/search",    label: t.navSearch,    icon: (s = 16) => <Search size={s} /> },
+    { href: "/recs",      label: t.navRecs,      icon: (s = 16) => <AutoAwesomeIcon size={s} /> },
+    { href: "/favorites", label: t.navFavorites, icon: (s = 16) => <Heart size={s} /> },
+    { href: "/profile",   label: t.navProfile,   icon: (s = 16) => <User size={s} /> },
+  ];
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -39,6 +42,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       return;
     }
     setIsAdmin(isAdminRole(user.role));
+    // Boot the app in the user's saved language before Profile ever loads.
+    if (user.language) setLang(user.language === "vi" ? "vi" : "en");
   }, [router]);
 
   // Restore saved theme on every page load
@@ -118,7 +123,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               }}
             >
               <ShieldCheck size={16} />
-              Admin
+              {t.navAdmin}
             </Link>
           )}
           <button
@@ -127,7 +132,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             style={{ color: 'var(--tm-text-2)' }}
           >
             <LogOut size={16} />
-            Logout
+            {t.logOut}
           </button>
         </div>
       </aside>

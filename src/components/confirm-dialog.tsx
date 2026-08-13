@@ -1,5 +1,7 @@
 "use client";
 
+import { useStrings } from "@/lib/use-strings";
+
 export function ConfirmDialog({
   title,
   message,
@@ -15,6 +17,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useStrings();
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -41,7 +44,7 @@ export function ConfirmDialog({
             className="px-4 py-2 rounded-lg text-sm font-semibold"
             style={{ color: "var(--tm-text-2)" }}
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             type="button"
