@@ -276,7 +276,7 @@ export default function AdminRecipeDetailPage() {
         )}
         <button
           type="button"
-          onClick={() => router.push("/admin/recipes")}
+          onClick={() => router.back()}
           className="flex items-center gap-1.5 text-xs font-semibold"
           style={{ color: "var(--tm-text-2)" }}
         >
@@ -295,7 +295,7 @@ export default function AdminRecipeDetailPage() {
       <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <button
           type="button"
-          onClick={() => router.push("/admin/recipes")}
+          onClick={() => router.back()}
           className="flex items-center gap-1.5 text-xs font-semibold"
           style={{ color: "var(--tm-text-2)" }}
         >

@@ -4,14 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import {
-  login,
-  FieldError,
-  getCurrentUser,
-  needsAdminViewChooser,
-  type CurrentUser,
-} from "@/lib/auth";
-import { ChefHat, LayoutDashboard, Mail, Lock, User } from "lucide-react";
+import { login, FieldError, getCurrentUser, getPostLoginPath } from "@/lib/auth";
+import { ChefHat, Mail, Lock } from "lucide-react";
 import {
   AuthField,
   AuthPrimaryButton,
@@ -34,16 +28,10 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [errors, setErrors] = useState<Errors>({ email: "", password: "" });
-  const [chooserUser, setChooserUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     const existing = getCurrentUser();
-    if (!existing) return;
-    if (needsAdminViewChooser(existing)) {
-      setChooserUser(existing);
-      return;
-    }
-    router.replace("/home");
+    if (existing) router.replace(getPostLoginPath(existing));
   }, [router]);
 
   function getEmailError(val = email) {
@@ -77,11 +65,7 @@ export default function LoginPage() {
         password: passwordValue,
         rememberMe,
       });
-      if (needsAdminViewChooser(user)) {
-        setChooserUser(user);
-        return;
-      }
-      router.replace("/home");
+      router.replace(getPostLoginPath(user));
     } catch (err: unknown) {
       if (err instanceof FieldError) {
         setErrors((prev) => ({ ...prev, [err.field]: err.message }));
@@ -98,82 +82,6 @@ export default function LoginPage() {
   }
 
   const isLoading = loading || googleLoading;
-
-  if (chooserUser) {
-    return (
-      <div className={`${authDisplay.variable} ${authSans.variable} auth-root`}>
-        <Link href="/" className="auth-brand">
-          <ChefHat size={22} color="#059669" />
-          <span>FoodHub</span>
-        </Link>
-
-        <div className="auth-card">
-          <h1 className="auth-heading">Choose a view</h1>
-          <p className="auth-sub">
-            Signed in as {chooserUser.name || chooserUser.email}
-          </p>
-
-          <div className="flex flex-col gap-2.5">
-            <button
-              type="button"
-              onClick={() => router.replace("/home")}
-              className="w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-colors hover:bg-emerald-50"
-              style={{ borderColor: "var(--a-line)" }}
-            >
-              <span
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: "#ECFDF5", color: "#059669" }}
-              >
-                <User size={20} />
-              </span>
-              <span>
-                <span
-                  className="block text-sm font-bold"
-                  style={{ color: "var(--a-ink)" }}
-                >
-                  User view
-                </span>
-                <span
-                  className="block text-xs mt-0.5"
-                  style={{ color: "var(--a-muted)" }}
-                >
-                  App người dùng — home, recs, favorites…
-                </span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.replace("/admin")}
-              className="w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-colors hover:bg-blue-50"
-              style={{ borderColor: "var(--a-line)" }}
-            >
-              <span
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: "#EFF6FF", color: "#2a78d6" }}
-              >
-                <LayoutDashboard size={20} />
-              </span>
-              <span>
-                <span
-                  className="block text-sm font-bold"
-                  style={{ color: "var(--a-ink)" }}
-                >
-                  Admin dashboard
-                </span>
-                <span
-                  className="block text-xs mt-0.5"
-                  style={{ color: "var(--a-muted)" }}
-                >
-                  Quản lý recipes, analytics…
-                </span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`${authDisplay.variable} ${authSans.variable} auth-root`}>

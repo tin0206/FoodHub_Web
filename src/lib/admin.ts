@@ -28,37 +28,7 @@ export interface LabelStat {
   colorIndex: number
 }
 
-export interface ActivityItem {
-  id: string
-  title: string
-  time: string
-  colorIndex: number
-}
-
-export interface OverviewStat {
-  label: string
-  value: string
-  trend: string
-  colorIndex: number
-}
-
 export const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-export const OVERVIEW_STATS: OverviewStat[] = [
-  { label: 'Total users', value: '247', trend: '+12 this week', colorIndex: 0 },
-  { label: 'Total recipes', value: '1,842', trend: '+34 this week', colorIndex: 2 },
-  { label: 'Total favorites', value: '4,391', trend: '+208 this week', colorIndex: 7 },
-  { label: 'AI scans', value: '893', trend: '+57 this week', colorIndex: 1 },
-]
-
-export const RECENT_ACTIVITY: ActivityItem[] = [
-  { id: '1', title: 'New user registered: kieu_anh', time: '2 minutes ago', colorIndex: 0 },
-  { id: '2', title: 'Recipe "Phở Bò Hà Nội" added', time: '14 minutes ago', colorIndex: 2 },
-  { id: '3', title: '12 new favorites in the last hour', time: '1 hour ago', colorIndex: 7 },
-  { id: '4', title: 'AI scan by minh_duc: 5 ingredients', time: '2 hours ago', colorIndex: 1 },
-  { id: '5', title: 'New user registered: thanh_nam', time: '3 hours ago', colorIndex: 0 },
-  { id: '6', title: 'Recipe "Avocado Toast" added', time: '5 hours ago', colorIndex: 2 },
-]
 
 export const TOP_RECIPES: TopRecipe[] = [
   { title: 'Green Smoothie Bowl', favorites: 201 },
@@ -331,6 +301,23 @@ export function setAdminUserActive(id: string, isActive: boolean): void {
 
 export function deleteAdminUser(id: string): void {
   writeAllUsers(readAllUsers().filter((u) => u.id !== id))
+}
+
+export function relativeTime(dateStr: string): string {
+  const then = new Date(dateStr).getTime()
+  if (Number.isNaN(then)) return ''
+  const diffMs = Date.now() - then
+  const minutes = Math.floor(diffMs / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`
+  const years = Math.floor(months / 12)
+  return `${years} year${years === 1 ? '' : 's'} ago`
 }
 
 export function avatarInitials(name: string): string {

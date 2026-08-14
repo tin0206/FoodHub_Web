@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { signup, FieldError, needsAdminViewChooser } from '@/lib/auth'
+import { signup, FieldError, getPostLoginPath } from '@/lib/auth'
 import { ChefHat, Mail, Lock, User } from 'lucide-react'
 import { AuthField, AuthPrimaryButton, AuthDivider, AuthSocialButton } from '@/components/auth/auth-widgets'
 import { authDisplay, authSans } from '../auth-fonts'
@@ -64,8 +64,7 @@ export default function SignupPage() {
       setLoading(true)
       setAuthError('')
       const user = await signup({ name: nameValue, email: emailValue, password: passwordValue })
-      // Admin must pick view on login screen; regular users go to the app
-      router.replace(needsAdminViewChooser(user) ? '/login' : '/home')
+      router.replace(getPostLoginPath(user))
     } catch (err: unknown) {
       if (err instanceof FieldError) {
         setErrors(prev => ({ ...prev, [err.field]: err.message }))

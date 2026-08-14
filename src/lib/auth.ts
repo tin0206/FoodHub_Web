@@ -47,13 +47,9 @@ function mapApiUser(user: ApiUser): CurrentUser {
   };
 }
 
-/** Default post-auth destination (consumer app home). Admins pick via login chooser. */
+/** Default post-auth destination — admins land in the dashboard, everyone else in the app. */
 export function getPostLoginPath(user: CurrentUser): string {
-  return "/home";
-}
-
-export function needsAdminViewChooser(user: CurrentUser | null | undefined): boolean {
-  return !!user && isAdminRole(user.role);
+  return isAdminRole(user.role) ? "/admin" : "/home";
 }
 
 function persistSession(token: string, user: ApiUser): CurrentUser {
