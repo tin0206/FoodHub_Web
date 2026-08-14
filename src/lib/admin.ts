@@ -22,14 +22,8 @@ export interface TopRecipe {
   favorites: number
 }
 
-export interface LabelStat {
-  label: string
-  count: number
-  colorIndex: number
-}
-
-export const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
+// Still used by mockUserRecipes() below to fabricate plausible recipe titles
+// for the (still-mock) admin user detail page.
 export const TOP_RECIPES: TopRecipe[] = [
   { title: 'Green Smoothie Bowl', favorites: 201 },
   { title: 'Bánh Mì Sandwich', favorites: 176 },
@@ -37,18 +31,6 @@ export const TOP_RECIPES: TopRecipe[] = [
   { title: 'Avocado Toast', favorites: 133 },
   { title: 'Bún Bò Huế', favorites: 98 },
 ]
-
-export const LABEL_STATS: LabelStat[] = [
-  { label: 'Vietnamese', count: 312, colorIndex: 0 },
-  { label: 'Vegan', count: 278, colorIndex: 2 },
-  { label: 'High Protein', count: 241, colorIndex: 1 },
-  { label: 'Quick Meal', count: 198, colorIndex: 3 },
-  { label: 'Breakfast', count: 156, colorIndex: 4 },
-  { label: 'Keto', count: 112, colorIndex: 6 },
-]
-
-export const WEEKLY_SIGNUPS = [3, 7, 5, 12, 8, 15, 10]
-export const WEEKLY_AI_SCANS = [18, 24, 31, 19, 42, 38, 27]
 
 export const AVAILABLE_LABELS = [
   'Dairy Free',

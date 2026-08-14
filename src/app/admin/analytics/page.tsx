@@ -1,17 +1,30 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { ChevronRight, RefreshCw } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
-import {
-  ADMIN_ACCENT_LIGHT,
-  ADMIN_ACCENT_DARK,
-  CATEGORICAL,
-  TOP_RECIPES,
-  LABEL_STATS,
-  WEEKLY_SIGNUPS,
-  WEEKLY_AI_SCANS,
-  WEEK_DAYS,
-} from "@/lib/admin";
+import { hasAccessToken } from "@/lib/auth";
+import { ApiError } from "@/lib/api-client";
+import { getAdminAnalytics, type AdminAnalytics } from "@/lib/api/admin-analytics";
+import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK, CATEGORICAL } from "@/lib/admin";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Last N calendar days (oldest first) as "YYYY-MM-DD", for zero-filling a sparse day-count series. */
+function lastNDays(n: number): string[] {
+  const out: string[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = n - 1; i >= 0; i--) {
+    out.push(new Date(today.getTime() - i * DAY_MS).toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+function dayLabel(dateStr: string): string {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" });
+}
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
@@ -32,12 +45,20 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
+function EmptyNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs" style={{ color: "var(--tm-text-2)" }}>
+      {children}
+    </p>
+  );
+}
+
 function ColumnChart({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data);
+  const max = Math.max(...data, 0);
   return (
     <div className="flex items-end justify-between gap-2" style={{ height: 96 }}>
       {data.map((v, i) => {
-        const frac = max === 0 ? 0 : Math.max(v / max, 0.08);
+        const frac = max === 0 ? 0 : Math.max(v / max, v > 0 ? 0.08 : 0);
         return (
           <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 h-full" title={`${v}`}>
             <span className="text-[10px] font-bold" style={{ color }}>
@@ -57,78 +78,147 @@ function ColumnChart({ data, color }: { data: number[]; color: string }) {
 export default function AdminAnalyticsPage() {
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
-  const orange = isDark ? CATEGORICAL[1].dark : CATEGORICAL[1].light;
-  const maxFav = TOP_RECIPES[0]?.favorites ?? 1;
-  const maxLabelCount = LABEL_STATS[0]?.count ?? 1;
+  const [data, setData] = useState<AdminAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    if (!hasAccessToken()) {
+      setData(null);
+      setError(
+        "No API token. Sign in with a real admin account (not Admin Bypass) to see live stats.",
+      );
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const result = await getAdminAnalytics();
+      setData(result);
+    } catch (err) {
+      setData(null);
+      if (err instanceof ApiError) {
+        setError(
+          err.status === 403 ? "Admin role required to view analytics." : err.message,
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to load analytics");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const days = lastNDays(7);
+  const signupByDate = new Map((data?.daily_signups ?? []).map((d) => [d.date, d.count]));
+  const signupCounts = days.map((d) => signupByDate.get(d) ?? 0);
+  const maxLabelCount = data?.popular_recipes[0]?.count ?? 1;
 
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-5">
-      {/* Top recipes */}
+      <div className="flex items-center justify-between">
+        <p className="text-lg font-bold" style={{ color: "var(--tm-text)" }}>
+          Analytics
+        </p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-50"
+          style={{ backgroundColor: `${accent}1F`, color: accent }}
+        >
+          <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div
+          className="rounded-2xl p-4 text-sm"
+          style={{ backgroundColor: "#F43F5E14", color: "#F43F5E", border: "1px solid #F43F5E33" }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Top recipes — most-favorited among recipes created in the last 30 days */}
       <section>
-        <SectionHeading>Most Favorited Recipes</SectionHeading>
+        <SectionHeading>Most Favorited Recipes (Last 30 Days)</SectionHeading>
         <Card>
-          <div className="space-y-3">
-            {TOP_RECIPES.map((r, i) => {
-              const rank = i + 1;
-              const frac = r.favorites / maxFav;
-              return (
-                <div key={r.title} className="flex items-center gap-2">
+          {data && data.top_recipes.length === 0 ? (
+            <EmptyNote>No recipes in the last 30 days yet.</EmptyNote>
+          ) : (
+            <div className="space-y-1">
+              {(data?.top_recipes ?? []).map((r, i) => (
+                <Link
+                  key={r.id}
+                  href={`/admin/recipes/${r.id}`}
+                  className="flex items-center gap-2.5 py-1.5 hover:opacity-90 transition-opacity"
+                >
                   <span
                     className="w-5 text-[11px] font-bold shrink-0"
-                    style={{ color: rank === 1 ? "#c98500" : "var(--tm-text-2)" }}
+                    style={{ color: i === 0 ? "#c98500" : "var(--tm-text-2)" }}
                   >
-                    #{rank}
+                    #{i + 1}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold truncate mb-1" style={{ color: "var(--tm-text)" }}>
-                      {r.title}
-                    </p>
-                    <div className="h-[5px] rounded-full" style={{ backgroundColor: "var(--tm-subtle)" }}>
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${frac * 100}%`, backgroundColor: accent }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0" title={`${r.favorites} favorites`}>
-                    <Heart size={11} color="#e34948" fill="#e34948" />
-                    <span className="text-xs font-bold" style={{ color: "var(--tm-text)" }}>
-                      {r.favorites}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  <span
+                    className="flex-1 min-w-0 text-xs font-semibold truncate"
+                    style={{ color: "var(--tm-text)" }}
+                  >
+                    {r.title}
+                  </span>
+                  <ChevronRight size={14} color="var(--tm-text-3)" className="shrink-0" />
+                </Link>
+              ))}
+            </div>
+          )}
         </Card>
       </section>
 
-      {/* Popular labels */}
+      {/* Popular labels — from favorited recipes */}
       <section>
         <SectionHeading>Popular Dietary Labels</SectionHeading>
         <Card>
-          <div className="space-y-2.5">
-            {LABEL_STATS.map((l) => {
-              const color = isDark ? CATEGORICAL[l.colorIndex].dark : CATEGORICAL[l.colorIndex].light;
-              const frac = l.count / maxLabelCount;
-              return (
-                <div key={l.label} className="flex items-center gap-2.5">
-                  <span className="w-20 text-[11.5px] font-medium shrink-0 truncate" style={{ color: "var(--tm-text-2)" }}>
-                    {l.label}
-                  </span>
-                  <div className="flex-1 h-5 rounded-md relative" style={{ backgroundColor: "var(--tm-subtle)" }} title={`${l.count}`}>
+          {data && data.popular_recipes.length === 0 ? (
+            <EmptyNote>No favorites yet.</EmptyNote>
+          ) : (
+            <div className="space-y-2.5">
+              {(data?.popular_recipes ?? []).map((l, i) => {
+                const color = isDark
+                  ? CATEGORICAL[i % CATEGORICAL.length].dark
+                  : CATEGORICAL[i % CATEGORICAL.length].light;
+                const frac = l.count / maxLabelCount;
+                return (
+                  <div key={l.label} className="flex items-center gap-2.5">
+                    <span
+                      className="w-20 text-[11.5px] font-medium shrink-0 truncate"
+                      style={{ color: "var(--tm-text-2)" }}
+                    >
+                      {l.label}
+                    </span>
                     <div
-                      className="h-full rounded-md"
-                      style={{ width: `${frac * 100}%`, backgroundColor: `${color}2E` }}
-                    />
+                      className="flex-1 h-5 rounded-md relative"
+                      style={{ backgroundColor: "var(--tm-subtle)" }}
+                      title={`${l.count}`}
+                    >
+                      <div
+                        className="h-full rounded-md"
+                        style={{ width: `${frac * 100}%`, backgroundColor: `${color}2E` }}
+                      />
+                    </div>
+                    <span className="w-9 text-xs font-bold text-right shrink-0" style={{ color }}>
+                      {l.count}
+                    </span>
                   </div>
-                  <span className="w-9 text-xs font-bold text-right shrink-0" style={{ color }}>
-                    {l.count}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </section>
 
@@ -136,26 +226,15 @@ export default function AdminAnalyticsPage() {
       <section>
         <SectionHeading>New Users — Last 7 Days</SectionHeading>
         <Card>
-          <ColumnChart data={WEEKLY_SIGNUPS} color={accent} />
+          <ColumnChart data={signupCounts} color={accent} />
           <div className="flex justify-between mt-2">
-            {WEEK_DAYS.map((d) => (
-              <span key={d} className="flex-1 text-center text-[10px] font-medium" style={{ color: "var(--tm-text-2)" }}>
-                {d}
-              </span>
-            ))}
-          </div>
-        </Card>
-      </section>
-
-      {/* AI scans */}
-      <section>
-        <SectionHeading>AI Scan Activity — Last 7 Days</SectionHeading>
-        <Card>
-          <ColumnChart data={WEEKLY_AI_SCANS} color={orange} />
-          <div className="flex justify-between mt-2">
-            {WEEK_DAYS.map((d) => (
-              <span key={d} className="flex-1 text-center text-[10px] font-medium" style={{ color: "var(--tm-text-2)" }}>
-                {d}
+            {days.map((d) => (
+              <span
+                key={d}
+                className="flex-1 text-center text-[10px] font-medium"
+                style={{ color: "var(--tm-text-2)" }}
+              >
+                {dayLabel(d)}
               </span>
             ))}
           </div>

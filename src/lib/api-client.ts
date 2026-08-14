@@ -121,7 +121,9 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   const { method = "GET", body, auth = true, token, query } = options;
   const base = getApiBaseUrl();
-  const url = new URL(`${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`);
+  const url = new URL(
+    `${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`,
+  );
 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -139,7 +141,8 @@ export async function apiFetch<T = unknown>(
   }
 
   if (auth) {
-    const bearer = token !== undefined && token !== null ? token : getAccessToken();
+    const bearer =
+      token !== undefined && token !== null ? token : getAccessToken();
     if (bearer) {
       headers.Authorization = `Bearer ${bearer}`;
     }
