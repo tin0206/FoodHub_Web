@@ -4,25 +4,28 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChefHat, LayoutDashboard, BarChart3, BookOpen, Users, LogOut, ArrowLeft } from "lucide-react";
+import { ChefHat, LayoutDashboard, BarChart3, BookOpen, Users, User, LogOut, ArrowLeft } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme } from "@/lib/theme";
+import { useStrings } from "@/lib/use-strings";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
-
-const TABS = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, match: (p: string) => p === "/admin" },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/admin/analytics") },
-  { href: "/admin/recipes", label: "Recipes", icon: BookOpen, match: (p: string) => p.startsWith("/admin/recipes") },
-  { href: "/admin/users", label: "Users", icon: Users, match: (p: string) => p.startsWith("/admin/users") },
-];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const t = useStrings();
   const [allowed, setAllowed] = useState(false);
+
+  const TABS = [
+    { href: "/admin", label: t.adminNavOverview, icon: LayoutDashboard, match: (p: string) => p === "/admin" },
+    { href: "/admin/analytics", label: t.adminNavAnalytics, icon: BarChart3, match: (p: string) => p.startsWith("/admin/analytics") },
+    { href: "/admin/recipes", label: t.adminNavRecipes, icon: BookOpen, match: (p: string) => p.startsWith("/admin/recipes") },
+    { href: "/admin/users", label: t.adminNavUsers, icon: Users, match: (p: string) => p.startsWith("/admin/users") },
+    { href: "/admin/profile", label: t.adminNavProfile, icon: User, match: (p: string) => p.startsWith("/admin/profile") },
+  ];
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -61,7 +64,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2 px-4 h-14 border-b shrink-0" style={{ borderColor: "var(--tm-border-s)" }}>
           <ChefHat size={20} color={accent} />
           <span className="text-sm font-bold" style={{ color: "var(--tm-text)" }}>
-            FoodHub Admin
+            {t.adminBrand}
           </span>
         </div>
 
@@ -94,7 +97,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             style={{ color: "var(--tm-text-2)" }}
           >
             <ArrowLeft size={16} />
-            Back to app
+            {t.adminBackToApp}
           </Link>
           <button
             type="button"
@@ -103,7 +106,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             style={{ color: "var(--tm-text-2)" }}
           >
             <LogOut size={16} />
-            Logout
+            {t.logOut}
           </button>
         </div>
       </aside>

@@ -33,21 +33,22 @@ export const AVAILABLE_LABELS = [
   'Low Carb',
 ]
 
-export function relativeTime(dateStr: string): string {
+export function relativeTime(dateStr: string, lang: 'en' | 'vi' = 'en'): string {
   const then = new Date(dateStr).getTime()
   if (Number.isNaN(then)) return ''
+  const vi = lang === 'vi'
   const diffMs = Date.now() - then
   const minutes = Math.floor(diffMs / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  if (minutes < 1) return vi ? 'vừa xong' : 'just now'
+  if (minutes < 60) return vi ? `${minutes} phút trước` : `${minutes} minute${minutes === 1 ? '' : 's'} ago`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  if (hours < 24) return vi ? `${hours} giờ trước` : `${hours} hour${hours === 1 ? '' : 's'} ago`
   const days = Math.floor(hours / 24)
-  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`
+  if (days < 30) return vi ? `${days} ngày trước` : `${days} day${days === 1 ? '' : 's'} ago`
   const months = Math.floor(days / 30)
-  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`
+  if (months < 12) return vi ? `${months} tháng trước` : `${months} month${months === 1 ? '' : 's'} ago`
   const years = Math.floor(months / 12)
-  return `${years} year${years === 1 ? '' : 's'} ago`
+  return vi ? `${years} năm trước` : `${years} year${years === 1 ? '' : 's'} ago`
 }
 
 export function avatarInitials(name: string): string {

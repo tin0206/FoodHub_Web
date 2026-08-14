@@ -4,10 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
+import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
 import { getAdminAnalytics, type AdminAnalytics } from "@/lib/api/admin-analytics";
+import { getRecipe } from "@/lib/api/admin-recipes";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK, CATEGORICAL } from "@/lib/admin";
+import type { Lang } from "@/lib/i18n";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -22,8 +26,8 @@ function lastNDays(n: number): string[] {
   return out;
 }
 
-function dayLabel(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" });
+function dayLabel(dateStr: string, lang: Lang): string {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(lang === "vi" ? "vi-VN" : "en-US", { weekday: "short" });
 }
 
 function Card({ children }: { children: React.ReactNode }) {
@@ -78,16 +82,17 @@ function ColumnChart({ data, color }: { data: number[]; color: string }) {
 export default function AdminAnalyticsPage() {
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const lang = useLang();
+  const t = useStrings();
   const [data, setData] = useState<AdminAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [viTitles, setViTitles] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     if (!hasAccessToken()) {
       setData(null);
-      setError(
-        "No API token. Sign in with a real admin account (not Admin Bypass) to see live stats.",
-      );
+      setError(t.adminNoTokenAnalytics);
       setLoading(false);
       return;
     }
@@ -99,20 +104,42 @@ export default function AdminAnalyticsPage() {
     } catch (err) {
       setData(null);
       if (err instanceof ApiError) {
-        setError(
-          err.status === 403 ? "Admin role required to view analytics." : err.message,
-        );
+        setError(err.status === 403 ? t.adminRoleRequiredAnalytics : err.message);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load analytics");
+        setError(err instanceof Error ? err.message : t.adminFailedLoadAnalytics);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Recipe titles come back in their own stored locale — when viewing in Vietnamese,
+  // fetch each top recipe's "vi" translation (falls back to the original if untranslated).
+  useEffect(() => {
+    const recipes = data?.top_recipes ?? [];
+    if (lang !== "vi" || recipes.length === 0) {
+      setViTitles({});
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      recipes.map((r) =>
+        getRecipe(r.id, "vi")
+          .then((translated) => [r.id, translated.title] as const)
+          .catch(() => [r.id, r.title] as const),
+      ),
+    ).then((entries) => {
+      if (!cancelled) setViTitles(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang, data]);
 
   const days = lastNDays(7);
   const signupByDate = new Map((data?.daily_signups ?? []).map((d) => [d.date, d.count]));
@@ -123,7 +150,7 @@ export default function AdminAnalyticsPage() {
     <div className="p-4 max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <p className="text-lg font-bold" style={{ color: "var(--tm-text)" }}>
-          Analytics
+          {t.adminAnalyticsTitle}
         </p>
         <button
           type="button"
@@ -133,7 +160,7 @@ export default function AdminAnalyticsPage() {
           style={{ backgroundColor: `${accent}1F`, color: accent }}
         >
           <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
-          Refresh
+          {t.refresh}
         </button>
       </div>
 
@@ -148,10 +175,10 @@ export default function AdminAnalyticsPage() {
 
       {/* Top recipes — most-favorited among recipes created in the last 30 days */}
       <section>
-        <SectionHeading>Most Favorited Recipes (Last 30 Days)</SectionHeading>
+        <SectionHeading>{t.adminTopRecipesHeading}</SectionHeading>
         <Card>
           {data && data.top_recipes.length === 0 ? (
-            <EmptyNote>No recipes in the last 30 days yet.</EmptyNote>
+            <EmptyNote>{t.adminNoTopRecipes}</EmptyNote>
           ) : (
             <div className="space-y-1">
               {(data?.top_recipes ?? []).map((r, i) => (
@@ -170,7 +197,7 @@ export default function AdminAnalyticsPage() {
                     className="flex-1 min-w-0 text-xs font-semibold truncate"
                     style={{ color: "var(--tm-text)" }}
                   >
-                    {r.title}
+                    {viTitles[r.id] ?? r.title}
                   </span>
                   <ChevronRight size={14} color="var(--tm-text-3)" className="shrink-0" />
                 </Link>
@@ -182,10 +209,10 @@ export default function AdminAnalyticsPage() {
 
       {/* Popular labels — from favorited recipes */}
       <section>
-        <SectionHeading>Popular Dietary Labels</SectionHeading>
+        <SectionHeading>{t.adminPopularLabelsHeading}</SectionHeading>
         <Card>
           {data && data.popular_recipes.length === 0 ? (
-            <EmptyNote>No favorites yet.</EmptyNote>
+            <EmptyNote>{t.adminNoFavoritesYet}</EmptyNote>
           ) : (
             <div className="space-y-2.5">
               {(data?.popular_recipes ?? []).map((l, i) => {
@@ -199,7 +226,7 @@ export default function AdminAnalyticsPage() {
                       className="w-20 text-[11.5px] font-medium shrink-0 truncate"
                       style={{ color: "var(--tm-text-2)" }}
                     >
-                      {l.label}
+                      {t.categoryDisplay(l.label)}
                     </span>
                     <div
                       className="flex-1 h-5 rounded-md relative"
@@ -224,7 +251,7 @@ export default function AdminAnalyticsPage() {
 
       {/* Weekly signups */}
       <section>
-        <SectionHeading>New Users — Last 7 Days</SectionHeading>
+        <SectionHeading>{t.adminNewUsersHeading}</SectionHeading>
         <Card>
           <ColumnChart data={signupCounts} color={accent} />
           <div className="flex justify-between mt-2">
@@ -234,7 +261,7 @@ export default function AdminAnalyticsPage() {
                 className="flex-1 text-center text-[10px] font-medium"
                 style={{ color: "var(--tm-text-2)" }}
               >
-                {dayLabel(d)}
+                {dayLabel(d, lang)}
               </span>
             ))}
           </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
@@ -51,6 +52,7 @@ export default function AdminRecipeDetailPage() {
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const t = useStrings();
   const recipeId = Number(params.id);
 
   const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
@@ -101,9 +103,7 @@ export default function AdminRecipeDetailPage() {
       return;
     }
     if (!hasAccessToken()) {
-      setError(
-        "No API token. Sign in with a real admin account (not Admin Bypass).",
-      );
+      setError(t.adminNoTokenGeneric);
       setLoading(false);
       return;
     }
@@ -124,8 +124,8 @@ export default function AdminRecipeDetailPage() {
         if (trErr instanceof ApiError && trErr.status !== 404) {
           setNotice(
             trErr.status === 403
-              ? "Translations unavailable (admin required)."
-              : `Translations could not be loaded: ${trErr.message}`,
+              ? t.adminTranslationsUnavailable
+              : t.adminTranslationsLoadFailed(trErr.message),
           );
         }
       }
@@ -142,18 +142,15 @@ export default function AdminRecipeDetailPage() {
       setRecipe(null);
       setTranslations([]);
       if (err instanceof ApiError) {
-        setError(
-          err.status === 404
-            ? "Recipe not found."
-            : err.message || "Failed to load recipe",
-        );
+        setError(err.status === 404 ? t.adminRecipeNotFound : err.message || t.adminFailedLoadRecipe);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load recipe");
+        setError(err instanceof Error ? err.message : t.adminFailedLoadRecipe);
       }
     } finally {
       setLoading(false);
     }
-  }, [applyTranslationForm, recipeId, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyTranslationForm, recipeId, router, t]);
 
   useEffect(() => {
     void load();
@@ -175,9 +172,9 @@ export default function AdminRecipeDetailPage() {
     try {
       const updated = await updateRecipeVisibility(recipe.id, next);
       setRecipe(updated);
-      setNotice(`Visibility set to ${updated.visibility}.`);
+      setNotice(t.adminVisibilitySet(updated.visibility === "public" ? t.publicLabel : t.privateLabel));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to update visibility");
+      setError(err instanceof ApiError ? err.message : t.adminFailedUpdateVisibility);
     } finally {
       setToggling(false);
     }
@@ -185,7 +182,7 @@ export default function AdminRecipeDetailPage() {
 
   async function handleSaveTranslation() {
     if (!recipe || !title.trim()) {
-      setError("Translation title is required.");
+      setError(t.adminTranslationTitleRequired);
       return;
     }
     setSaving(true);
@@ -202,7 +199,7 @@ export default function AdminRecipeDetailPage() {
         saved,
       ].sort((a, b) => a.locale.localeCompare(b.locale));
       setTranslations(next);
-      setNotice(`Saved ${locale} translation.`);
+      setNotice(t.adminTranslationSaved(locale));
       if (locale === recipe.locale) {
         setRecipe({
           ...recipe,
@@ -212,7 +209,7 @@ export default function AdminRecipeDetailPage() {
         });
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to save translation");
+      setError(err instanceof ApiError ? err.message : t.adminFailedSaveTranslation);
     } finally {
       setSaving(false);
     }
@@ -228,10 +225,10 @@ export default function AdminRecipeDetailPage() {
       await deleteRecipeTranslation(recipe.id, locale);
       const next = translations.filter((t) => t.locale !== locale);
       setTranslations(next);
-      setNotice(`Deleted ${locale} translation.`);
+      setNotice(t.adminTranslationDeleted(locale));
       applyTranslationForm(next, locale, recipe);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to delete translation");
+      setError(err instanceof ApiError ? err.message : t.adminFailedDeleteTranslation);
     } finally {
       setSaving(false);
     }
@@ -246,9 +243,7 @@ export default function AdminRecipeDetailPage() {
       await deleteRecipe(recipe.id);
       router.push("/admin/recipes");
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to delete recipe",
-      );
+      setError(err instanceof ApiError ? err.message : t.adminFailedDeleteRecipe);
       setDeleting(false);
     }
   }
@@ -257,7 +252,7 @@ export default function AdminRecipeDetailPage() {
     return (
       <div className="p-4 max-w-2xl mx-auto">
         <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>
-          Loading recipe…
+          {t.adminLoadingRecipe}
         </p>
       </div>
     );
@@ -280,7 +275,7 @@ export default function AdminRecipeDetailPage() {
           className="flex items-center gap-1.5 text-xs font-semibold"
           style={{ color: "var(--tm-text-2)" }}
         >
-          <ArrowLeft size={14} /> Back to recipes
+          <ArrowLeft size={14} /> {t.adminBackToRecipes}
         </button>
       </div>
     );
@@ -299,7 +294,7 @@ export default function AdminRecipeDetailPage() {
           className="flex items-center gap-1.5 text-xs font-semibold"
           style={{ color: "var(--tm-text-2)" }}
         >
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={14} /> {t.back}
         </button>
         <div className="flex items-center gap-2 flex-wrap">
           <Link
@@ -307,7 +302,7 @@ export default function AdminRecipeDetailPage() {
             className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
             style={{ backgroundColor: `${accent}1F`, color: accent }}
           >
-            <Pencil size={13} /> Edit
+            <Pencil size={13} /> {t.edit}
           </Link>
           {canDelete ? (
             <button
@@ -317,7 +312,7 @@ export default function AdminRecipeDetailPage() {
               className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
               style={{ backgroundColor: "#F43F5E19", color: "#F43F5E" }}
             >
-              <Trash2 size={13} /> Delete
+              <Trash2 size={13} /> {t.delete}
             </button>
           ) : null}
           <button
@@ -328,7 +323,7 @@ export default function AdminRecipeDetailPage() {
             style={{ backgroundColor: `${accent}1F`, color: accent }}
           >
             {isPublic ? <EyeOff size={13} /> : <Eye size={13} />}
-            {toggling ? "Updating…" : isPublic ? "Make private" : "Make public"}
+            {toggling ? t.updating : isPublic ? t.adminMakePrivate : t.adminMakePublic}
           </button>
         </div>
       </div>
@@ -338,8 +333,7 @@ export default function AdminRecipeDetailPage() {
           className="rounded-2xl p-3 mb-3 text-xs"
           style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
         >
-          Catalog recipe (shared). Edit creates a private copy. Delete is not
-          allowed by the API.
+          {t.adminCatalogNotice}
         </div>
       )}
 
@@ -392,10 +386,10 @@ export default function AdminRecipeDetailPage() {
           }}
         >
           {isPublic ? <Eye size={11} /> : <EyeOff size={11} />}
-          {recipe.visibility}
+          {isPublic ? t.publicLabel : t.privateLabel}
         </span>
         <span className="text-xs" style={{ color: "var(--tm-text-3)" }}>
-          #{recipe.id} · locale {recipe.locale}
+          #{recipe.id} · {t.adminLocaleLabel} {recipe.locale}
         </span>
       </div>
 
@@ -424,7 +418,7 @@ export default function AdminRecipeDetailPage() {
           <div className="flex items-center gap-1.5 mb-2">
             <ShoppingBasket size={15} color={accent} />
             <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
-              Ingredients
+              {t.adminIngredientsHeading}
             </span>
           </div>
           <ul className="space-y-1.5">
@@ -443,7 +437,7 @@ export default function AdminRecipeDetailPage() {
             ))}
             {(recipe.ingredients ?? []).length === 0 && (
               <li className="text-xs" style={{ color: "var(--tm-text-3)" }}>
-                No ingredients
+                {t.adminNoIngredients}
               </li>
             )}
           </ul>
@@ -459,7 +453,7 @@ export default function AdminRecipeDetailPage() {
           <div className="flex items-center gap-1.5 mb-2">
             <ListOrdered size={15} color={accent} />
             <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
-              Instructions
+              {t.adminInstructionsHeading}
             </span>
           </div>
           <ol className="space-y-2">
@@ -480,7 +474,7 @@ export default function AdminRecipeDetailPage() {
             ))}
             {(recipe.directions ?? []).length === 0 && (
               <li className="text-xs" style={{ color: "var(--tm-text-3)" }}>
-                No directions
+                {t.adminNoDirections}
               </li>
             )}
           </ol>
@@ -488,7 +482,7 @@ export default function AdminRecipeDetailPage() {
 
         {(recipe.dietary_restrictions?.length ?? 0) === 0 && (
           <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--tm-text-3)" }}>
-            <Tag size={12} /> No dietary labels
+            <Tag size={12} /> {t.adminNoDietaryLabels}
           </div>
         )}
       </div>
@@ -502,7 +496,7 @@ export default function AdminRecipeDetailPage() {
         }}
       >
         <p className="text-[13px] font-bold mb-3" style={{ color: "var(--tm-text)" }}>
-          Translations
+          {t.adminTranslationsHeading}
         </p>
 
         <div className="flex flex-wrap gap-2 mb-3">
@@ -521,14 +515,14 @@ export default function AdminRecipeDetailPage() {
                 }}
               >
                 {loc}
-                {exists ? "" : " · new"}
+                {exists ? "" : t.adminNewLocaleSuffix}
               </button>
             );
           })}
         </div>
 
         <label className="block text-xs font-semibold mb-1" style={{ color: "var(--tm-text-2)" }}>
-          Title
+          {t.adminTitleLabel}
         </label>
         <input
           value={title}
@@ -542,7 +536,7 @@ export default function AdminRecipeDetailPage() {
         />
 
         <label className="block text-xs font-semibold mb-1" style={{ color: "var(--tm-text-2)" }}>
-          Ingredients (one per line)
+          {t.adminIngredientsOnePerLine}
         </label>
         <textarea
           value={ingredientsText}
@@ -557,7 +551,7 @@ export default function AdminRecipeDetailPage() {
         />
 
         <label className="block text-xs font-semibold mb-1" style={{ color: "var(--tm-text-2)" }}>
-          Directions (one per line)
+          {t.adminDirectionsOnePerLine}
         </label>
         <textarea
           value={directionsText}
@@ -579,7 +573,7 @@ export default function AdminRecipeDetailPage() {
             className="text-xs font-bold text-white px-3 py-2 rounded-lg"
             style={{ backgroundColor: accent }}
           >
-            {saving ? "Saving…" : `Save ${locale}`}
+            {saving ? t.saving : t.adminSaveLocale(locale)}
           </button>
           {existingLocales.has(locale) && (
             <button
@@ -589,7 +583,7 @@ export default function AdminRecipeDetailPage() {
               className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
               style={{ backgroundColor: "#F43F5E19", color: "#F43F5E" }}
             >
-              <Trash2 size={13} /> Delete {locale}
+              <Trash2 size={13} /> {t.adminDeleteLocale(locale)}
             </button>
           )}
         </div>
@@ -597,9 +591,9 @@ export default function AdminRecipeDetailPage() {
 
       {confirmDeleteLocale && (
         <ConfirmDialog
-          title="Delete translation?"
-          message={`Remove the "${locale}" translation for "${recipe.title}"?`}
-          confirmLabel="Delete"
+          title={t.adminDeleteTranslationTitle}
+          message={t.adminDeleteTranslationMessage(locale, recipe.title)}
+          confirmLabel={t.delete}
           confirmColor="#F43F5E"
           onConfirm={() => void handleDeleteTranslation()}
           onCancel={() => setConfirmDeleteLocale(false)}
@@ -608,9 +602,9 @@ export default function AdminRecipeDetailPage() {
 
       {confirmDeleteRecipe && (
         <ConfirmDialog
-          title="Delete recipe?"
-          message={`"${recipe.title}" will be permanently deleted.`}
-          confirmLabel="Delete"
+          title={t.adminDeleteRecipeTitle}
+          message={t.adminDeleteRecipeMessage(recipe.title)}
+          confirmLabel={t.delete}
           confirmColor="#F43F5E"
           onConfirm={() => void handleDeleteRecipe()}
           onCancel={() => setConfirmDeleteRecipe(false)}

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { getCurrentUser, hasAccessToken, type CurrentUser } from "@/lib/auth";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
+import { useStrings } from "@/lib/use-strings";
 import { ApiError } from "@/lib/api-client";
 import { getAdminOverview, type AdminOverview } from "@/lib/api/admin-overview";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK, CATEGORICAL, relativeTime } from "@/lib/admin";
@@ -21,6 +23,8 @@ import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK, CATEGORICAL, relativeTime } from
 export default function AdminOverviewPage() {
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const lang = useLang();
+  const t = useStrings();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,9 +37,7 @@ export default function AdminOverviewPage() {
   const load = useCallback(async () => {
     if (!hasAccessToken()) {
       setOverview(null);
-      setError(
-        "No API token. Sign in with a real admin account (not Admin Bypass) to see live stats.",
-      );
+      setError(t.adminNoTokenStats);
       setLoading(false);
       return;
     }
@@ -48,18 +50,15 @@ export default function AdminOverviewPage() {
     } catch (err) {
       setOverview(null);
       if (err instanceof ApiError) {
-        setError(
-          err.status === 403
-            ? "Admin role required to view live stats."
-            : err.message,
-        );
+        setError(err.status === 403 ? t.adminRoleRequiredStats : err.message);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load stats");
+        setError(err instanceof Error ? err.message : t.adminFailedLoadStats);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -68,13 +67,13 @@ export default function AdminOverviewPage() {
   const tiles = overview
     ? [
         {
-          label: "Total recipes",
+          label: t.adminTotalRecipes,
           value: overview.total_recipes.toLocaleString(),
           icon: BookOpen,
           colorIndex: 2,
         },
         {
-          label: "Total users",
+          label: t.adminTotalUsers,
           value: overview.total_users.toLocaleString(),
           icon: Users,
           colorIndex: 6,
@@ -93,12 +92,12 @@ export default function AdminOverviewPage() {
         }}
       >
         <div>
-          <p className="text-xs text-white/80">Welcome back,</p>
+          <p className="text-xs text-white/80">{t.adminWelcomeBack}</p>
           <p className="text-xl font-extrabold text-white tracking-tight">
-            {user?.name ?? "Admin"}
+            {user?.name ?? t.adminFallbackName}
           </p>
           <span className="inline-block mt-2 text-[11px] font-semibold text-white px-2.5 py-1 rounded-full bg-white/20">
-            Administrator
+            {t.adminAdministrator}
           </span>
         </div>
         <div
@@ -111,7 +110,7 @@ export default function AdminOverviewPage() {
 
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-bold" style={{ color: "var(--tm-text)" }}>
-          Overview
+          {t.adminOverviewTitle}
         </p>
         <button
           type="button"
@@ -121,7 +120,7 @@ export default function AdminOverviewPage() {
           style={{ backgroundColor: `${accent}1F`, color: accent }}
         >
           <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
-          Refresh
+          {t.refresh}
         </button>
       </div>
 
@@ -179,7 +178,7 @@ export default function AdminOverviewPage() {
 
       {/* Recent activity — mixed feed of new users and new recipes */}
       <p className="text-sm font-bold mb-2" style={{ color: "var(--tm-text)" }}>
-        Recent Activity
+        {t.adminRecentActivity}
       </p>
       <div
         className="rounded-2xl overflow-hidden"
@@ -187,7 +186,7 @@ export default function AdminOverviewPage() {
       >
         {overview && overview.recent_activities.length === 0 && (
           <p className="text-sm px-3.5 py-4" style={{ color: "var(--tm-text-2)" }}>
-            No activity yet.
+            {t.adminNoActivityYet}
           </p>
         )}
         {(overview?.recent_activities ?? []).map((activity, i) => {
@@ -213,7 +212,7 @@ export default function AdminOverviewPage() {
                     {u.full_name || u.username || u.email}
                   </p>
                   <p className="text-[11px]" style={{ color: "var(--tm-text-2)" }}>
-                    New user joined {relativeTime(activity.created_at)}
+                    {t.adminNewUserJoined(relativeTime(activity.created_at, lang))}
                   </p>
                 </div>
               </div>
@@ -241,7 +240,7 @@ export default function AdminOverviewPage() {
                   {r.title}
                 </p>
                 <p className="text-[11px]" style={{ color: "var(--tm-text-2)" }}>
-                  Recipe added {relativeTime(activity.created_at)} · {isPublic ? "Public" : "Private"}
+                  {t.adminRecipeAdded(relativeTime(activity.created_at, lang), isPublic ? t.publicLabel : t.privateLabel)}
                 </p>
               </div>
               <ChevronRight size={16} color="var(--tm-text-3)" className="shrink-0" />

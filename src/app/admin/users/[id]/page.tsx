@@ -24,6 +24,9 @@ import {
   Utensils,
 } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
+import { useStrings } from "@/lib/use-strings";
+import type { Strings } from "@/lib/strings";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
@@ -94,16 +97,18 @@ function RecipeList({
   loading,
   emptyLabel,
   accent,
+  t,
 }: {
   items: ApiRecipe[] | null;
   loading: boolean;
   emptyLabel: string;
   accent: string;
+  t: Strings;
 }) {
   if (loading && items === null) {
     return (
       <p className="text-center text-sm py-10" style={{ color: "var(--tm-text-2)" }}>
-        Loading…
+        {t.loading}
       </p>
     );
   }
@@ -144,7 +149,7 @@ function RecipeList({
               {r.title}
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: "var(--tm-text-2)" }}>
-              {r.visibility === "public" ? "Public" : "Private"}
+              {r.visibility === "public" ? t.publicLabel : t.privateLabel}
             </p>
           </div>
         </Link>
@@ -158,6 +163,8 @@ export default function AdminUserDetailPage() {
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const lang = useLang();
+  const t = useStrings();
   const userId = Number(params.id);
 
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
@@ -178,7 +185,7 @@ export default function AdminUserDetailPage() {
       return;
     }
     if (!hasAccessToken()) {
-      setError("No API token. Sign in with a real admin account (not Admin Bypass).");
+      setError(t.adminNoTokenGeneric);
       setLoading(false);
       return;
     }
@@ -190,14 +197,15 @@ export default function AdminUserDetailPage() {
     } catch (err) {
       setDetail(null);
       if (err instanceof ApiError) {
-        setError(err.status === 404 ? "User not found." : err.message || "Failed to load user");
+        setError(err.status === 404 ? t.adminUserNotFound : err.message || t.adminFailedLoadUser);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load user");
+        setError(err instanceof Error ? err.message : t.adminFailedLoadUser);
       }
     } finally {
       setLoading(false);
     }
-  }, [userId, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, router, t]);
 
   useEffect(() => {
     void load();
@@ -230,7 +238,7 @@ export default function AdminUserDetailPage() {
       const updated = await updateAdminUser(detail.user.id, { is_active: next });
       setDetail({ ...detail, user: updated });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to update user");
+      setError(err instanceof ApiError ? err.message : t.adminFailedUpdateUser);
     } finally {
       setToggling(false);
     }
@@ -240,7 +248,7 @@ export default function AdminUserDetailPage() {
     return (
       <div className="p-4 max-w-2xl mx-auto">
         <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>
-          Loading user…
+          {t.adminLoadingUser}
         </p>
       </div>
     );
@@ -260,7 +268,7 @@ export default function AdminUserDetailPage() {
           className="flex items-center gap-1.5 text-xs font-semibold"
           style={{ color: "var(--tm-text-2)" }}
         >
-          <ArrowLeft size={14} /> Back to users
+          <ArrowLeft size={14} /> {t.adminBackToUsers}
         </button>
       </div>
     );
@@ -271,9 +279,9 @@ export default function AdminUserDetailPage() {
   const avatar = avatarColor(name, isDark);
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: "profile", label: "Profile" },
-    { key: "saved", label: `Saved (${saved_count})` },
-    { key: "recipes", label: `Recipes (${recipes_count})` },
+    { key: "profile", label: t.adminProfileTab },
+    { key: "saved", label: t.adminSavedTab(saved_count) },
+    { key: "recipes", label: t.adminRecipesTab(recipes_count) },
   ];
 
   return (
@@ -285,14 +293,14 @@ export default function AdminUserDetailPage() {
           className="flex items-center gap-1.5 text-xs font-semibold"
           style={{ color: "var(--tm-text-2)" }}
         >
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={14} /> {t.back}
         </button>
         <Link
           href={`/admin/users/${user.id}/edit`}
           className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg"
           style={{ backgroundColor: `${accent}1F`, color: accent }}
         >
-          <Pencil size={13} /> Edit
+          <Pencil size={13} /> {t.edit}
         </Link>
       </div>
 
@@ -329,23 +337,23 @@ export default function AdminUserDetailPage() {
               }}
             >
               {user.role === "admin" ? <Shield size={11} /> : <UserIcon size={11} />}
-              {user.role === "admin" ? "Admin" : "User"}
+              {user.role === "admin" ? t.adminRoleLabel : t.userRoleLabel}
             </span>
             <span
               className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full"
               style={{ backgroundColor: "var(--tm-subtle)", color: user.is_active ? "#10B981" : "#F43F5E" }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: user.is_active ? "#10B981" : "#F43F5E" }} />
-              {user.is_active ? "Active" : "Inactive"}
+              {user.is_active ? t.active : t.inactive}
             </span>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0 text-[11px] font-semibold" style={{ color: "var(--tm-text-2)" }}>
           <span className="flex items-center gap-1">
-            <BookOpen size={11} /> {recipes_count} recipes
+            <BookOpen size={11} /> {t.adminRecipesCountStat(recipes_count)}
           </span>
           <span className="flex items-center gap-1">
-            <Heart size={11} /> {saved_count} saved
+            <Heart size={11} /> {t.adminSavedCountStat(saved_count)}
           </span>
         </div>
       </div>
@@ -367,34 +375,34 @@ export default function AdminUserDetailPage() {
 
       {tab === "profile" && (
         <div className="space-y-3">
-          <InfoCard title="Account" icon={UserIcon} accent={accent}>
-            <InfoRow icon={Hash} label="User ID" value={`#${user.id}`} accent={accent} />
-            <InfoRow icon={AtSign} label="Username" value={user.username} accent={accent} />
-            <InfoRow icon={Mail} label="Email" value={user.email} accent={accent} />
+          <InfoCard title={t.adminAccountCardTitle} icon={UserIcon} accent={accent}>
+            <InfoRow icon={Hash} label={t.adminUserIdLabel} value={`#${user.id}`} accent={accent} />
+            <InfoRow icon={AtSign} label={t.adminUsernameLabel} value={user.username} accent={accent} />
+            <InfoRow icon={Mail} label={t.emailLabel} value={user.email} accent={accent} />
             <InfoRow
               icon={CalendarDays}
-              label="Joined"
-              value={user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}
+              label={t.adminJoinedLabel}
+              value={user.created_at ? new Date(user.created_at).toLocaleDateString(lang === "vi" ? "vi-VN" : "en-US") : "—"}
               accent={accent}
             />
           </InfoCard>
 
-          <InfoCard title="Nutrition Goals" icon={Flame} accent={accent}>
-            <InfoRow icon={Cake} label="Age" value={user.age ? `${user.age} years` : "—"} accent={accent} />
-            <InfoRow icon={Weight} label="Weight" value={user.weight ? `${user.weight} kg` : "—"} accent={accent} />
+          <InfoCard title={t.adminNutritionGoalsCardTitle} icon={Flame} accent={accent}>
+            <InfoRow icon={Cake} label={t.ageLabel} value={user.age ? t.adminAgeYears(user.age) : "—"} accent={accent} />
+            <InfoRow icon={Weight} label={t.weightLabel} value={user.weight ? t.adminWeightKg(user.weight) : "—"} accent={accent} />
             <InfoRow
               icon={Flame}
-              label="Calorie Target"
-              value={user.calorie_target ? `${user.calorie_target} cal/day` : "—"}
+              label={t.dailyCalorieTarget}
+              value={user.calorie_target ? t.adminCalorieDay(user.calorie_target) : "—"}
               accent={accent}
             />
-            <InfoRow icon={Flag} label="Primary Goal" value={user.primary_goal ?? "—"} accent={accent} />
+            <InfoRow icon={Flag} label={t.primaryGoalLabel} value={user.primary_goal ? t.goalDisplay(user.primary_goal) : "—"} accent={accent} />
           </InfoCard>
 
-          <InfoCard title="Dietary Restrictions" icon={Tag} accent={accent}>
+          <InfoCard title={t.adminDietaryRestrictionsCardTitle} icon={Tag} accent={accent}>
             {user.dietary_restrictions.length === 0 ? (
               <p className="text-xs pt-1" style={{ color: "var(--tm-text-2)" }}>
-                None specified
+                {t.adminNoneSpecified}
               </p>
             ) : (
               <div className="flex flex-wrap gap-1.5 pt-2">
@@ -404,7 +412,7 @@ export default function AdminUserDetailPage() {
                     className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
                     style={{ backgroundColor: `${accent}1A`, color: accent }}
                   >
-                    {tagName}
+                    {t.dietaryTagDisplay(tagName)}
                   </span>
                 ))}
               </div>
@@ -419,27 +427,27 @@ export default function AdminUserDetailPage() {
             style={{ color: user.is_active ? "#F43F5E" : "#10B981", borderColor: user.is_active ? "#F43F5E" : "#10B981" }}
           >
             {user.is_active ? <Ban size={16} /> : <CheckCircle2 size={16} />}
-            {user.is_active ? "Deactivate Account" : "Activate Account"}
+            {user.is_active ? t.adminDeactivateAccount : t.adminActivateAccount}
           </button>
         </div>
       )}
 
       {tab === "saved" && (
-        <RecipeList items={savedRecipes} loading={savedLoading} emptyLabel="No saved recipes yet" accent={accent} />
+        <RecipeList items={savedRecipes} loading={savedLoading} emptyLabel={t.adminNoSavedRecipesYet} accent={accent} t={t} />
       )}
       {tab === "recipes" && (
-        <RecipeList items={createdRecipes} loading={createdLoading} emptyLabel="No recipes created yet" accent={accent} />
+        <RecipeList items={createdRecipes} loading={createdLoading} emptyLabel={t.adminNoCreatedRecipesYet} accent={accent} t={t} />
       )}
 
       {confirming && (
         <ConfirmDialog
-          title={`${user.is_active ? "Deactivate" : "Activate"} Account?`}
+          title={user.is_active ? t.adminDeactivateAccountTitle : t.adminActivateAccountTitle}
           message={
             user.is_active
-              ? `${name} will lose access to the app.`
-              : `${name} will regain access to the app.`
+              ? t.adminWillLoseAccess(name)
+              : t.adminWillRegainAccess(name)
           }
-          confirmLabel={user.is_active ? "Deactivate" : "Activate"}
+          confirmLabel={user.is_active ? t.deactivateLabel : t.activateLabel}
           confirmColor={user.is_active ? "#F43F5E" : "#10B981"}
           onConfirm={() => void handleToggleActive()}
           onCancel={() => setConfirming(false)}

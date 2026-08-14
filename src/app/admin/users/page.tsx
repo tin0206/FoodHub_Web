@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
+import type { Strings } from "@/lib/strings";
 import {
   ADMIN_ACCENT_LIGHT,
   ADMIN_ACCENT_DARK,
@@ -26,16 +28,9 @@ import type { ApiUser } from "@/lib/api/types";
 
 type UserFilter = "" | "admin" | "active" | "inactive";
 
-const FILTERS: { value: UserFilter; label: string }[] = [
-  { value: "", label: "All" },
-  { value: "admin", label: "Admin" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-];
-
 const PAGE_SIZE = 20;
 
-function RoleBadge({ role, accent }: { role: string; accent: string }) {
+function RoleBadge({ role, accent, t }: { role: string; accent: string; t: Strings }) {
   const isAdmin = role === "admin";
   return (
     <span
@@ -46,7 +41,7 @@ function RoleBadge({ role, accent }: { role: string; accent: string }) {
       }}
     >
       {isAdmin ? <Shield size={10} /> : <UserIcon size={10} />}
-      {isAdmin ? "Admin" : "User"}
+      {isAdmin ? t.adminRoleLabel : t.userRoleLabel}
     </span>
   );
 }
@@ -54,6 +49,13 @@ function RoleBadge({ role, accent }: { role: string; accent: string }) {
 export default function AdminUsersPage() {
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const t = useStrings();
+  const FILTERS: { value: UserFilter; label: string }[] = [
+    { value: "", label: t.filterAll },
+    { value: "admin", label: t.filterAdmin },
+    { value: "active", label: t.filterActive },
+    { value: "inactive", label: t.filterInactive },
+  ];
   const [users, setUsers] = useState<ApiUser[] | null>(null);
   const [filter, setFilter] = useState<UserFilter>("");
   const [query, setQuery] = useState("");
@@ -75,9 +77,7 @@ export default function AdminUsersPage() {
     if (!hasAccessToken()) {
       setUsers([]);
       setHasNext(false);
-      setError(
-        "No API token. Sign in with a real admin account (not Admin Bypass) to manage users.",
-      );
+      setError(t.adminNoTokenUsers);
       setLoading(false);
       return;
     }
@@ -124,18 +124,15 @@ export default function AdminUsersPage() {
       setUsers([]);
       setHasNext(false);
       if (err instanceof ApiError) {
-        setError(
-          err.status === 403
-            ? "Admin role required to list users."
-            : err.message,
-        );
+        setError(err.status === 403 ? t.adminRoleRequiredUsersList : err.message);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load users");
+        setError(err instanceof Error ? err.message : t.adminFailedLoadUsers);
       }
     } finally {
       setLoading(false);
     }
-  }, [filter, page, debouncedQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, page, debouncedQuery, t]);
 
   useEffect(() => {
     void load();
@@ -153,7 +150,7 @@ export default function AdminUsersPage() {
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-3 gap-2">
         <p className="text-sm font-bold" style={{ color: "var(--tm-text)" }}>
-          Users
+          {t.adminUsersTitle}
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -167,14 +164,14 @@ export default function AdminUsersPage() {
               size={14}
               className={loading ? "animate-spin" : undefined}
             />
-            Refresh
+            {t.refresh}
           </button>
           <Link
             href="/admin/users/new"
             className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-2 rounded-lg"
             style={{ backgroundColor: accent }}
           >
-            <Plus size={14} /> Add User
+            <Plus size={14} /> {t.adminAddUser}
           </Link>
         </div>
       </div>
@@ -190,10 +187,10 @@ export default function AdminUsersPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, email, username…"
+          placeholder={t.adminSearchUsersHint}
           className="flex-1 min-w-0 bg-transparent outline-none text-sm"
           style={{ color: "var(--tm-text)" }}
-          aria-label="Search users"
+          aria-label={t.adminSearchUsersHint}
         />
         {query && (
           <button
@@ -261,12 +258,10 @@ export default function AdminUsersPage() {
             className="text-sm font-semibold"
             style={{ color: "var(--tm-text)" }}
           >
-            No users found
+            {t.adminNoUsersFound}
           </p>
           <p className="text-xs" style={{ color: "var(--tm-text-2)" }}>
-            {debouncedQuery
-              ? "Try another search term or clear the search."
-              : "Try another filter."}
+            {debouncedQuery ? t.adminTryAnotherSearch : t.adminTryAnotherFilter}
           </p>
         </div>
       ) : users && users.length > 0 ? (
@@ -311,7 +306,7 @@ export default function AdminUsersPage() {
                       >
                         {name}
                       </p>
-                      <RoleBadge role={u.role} accent={accent} />
+                      <RoleBadge role={u.role} accent={accent} t={t} />
                     </div>
                     <p
                       className="text-[11.5px] truncate"
@@ -330,7 +325,7 @@ export default function AdminUsersPage() {
                         backgroundColor: u.is_active ? "#10B981" : "#F43F5E",
                       }}
                     />
-                    {u.is_active ? "Active" : "Inactive"}
+                    {u.is_active ? t.active : t.inactive}
                   </span>
                 </Link>
               );
@@ -339,9 +334,7 @@ export default function AdminUsersPage() {
 
           <div className="flex items-center justify-between mt-3 gap-2">
             <p className="text-[11px]" style={{ color: "var(--tm-text-3)" }}>
-              Showing {rangeStart}–{rangeEnd} of {rangeEnd}
-              {hasNext ? "+" : ""} users
-              {debouncedQuery ? ` · "${debouncedQuery}"` : ""}
+              {t.adminShowingUsers(rangeStart, rangeEnd, hasNext, debouncedQuery)}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -354,7 +347,7 @@ export default function AdminUsersPage() {
                   color: "var(--tm-text-2)",
                 }}
               >
-                <ChevronLeft size={14} /> Prev
+                <ChevronLeft size={14} /> {t.prev}
               </button>
               <button
                 type="button"
@@ -363,7 +356,7 @@ export default function AdminUsersPage() {
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-40"
                 style={{ backgroundColor: `${accent}1F`, color: accent }}
               >
-                Next <ChevronRight size={14} />
+                {t.next} <ChevronRight size={14} />
               </button>
             </div>
           </div>

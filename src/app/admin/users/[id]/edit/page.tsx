@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AdminUserForm } from "@/components/admin/user-form";
 import { hasAccessToken } from "@/lib/auth";
+import { useStrings } from "@/lib/use-strings";
 import { ApiError } from "@/lib/api-client";
 import { getAdminUser } from "@/lib/api/admin-users";
 import type { ApiUser } from "@/lib/api/types";
@@ -11,6 +12,7 @@ import type { ApiUser } from "@/lib/api/types";
 export default function EditAdminUserPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useStrings();
   const userId = Number(params.id);
   const [user, setUser] = useState<ApiUser | null>(null);
   const [error, setError] = useState("");
@@ -22,7 +24,7 @@ export default function EditAdminUserPage() {
       return;
     }
     if (!hasAccessToken()) {
-      setError("Sign in with a real admin account to edit users.");
+      setError(t.adminSignInEditUsers);
       setLoading(false);
       return;
     }
@@ -37,9 +39,9 @@ export default function EditAdminUserPage() {
           setError(
             err instanceof ApiError
               ? err.status === 404
-                ? "User not found."
+                ? t.adminUserNotFound
                 : err.message
-              : "Failed to load user",
+              : t.adminFailedLoadUser,
           );
         }
       } finally {
@@ -50,13 +52,14 @@ export default function EditAdminUserPage() {
     return () => {
       cancelled = true;
     };
-  }, [userId, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, router, t]);
 
   if (loading) {
     return (
       <div className="p-4 max-w-2xl mx-auto">
         <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>
-          Loading user…
+          {t.adminLoadingUser}
         </p>
       </div>
     );
@@ -66,7 +69,7 @@ export default function EditAdminUserPage() {
     return (
       <div className="p-4 max-w-2xl mx-auto">
         <p className="text-sm" style={{ color: "#F43F5E" }}>
-          {error || "User not found."}
+          {error || t.adminUserNotFound}
         </p>
       </div>
     );

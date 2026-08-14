@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AVAILABLE_LABELS, ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
+import type { Strings } from "@/lib/strings";
 import { ApiError } from "@/lib/api-client";
 import {
   createAdminUser,
@@ -27,9 +29,9 @@ function FieldCard({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function getPasswordError(val: string): string {
-  if (!val) return "Please enter a password.";
-  if (val.length < 6) return "Password must be at least 6 characters.";
+function getPasswordError(val: string, t: Strings): string {
+  if (!val) return t.adminPasswordRequired;
+  if (val.length < 6) return t.adminPasswordTooShort;
   return "";
 }
 
@@ -37,6 +39,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const t = useStrings();
 
   const [fullName, setFullName] = useState(initial?.full_name ?? "");
   const [username, setUsername] = useState(initial?.username ?? "");
@@ -79,11 +82,11 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim();
     if (!trimmedUsername || !trimmedEmail) {
-      setError("Please fill in username and email.");
+      setError(t.adminUsernameEmailRequired);
       return;
     }
     if (!initial) {
-      const pwErr = getPasswordError(password);
+      const pwErr = getPasswordError(password, t);
       setPasswordError(pwErr);
       if (pwErr) {
         setError(pwErr);
@@ -131,7 +134,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           notify_weekly_summary: true,
         };
         const created = await createAdminUser(payload);
-        setSuccess(`User "${created.username}" created successfully.`);
+        setSuccess(t.adminUserCreatedSuccess(created.username));
         setFullName("");
         setUsername("");
         setEmail("");
@@ -148,7 +151,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
       }
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Failed to save user",
+        err instanceof ApiError ? err.message : err instanceof Error ? err.message : t.adminFailedSaveUser,
       );
     } finally {
       setSaving(false);
@@ -166,11 +169,11 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         className="flex items-center gap-1.5 text-xs font-semibold mb-3"
         style={{ color: "var(--tm-text-2)" }}
       >
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t.back}
       </button>
 
       <div className="space-y-2.5">
-        <FieldCard label="Full name">
+        <FieldCard label={t.adminFullNameFieldLabel}>
           <input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
@@ -181,7 +184,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         </FieldCard>
 
         <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label="Username">
+          <FieldCard label={t.adminUsernameFieldLabel}>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -190,7 +193,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               style={inputStyle}
             />
           </FieldCard>
-          <FieldCard label="Email">
+          <FieldCard label={t.adminEmailFieldLabel}>
             <input
               type="email"
               value={email}
@@ -203,16 +206,16 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         </div>
 
         {!initial && (
-          <FieldCard label="Password">
+          <FieldCard label={t.adminPasswordFieldLabel}>
             <input
               type="text"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                if (passwordError) setPasswordError(getPasswordError(e.target.value));
+                if (passwordError) setPasswordError(getPasswordError(e.target.value, t));
               }}
-              onBlur={() => setPasswordError(getPasswordError(password))}
-              placeholder="At least 6 characters"
+              onBlur={() => setPasswordError(getPasswordError(password, t))}
+              placeholder={t.adminPasswordHint}
               className={inputClass}
               style={inputStyle}
             />
@@ -225,18 +228,18 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         )}
 
         <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label="Role">
+          <FieldCard label={t.adminRoleFieldLabel}>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className={inputClass}
               style={inputStyle}
             >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+              <option value="user">{t.userRoleLabel}</option>
+              <option value="admin">{t.adminRoleLabel}</option>
             </select>
           </FieldCard>
-          <FieldCard label="Status">
+          <FieldCard label={t.adminStatusFieldLabel}>
             <button
               type="button"
               onClick={() => setIsActive((v) => !v)}
@@ -244,13 +247,13 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               style={{ color: isActive ? "#10B981" : "#F43F5E" }}
             >
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isActive ? "#10B981" : "#F43F5E" }} />
-              {isActive ? "Active" : "Inactive"}
+              {isActive ? t.active : t.inactive}
             </button>
           </FieldCard>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label="Age">
+          <FieldCard label={t.adminAgeFieldLabel}>
             <input
               value={age}
               onChange={(e) => setAge(e.target.value.replace(/[^0-9]/g, ""))}
@@ -259,7 +262,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               style={inputStyle}
             />
           </FieldCard>
-          <FieldCard label="Weight (kg)">
+          <FieldCard label={t.adminWeightFieldLabel}>
             <input
               value={weight}
               onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ""))}
@@ -271,7 +274,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label="Calorie target (cal/day)">
+          <FieldCard label={t.adminCalorieTargetFieldLabel}>
             <input
               value={calorieTarget}
               onChange={(e) => setCalorieTarget(e.target.value.replace(/[^0-9]/g, ""))}
@@ -280,7 +283,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               style={inputStyle}
             />
           </FieldCard>
-          <FieldCard label="Protein target (g/day)">
+          <FieldCard label={t.adminProteinTargetFieldLabel}>
             <input
               value={proteinTarget}
               onChange={(e) => setProteinTarget(e.target.value.replace(/[^0-9]/g, ""))}
@@ -291,17 +294,17 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           </FieldCard>
         </div>
 
-        <FieldCard label="Primary goal">
+        <FieldCard label={t.adminPrimaryGoalFieldLabel}>
           <input
             value={primaryGoal}
             onChange={(e) => setPrimaryGoal(e.target.value)}
-            placeholder="e.g. Build Muscle"
+            placeholder={t.adminPrimaryGoalHint}
             className={inputClass}
             style={inputStyle}
           />
         </FieldCard>
 
-        <FieldCard label="Dietary restrictions">
+        <FieldCard label={t.adminDietaryRestrictionsFieldLabel}>
           <div className="flex flex-wrap gap-1.5 pt-1">
             {AVAILABLE_LABELS.map((label) => {
               const selected = restrictions.has(label);
@@ -317,7 +320,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
                     borderColor: selected ? accent : "var(--tm-border-i)",
                   }}
                 >
-                  {label}
+                  {t.dietaryTagDisplay(label)}
                 </button>
               );
             })}
@@ -343,7 +346,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
             className="flex-1 h-11 rounded-xl text-sm font-bold border-2"
             style={{ backgroundColor: "var(--tm-surface)", color: "var(--tm-text)", borderColor: "var(--tm-border-i)" }}
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -352,7 +355,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
             className="flex-1 h-11 rounded-xl text-sm font-bold text-white disabled:opacity-60"
             style={{ backgroundColor: accent }}
           >
-            {saving ? "Saving…" : initial ? "Save Changes" : "Add User"}
+            {saving ? t.saving : initial ? t.adminSaveUserChanges : t.adminAddUserCta}
           </button>
         </div>
       </div>

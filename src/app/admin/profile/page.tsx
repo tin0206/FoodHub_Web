@@ -2,6 +2,6 @@
 
 import { ProfileEditor } from "@/components/profile-editor";
 
-export default function ProfilePage() {
+export default function AdminProfilePage() {
   return <ProfileEditor />;
 }

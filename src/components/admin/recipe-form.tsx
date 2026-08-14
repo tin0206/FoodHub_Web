@@ -18,6 +18,7 @@ import {
   AVAILABLE_LABELS,
 } from "@/lib/admin";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
 import {
   createRecipe,
@@ -56,6 +57,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const t = useStrings();
   const isCatalog = initial != null && initial.created_by == null;
 
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? "");
@@ -114,14 +116,14 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
       cleanIngredients.length === 0 ||
       cleanSteps.length === 0
     ) {
-      setError("Title, ingredients, and instructions are required.");
+      setError(t.adminRecipeFieldsRequired);
       return;
     }
     if (
       servings.trim() &&
       (!Number.isFinite(servingsNum) || (servingsNum as number) <= 0)
     ) {
-      setError("Servings must be a positive number.");
+      setError(t.adminServingsMustBePositive);
       return;
     }
 
@@ -155,7 +157,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
           ? err.message
           : err instanceof Error
             ? err.message
-            : "Failed to save recipe";
+            : t.adminFailedSaveRecipe;
       setError(msg);
     } finally {
       setSaving(false);
@@ -174,7 +176,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
         className="flex items-center gap-1.5 text-xs font-semibold mb-3"
         style={{ color: "var(--tm-text-2)" }}
       >
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t.back}
       </button>
 
       {isCatalog && (
@@ -182,9 +184,9 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
           className="rounded-2xl p-3 mb-3 text-xs"
           style={{ backgroundColor: `${accent}14`, color: accent }}
         >
-          This is a shared catalog recipe. Saving will create a{" "}
-          <strong>private copy</strong> owned by you (API behavior) — the
-          original catalog entry is not overwritten.
+          {t.adminCatalogFormNotice}
+          <strong>{t.adminCatalogFormNoticeStrong}</strong>
+          {t.adminCatalogFormNoticeSuffix}
         </div>
       )}
 
@@ -196,7 +198,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               className="text-[13px] font-bold"
               style={{ color: "var(--tm-text)" }}
             >
-              Image URL
+              {t.adminImageUrlLabel}
             </span>
           </div>
           {previewSrc ? (
@@ -215,7 +217,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
             style={inputStyle}
           />
           <p className="text-[11px] mt-1" style={hintStyle}>
-            Use an API media path or absolute URL. Leave empty for no image.
+            {t.adminImageUrlHint}
           </p>
         </FieldCard>
 
@@ -223,7 +225,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Recipe name…"
+            placeholder={t.adminRecipeNameHint}
             className="w-full text-[17px] font-bold bg-transparent focus:outline-none tracking-tight"
             style={inputStyle}
           />
@@ -242,7 +244,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               style={inputStyle}
             />
             <span className="text-xs" style={hintStyle}>
-              servings (optional)
+              {t.adminServingsOptional}
             </span>
           </div>
         </FieldCard>
@@ -254,7 +256,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               className="text-[13px] font-bold"
               style={{ color: "var(--tm-text)" }}
             >
-              Ingredients
+              {t.adminIngredientsHeading}
             </span>
           </div>
           <div className="space-y-1.5">
@@ -269,7 +271,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
                   onChange={(e) =>
                     updateAt(ingredients, setIngredients, i, e.target.value)
                   }
-                  placeholder={`Ingredient ${i + 1}`}
+                  placeholder={t.adminIngredientHint(i)}
                   className="flex-1 text-[13px] bg-transparent focus:outline-none py-1"
                   style={inputStyle}
                 />
@@ -293,7 +295,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
             className="mt-2 flex items-center gap-1 text-xs font-semibold"
             style={{ color: accent }}
           >
-            <Plus size={14} /> Add ingredient
+            <Plus size={14} /> {t.adminAddIngredient}
           </button>
         </FieldCard>
 
@@ -304,7 +306,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               className="text-[13px] font-bold"
               style={{ color: "var(--tm-text)" }}
             >
-              Instructions
+              {t.adminInstructionsHeading}
             </span>
           </div>
           <div className="space-y-1.5">
@@ -321,7 +323,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
                   onChange={(e) =>
                     updateAt(steps, setSteps, i, e.target.value)
                   }
-                  placeholder={`Step ${i + 1}…`}
+                  placeholder={t.adminStepHint(i)}
                   rows={1}
                   className="flex-1 text-[13px] bg-transparent focus:outline-none py-1 resize-none"
                   style={inputStyle}
@@ -346,7 +348,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
             className="mt-2 flex items-center gap-1 text-xs font-semibold"
             style={{ color: accent }}
           >
-            <Plus size={14} /> Add step
+            <Plus size={14} /> {t.adminAddStep}
           </button>
         </FieldCard>
 
@@ -357,7 +359,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               className="text-[13px] font-bold"
               style={{ color: "var(--tm-text)" }}
             >
-              Dietary labels
+              {t.adminDietaryLabelsHeading}
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -375,7 +377,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
                     borderColor: selected ? accent : "var(--tm-border-i)",
                   }}
                 >
-                  {label}
+                  {t.dietaryTagDisplay(label)}
                 </button>
               );
             })}
@@ -399,7 +401,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               borderColor: "var(--tm-border-i)",
             }}
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -409,12 +411,12 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
             style={{ backgroundColor: accent }}
           >
             {saving
-              ? "Saving…"
+              ? t.saving
               : initial
                 ? isCatalog
-                  ? "Save as private copy"
-                  : "Save Changes"
-                : "Save Recipe"}
+                  ? t.adminSaveAsPrivateCopy
+                  : t.adminSaveRecipeChanges
+                : t.adminSaveRecipeCta}
           </button>
         </div>
       </div>

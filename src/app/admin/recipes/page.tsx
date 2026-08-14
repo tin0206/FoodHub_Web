@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
@@ -27,6 +28,7 @@ const PAGE_SIZE = 20;
 export default function AdminRecipesPage() {
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
+  const t = useStrings();
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [filter, setFilter] = useState<VisibilityFilter>("");
   const [query, setQuery] = useState("");
@@ -48,9 +50,7 @@ export default function AdminRecipesPage() {
     if (!hasAccessToken()) {
       setRecipes([]);
       setHasNext(false);
-      setError(
-        "No API token. Sign in with a real admin account (not Admin Bypass) to manage recipes.",
-      );
+      setError(t.adminNoTokenRecipes);
       setLoading(false);
       return;
     }
@@ -92,18 +92,15 @@ export default function AdminRecipesPage() {
       setRecipes([]);
       setHasNext(false);
       if (err instanceof ApiError) {
-        setError(
-          err.status === 403
-            ? "Admin role required to list recipes."
-            : err.message,
-        );
+        setError(err.status === 403 ? t.adminRoleRequiredRecipesList : err.message);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load recipes");
+        setError(err instanceof Error ? err.message : t.adminFailedLoadRecipes);
       }
     } finally {
       setLoading(false);
     }
-  }, [filter, page, debouncedQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, page, debouncedQuery, t]);
 
   useEffect(() => {
     void load();
@@ -121,7 +118,7 @@ export default function AdminRecipesPage() {
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-3 gap-2">
         <p className="text-sm font-bold" style={{ color: "var(--tm-text)" }}>
-          Recipes
+          {t.adminRecipesTitle}
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -132,14 +129,14 @@ export default function AdminRecipesPage() {
             disabled={loading}
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : undefined} />
-            Refresh
+            {t.refresh}
           </button>
           <Link
             href="/admin/recipes/new"
             className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-2 rounded-lg"
             style={{ backgroundColor: accent }}
           >
-            <Plus size={14} /> New Recipe
+            <Plus size={14} /> {t.adminNewRecipe}
           </Link>
         </div>
       </div>
@@ -155,10 +152,10 @@ export default function AdminRecipesPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by title, id, ingredients…"
+          placeholder={t.adminSearchRecipesHint}
           className="flex-1 min-w-0 bg-transparent outline-none text-sm"
           style={{ color: "var(--tm-text)" }}
-          aria-label="Search recipes"
+          aria-label={t.adminSearchRecipesHint}
         />
         {query && (
           <button
@@ -176,9 +173,9 @@ export default function AdminRecipesPage() {
       <div className="flex gap-2 mb-3">
         {(
           [
-            { value: "" as VisibilityFilter, label: "All" },
-            { value: "public" as VisibilityFilter, label: "Public" },
-            { value: "private" as VisibilityFilter, label: "Private" },
+            { value: "" as VisibilityFilter, label: t.filterAll },
+            { value: "public" as VisibilityFilter, label: t.filterPublic },
+            { value: "private" as VisibilityFilter, label: t.filterPrivate },
           ]
         ).map((opt) => {
           const active = filter === opt.value;
@@ -226,12 +223,10 @@ export default function AdminRecipesPage() {
         >
           <BookOpen size={28} color="var(--tm-text-3)" />
           <p className="text-sm font-semibold" style={{ color: "var(--tm-text)" }}>
-            No recipes found
+            {t.adminNoRecipesFound}
           </p>
           <p className="text-xs" style={{ color: "var(--tm-text-2)" }}>
-            {debouncedQuery
-              ? "Try another search term or clear the search."
-              : "Try another visibility filter or seed the API database."}
+            {debouncedQuery ? t.adminTryAnotherSearch : t.adminTryAnotherVisibilityFilter}
           </p>
         </div>
       ) : recipes && recipes.length > 0 ? (
@@ -293,7 +288,7 @@ export default function AdminRecipesPage() {
                         }}
                       >
                         {isPublic ? <Eye size={11} /> : <EyeOff size={11} />}
-                        {r.visibility}
+                        {isPublic ? t.publicLabel : t.privateLabel}
                       </span>
                       <span
                         className="text-[11px]"
@@ -311,9 +306,7 @@ export default function AdminRecipesPage() {
 
           <div className="flex items-center justify-between mt-3 gap-2">
             <p className="text-[11px]" style={{ color: "var(--tm-text-3)" }}>
-              Showing {rangeStart}–{rangeEnd} of {rangeEnd}
-              {hasNext ? "+" : ""} recipes
-              {debouncedQuery ? ` · "${debouncedQuery}"` : ""}
+              {t.adminShowingRecipes(rangeStart, rangeEnd, hasNext, debouncedQuery)}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -326,7 +319,7 @@ export default function AdminRecipesPage() {
                   color: "var(--tm-text-2)",
                 }}
               >
-                <ChevronLeft size={14} /> Prev
+                <ChevronLeft size={14} /> {t.prev}
               </button>
               <button
                 type="button"
@@ -335,7 +328,7 @@ export default function AdminRecipesPage() {
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-40"
                 style={{ backgroundColor: `${accent}1F`, color: accent }}
               >
-                Next <ChevronRight size={14} />
+                {t.next} <ChevronRight size={14} />
               </button>
             </div>
           </div>
