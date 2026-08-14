@@ -311,10 +311,9 @@ export default function AdminRecipesPage() {
 
           <div className="flex items-center justify-between mt-3 gap-2">
             <p className="text-[11px]" style={{ color: "var(--tm-text-3)" }}>
-              Page {page + 1}
-              {recipes.length > 0 ? ` · ${rangeStart}–${rangeEnd}` : ""}
-              {hasNext ? "+" : ""}
-              {debouncedQuery ? ` · “${debouncedQuery}”` : ""}
+              Showing {rangeStart}–{rangeEnd} of {rangeEnd}
+              {hasNext ? "+" : ""} recipes
+              {debouncedQuery ? ` · "${debouncedQuery}"` : ""}
             </p>
             <div className="flex items-center gap-2">
               <button

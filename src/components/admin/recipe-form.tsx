@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Plus,
   X,
   ShoppingBasket,
@@ -167,6 +168,15 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-xs font-semibold mb-3"
+        style={{ color: "var(--tm-text-2)" }}
+      >
+        <ArrowLeft size={14} /> Back
+      </button>
+
       {isCatalog && (
         <div
           className="rounded-2xl p-3 mb-3 text-xs"
@@ -382,10 +392,11 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex-1 h-11 rounded-xl text-sm font-semibold"
+            className="flex-1 h-11 rounded-xl text-sm font-bold border-2"
             style={{
-              backgroundColor: "var(--tm-subtle)",
+              backgroundColor: "var(--tm-surface)",
               color: "var(--tm-text)",
+              borderColor: "var(--tm-border-i)",
             }}
           >
             Cancel

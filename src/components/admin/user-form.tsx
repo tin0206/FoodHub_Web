@@ -2,34 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AVAILABLE_LABELS,
-  saveAdminUser,
-  ADMIN_ACCENT_LIGHT,
-  ADMIN_ACCENT_DARK,
-  type AdminUser,
-} from "@/lib/admin";
+import { ArrowLeft } from "lucide-react";
+import { AVAILABLE_LABELS, ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { ApiError } from "@/lib/api-client";
+import {
+  createAdminUser,
+  updateAdminUser,
+  type AdminUserCreate,
+  type AdminUserUpdate,
+} from "@/lib/api/admin-users";
+import type { ApiUser } from "@/lib/api/types";
 
-function FieldCard({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+const DEFAULT_PASSWORD = "123456";
+
+function FieldCard({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div
-      className="rounded-2xl p-3.5"
-      style={{
-        backgroundColor: "var(--tm-surface)",
-        border: "1px solid var(--tm-border-i)",
-      }}
-    >
-      <label
-        className="block text-[11px] font-bold mb-1.5"
-        style={{ color: "var(--tm-text-2)" }}
-      >
+    <div className="rounded-2xl p-3.5" style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}>
+      <label className="block text-[11px] font-bold mb-1.5" style={{ color: "var(--tm-text-2)" }}>
         {label}
       </label>
       {children}
@@ -37,31 +27,38 @@ function FieldCard({
   );
 }
 
-export function AdminUserForm({ initial }: { initial?: AdminUser }) {
+function getPasswordError(val: string): string {
+  if (!val) return "Please enter a password.";
+  if (val.length < 6) return "Password must be at least 6 characters.";
+  return "";
+}
+
+export function AdminUserForm({ initial }: { initial?: ApiUser }) {
   const router = useRouter();
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
 
-  const [fullName, setFullName] = useState(initial?.fullName ?? "");
+  const [fullName, setFullName] = useState(initial?.full_name ?? "");
   const [username, setUsername] = useState(initial?.username ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
-  const [role, setRole] = useState<AdminUser["role"]>(initial?.role ?? "user");
-  const [isActive, setIsActive] = useState(initial?.isActive ?? true);
+  const [password, setPassword] = useState(DEFAULT_PASSWORD);
+  const [passwordError, setPasswordError] = useState("");
+  const [role, setRole] = useState(initial?.role ?? "user");
+  const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [age, setAge] = useState(initial?.age ? String(initial.age) : "");
-  const [weight, setWeight] = useState(
-    initial?.weight ? String(initial.weight) : "",
-  );
+  const [weight, setWeight] = useState(initial?.weight ? String(initial.weight) : "");
   const [calorieTarget, setCalorieTarget] = useState(
-    initial?.calorieTarget ? String(initial.calorieTarget) : "",
+    initial?.calorie_target ? String(initial.calorie_target) : "",
   );
   const [proteinTarget, setProteinTarget] = useState(
-    initial?.proteinTarget ? String(initial.proteinTarget) : "",
+    initial?.protein_target ? String(initial.protein_target) : "",
   );
-  const [primaryGoal, setPrimaryGoal] = useState(initial?.primaryGoal ?? "");
+  const [primaryGoal, setPrimaryGoal] = useState(initial?.primary_goal ?? "");
   const [restrictions, setRestrictions] = useState<Set<string>>(
-    new Set(initial?.dietaryRestrictions ?? []),
+    new Set(initial?.dietary_restrictions ?? []),
   );
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   function toggleRestriction(label: string) {
@@ -72,37 +69,90 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
     });
   }
 
-  function toNumber(v: string): number | undefined {
+  function toNumberOrNull(v: string): number | null {
     const n = Number.parseFloat(v);
-    return Number.isFinite(n) && v.trim() !== "" ? n : undefined;
+    return Number.isFinite(n) && v.trim() !== "" ? n : null;
   }
 
   async function handleSave() {
     if (saving) return;
-    const trimmedName = fullName.trim();
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim();
-    if (!trimmedName || !trimmedUsername || !trimmedEmail) {
-      setError("Please fill in name, username, and email.");
+    if (!trimmedUsername || !trimmedEmail) {
+      setError("Please fill in username and email.");
       return;
     }
+    if (!initial) {
+      const pwErr = getPasswordError(password);
+      setPasswordError(pwErr);
+      if (pwErr) {
+        setError(pwErr);
+        return;
+      }
+    }
+
     setError(null);
+    setSuccess(null);
     setSaving(true);
-    saveAdminUser({
-      id: initial?.id,
-      fullName: trimmedName,
-      username: trimmedUsername,
-      email: trimmedEmail,
-      role,
-      isActive,
-      age: toNumber(age),
-      weight: toNumber(weight),
-      calorieTarget: toNumber(calorieTarget),
-      proteinTarget: toNumber(proteinTarget),
-      primaryGoal: primaryGoal.trim() || undefined,
-      dietaryRestrictions: [...restrictions],
-    });
-    router.push(initial ? `/admin/users/${initial.id}` : "/admin/users");
+    try {
+      if (initial) {
+        const payload: AdminUserUpdate = {
+          full_name: fullName.trim() || null,
+          username: trimmedUsername,
+          email: trimmedEmail,
+          role,
+          is_active: isActive,
+          age: toNumberOrNull(age),
+          weight: toNumberOrNull(weight),
+          calorie_target: toNumberOrNull(calorieTarget),
+          protein_target: toNumberOrNull(proteinTarget),
+          primary_goal: primaryGoal.trim() || null,
+          dietary_restrictions: [...restrictions],
+        };
+        const updated = await updateAdminUser(initial.id, payload);
+        router.push(`/admin/users/${updated.id}`);
+      } else {
+        const payload: AdminUserCreate = {
+          email: trimmedEmail,
+          username: trimmedUsername,
+          password,
+          full_name: fullName.trim() || null,
+          role,
+          is_active: isActive,
+          age: toNumberOrNull(age),
+          weight: toNumberOrNull(weight),
+          calorie_target: toNumberOrNull(calorieTarget),
+          protein_target: toNumberOrNull(proteinTarget),
+          dietary_restrictions: [...restrictions],
+          primary_goal: primaryGoal.trim() || null,
+          language: "en",
+          notify_recommendations: true,
+          notify_new_features: true,
+          notify_weekly_summary: true,
+        };
+        const created = await createAdminUser(payload);
+        setSuccess(`User "${created.username}" created successfully.`);
+        setFullName("");
+        setUsername("");
+        setEmail("");
+        setPassword(DEFAULT_PASSWORD);
+        setPasswordError("");
+        setRole("user");
+        setIsActive(true);
+        setAge("");
+        setWeight("");
+        setCalorieTarget("");
+        setProteinTarget("");
+        setPrimaryGoal("");
+        setRestrictions(new Set());
+      }
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Failed to save user",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   const inputClass = "w-full text-sm bg-transparent focus:outline-none py-1";
@@ -110,6 +160,15 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-xs font-semibold mb-3"
+        style={{ color: "var(--tm-text-2)" }}
+      >
+        <ArrowLeft size={14} /> Back
+      </button>
+
       <div className="space-y-2.5">
         <FieldCard label="Full name">
           <input
@@ -143,11 +202,33 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
           </FieldCard>
         </div>
 
+        {!initial && (
+          <FieldCard label="Password">
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError(getPasswordError(e.target.value));
+              }}
+              onBlur={() => setPasswordError(getPasswordError(password))}
+              placeholder="At least 6 characters"
+              className={inputClass}
+              style={inputStyle}
+            />
+            {passwordError && (
+              <p className="text-[11px] mt-1" style={{ color: "#d03b3b" }}>
+                {passwordError}
+              </p>
+            )}
+          </FieldCard>
+        )}
+
         <div className="grid grid-cols-2 gap-2.5">
           <FieldCard label="Role">
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as AdminUser["role"])}
+              onChange={(e) => setRole(e.target.value)}
               className={inputClass}
               style={inputStyle}
             >
@@ -162,10 +243,7 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
               className="flex items-center gap-2 text-sm font-semibold py-1"
               style={{ color: isActive ? "#10B981" : "#F43F5E" }}
             >
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: isActive ? "#10B981" : "#F43F5E" }}
-              />
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isActive ? "#10B981" : "#F43F5E" }} />
               {isActive ? "Active" : "Inactive"}
             </button>
           </FieldCard>
@@ -176,7 +254,7 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
             <input
               value={age}
               onChange={(e) => setAge(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="—"
+              placeholder="e.g. 28"
               className={inputClass}
               style={inputStyle}
             />
@@ -184,10 +262,8 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
           <FieldCard label="Weight (kg)">
             <input
               value={weight}
-              onChange={(e) =>
-                setWeight(e.target.value.replace(/[^0-9.]/g, ""))
-              }
-              placeholder="—"
+              onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ""))}
+              placeholder="e.g. 65"
               className={inputClass}
               style={inputStyle}
             />
@@ -198,10 +274,8 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
           <FieldCard label="Calorie target (cal/day)">
             <input
               value={calorieTarget}
-              onChange={(e) =>
-                setCalorieTarget(e.target.value.replace(/[^0-9]/g, ""))
-              }
-              placeholder="—"
+              onChange={(e) => setCalorieTarget(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 2000"
               className={inputClass}
               style={inputStyle}
             />
@@ -209,10 +283,8 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
           <FieldCard label="Protein target (g/day)">
             <input
               value={proteinTarget}
-              onChange={(e) =>
-                setProteinTarget(e.target.value.replace(/[^0-9]/g, ""))
-              }
-              placeholder="—"
+              onChange={(e) => setProteinTarget(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 120"
               className={inputClass}
               style={inputStyle}
             />
@@ -252,6 +324,12 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
           </div>
         </FieldCard>
 
+        {success && (
+          <p className="text-xs font-medium" style={{ color: "#10B981" }}>
+            {success}
+          </p>
+        )}
+
         {error && (
           <p className="text-xs font-medium" style={{ color: "#d03b3b" }}>
             {error}
@@ -262,22 +340,19 @@ export function AdminUserForm({ initial }: { initial?: AdminUser }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex-1 h-11 rounded-xl text-sm font-semibold"
-            style={{
-              backgroundColor: "var(--tm-subtle)",
-              color: "var(--tm-text)",
-            }}
+            className="flex-1 h-11 rounded-xl text-sm font-bold border-2"
+            style={{ backgroundColor: "var(--tm-surface)", color: "var(--tm-text)", borderColor: "var(--tm-border-i)" }}
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={saving}
             className="flex-1 h-11 rounded-xl text-sm font-bold text-white disabled:opacity-60"
             style={{ backgroundColor: accent }}
           >
-            {initial ? "Save Changes" : "Add User"}
+            {saving ? "Saving…" : initial ? "Save Changes" : "Add User"}
           </button>
         </div>
       </div>
