@@ -259,37 +259,50 @@ export default function SearchPage() {
         />
       </div>
 
-      {/* Category chips */}
+      {/* Category chips — wait until every option is fetched so the row doesn't
+          pop in twice (meal types immediately, dietary labels a moment later). */}
       <p className="text-xs mb-2.5" style={{ color: "var(--tm-text-3)" }}>
         {t.popularCategories}
       </p>
       <div className="flex flex-wrap gap-2 mb-5">
-        {categoryChips.map(([emoji, label]) => {
-          const active = selectedCategory === label;
-          return (
-            <button
-              key={label}
-              onClick={() => toggleCategory(label)}
-              className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
-              style={
-                active
-                  ? {
-                      backgroundColor: "#059669",
-                      color: "white",
-                      boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
-                    }
-                  : {
-                      backgroundColor: dark ? "#1E1E1E" : "white",
-                      color: "var(--tm-text-2)",
-                      boxShadow: panelShadow(dark),
-                    }
-              }
-            >
-              <span>{emoji}</span>
-              {t.categoryDisplay(label)}
-            </button>
-          );
-        })}
+        {!dietaryReady
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <span
+                key={i}
+                className="inline-block rounded-full animate-pulse"
+                style={{
+                  width: 76 + (i % 3) * 18,
+                  height: 28,
+                  backgroundColor: dark ? "#1E1E1E" : "var(--tm-subtle)",
+                }}
+              />
+            ))
+          : categoryChips.map(([emoji, label]) => {
+              const active = selectedCategory === label;
+              return (
+                <button
+                  key={label}
+                  onClick={() => toggleCategory(label)}
+                  className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={
+                    active
+                      ? {
+                          backgroundColor: "#059669",
+                          color: "white",
+                          boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
+                        }
+                      : {
+                          backgroundColor: dark ? "#1E1E1E" : "white",
+                          color: "var(--tm-text-2)",
+                          boxShadow: panelShadow(dark),
+                        }
+                  }
+                >
+                  <span>{emoji}</span>
+                  {t.categoryDisplay(label)}
+                </button>
+              );
+            })}
       </div>
 
       {/* Results header */}

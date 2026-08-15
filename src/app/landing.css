@@ -195,6 +195,27 @@
   background: rgba(255, 255, 255, 0.22);
 }
 
+/* Secondary CTA for light (non-hero) backgrounds, e.g. the library section. */
+.landing-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.8rem 1.25rem;
+  border-radius: 999px;
+  color: var(--lh-ink);
+  border: 1px solid var(--lh-line);
+  background: transparent;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.landing-btn-outline:hover {
+  background: rgba(12, 26, 20, 0.05);
+  transform: translateY(-1px);
+}
+
 .landing-section {
   padding: 4.5rem 1.25rem;
   max-width: 40rem;
@@ -204,6 +225,21 @@
 @media (min-width: 768px) {
   .landing-section {
     padding: 5.5rem 2.5rem;
+  }
+}
+
+/* Utility subpages (e.g. /recipes) sit directly under a sticky header instead
+   of mid-scroll — they need normal page padding, not the hero section's
+   generous breathing room. */
+.landing-page-content {
+  padding: 1.75rem 1.25rem 3.5rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .landing-page-content {
+    padding: 2.25rem 2.5rem 4rem;
   }
 }
 
@@ -272,6 +308,74 @@
 .landing-cta-row-section {
   max-width: 40rem;
   margin: 1.75rem auto 0;
+}
+
+/* ── Subpages (e.g. /recipes) — same palette/fonts as the landing hero, but a
+   plain solid header instead of the hero's fixed dark-overlay one. ── */
+
+.landing-subheader {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--lh-cream);
+  border-bottom: 1px solid var(--lh-line);
+}
+
+@media (min-width: 768px) {
+  .landing-subheader {
+    padding: 1rem 2.5rem;
+  }
+}
+
+.landing-subbrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--lh-ink);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.landing-subnav-link {
+  color: var(--lh-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.landing-subnav-link:hover {
+  background: rgba(12, 26, 20, 0.06);
+  color: var(--lh-ink);
+}
+
+.landing-subnav-cta {
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--lh-green-bright);
+  color: #fff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-subnav-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(4, 120, 87, 0.28);
+}
+
+.landing-subpage-main {
+  min-height: calc(100vh - 8.5rem);
 }
 
 .landing-footer {

@@ -37,9 +37,11 @@ export async function listAdminRecipes(params?: {
 export async function getRecipe(
   recipeId: number,
   lang?: string,
+  token?: string,
 ): Promise<ApiRecipe> {
   return apiFetch<ApiRecipe>(`/recipes/${recipeId}`, {
     query: { lang },
+    token,
   });
 }
 

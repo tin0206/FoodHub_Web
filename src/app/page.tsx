@@ -34,6 +34,9 @@ export default function LandingPage() {
           <span>FoodHub</span>
         </Link>
         <nav className="landing-nav" aria-label="Primary">
+          <Link href="/recipes" className="landing-nav-link">
+            Recipes
+          </Link>
           <Link href="/login" className="landing-nav-link">
             Sign in
           </Link>
@@ -95,7 +98,10 @@ export default function LandingPage() {
             stay useful—whether you cook for energy, balance, or pure comfort.
           </p>
           <div className="landing-cta-row landing-cta-row-section">
-            <Link href="/signup" className="landing-btn-primary">
+            <Link href="/recipes" className="landing-btn-primary">
+              Browse recipes
+            </Link>
+            <Link href="/signup" className="landing-btn-outline">
               Create an account
             </Link>
           </div>

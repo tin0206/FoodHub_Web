@@ -60,7 +60,7 @@ export function RecipeCard({
         imageUrl={recipe.imageUrl}
         cardId={recipe.id}
         labels={recipe.labels}
-        height={120}
+        height={180}
       />
       <div className="px-3 pt-2.5 pb-2.5">
         <div className="flex items-start gap-2.5">

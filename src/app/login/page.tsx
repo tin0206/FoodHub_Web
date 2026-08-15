@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [errors, setErrors] = useState<Errors>({ email: "", password: "" });
+  const [credentialsInvalid, setCredentialsInvalid] = useState(false);
 
   useEffect(() => {
     const existing = getCurrentUser();
@@ -69,6 +70,9 @@ export default function LoginPage() {
     } catch (err: unknown) {
       if (err instanceof FieldError) {
         setErrors((prev) => ({ ...prev, [err.field]: err.message }));
+        // Wrong email/password is ambiguous about which field is at fault —
+        // highlight both instead of just the one the backend happened to name.
+        if (err.field === "password") setCredentialsInvalid(true);
       } else {
         setAuthError(err instanceof Error ? err.message : "Login failed");
       }
@@ -112,6 +116,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
+              setCredentialsInvalid(false);
               if (errors.email)
                 setErrors((prev) => ({
                   ...prev,
@@ -123,6 +128,7 @@ export default function LoginPage() {
             }
             placeholder="you@example.com"
             error={errors.email}
+            invalid={credentialsInvalid}
           />
 
           <AuthField
@@ -132,6 +138,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
+              setCredentialsInvalid(false);
               if (errors.password)
                 setErrors((prev) => ({
                   ...prev,
@@ -143,6 +150,7 @@ export default function LoginPage() {
             }
             placeholder="••••••••"
             error={errors.password}
+            invalid={credentialsInvalid}
           />
 
           <div className="auth-row-between">

@@ -34,6 +34,8 @@ export async function searchRecipes(params?: {
   limit?: number;
   mine?: boolean;
   lang?: string;
+  /** Override Bearer token — e.g. a guest demo session for public browsing. */
+  token?: string;
 }): Promise<RecipeSearchResult> {
   const res = await apiFetch<{ total_count: number; recipes: ApiRecipe[] }>(
     "/recipes/search",
@@ -46,6 +48,7 @@ export async function searchRecipes(params?: {
         mine: params?.mine,
         lang: params?.lang,
       },
+      token: params?.token,
     },
   );
   return { totalCount: res.total_count, recipes: res.recipes };

@@ -8,7 +8,6 @@ import { apiGetMe, apiUpdateMe, apiChangePassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
 import type { ApiUser, UserProfileUpdate } from "@/lib/api/types";
 import { applyTheme } from "@/lib/theme";
-import { useDarkMode } from "@/lib/use-dark-mode";
 import { setLang, type Lang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import LoadingOverlay from "@/components/loading-overlay";
@@ -188,7 +187,6 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
 }
 
 export function ProfileEditor() {
-  const dark = useDarkMode();
   const router = useRouter();
   const t = useStrings();
 
@@ -264,9 +262,10 @@ export function ProfileEditor() {
     });
   }
 
+  // Only updates the pending form value — the app's actual colors stay as
+  // saved until the user hits Save, so an unsaved toggle doesn't repaint the UI.
   function toggleTheme() {
-    const next = !dark;
-    applyTheme(next);
+    const next = formData?.theme !== "dark";
     set("theme", next ? "dark" : "light");
   }
 
@@ -323,7 +322,6 @@ export function ProfileEditor() {
     if (savedData) {
       setFormData(savedData);
       setLang(savedData.language === "vi" ? "vi" : "en");
-      applyTheme(savedData.theme === "dark");
     }
     setFieldErrors(NO_ERRORS);
     setSaveError("");
@@ -391,10 +389,10 @@ export function ProfileEditor() {
               <div>
                 <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>{t.themeLabel}</p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--tm-text-3)" }}>
-                  {dark ? t.darkMode : t.lightMode}
+                  {formData.theme === "dark" ? t.darkMode : t.lightMode}
                 </p>
               </div>
-              <Toggle checked={dark} onChange={toggleTheme} />
+              <Toggle checked={formData.theme === "dark"} onChange={toggleTheme} />
             </div>
             <div className="pt-3" style={{ borderTop: "1px solid var(--tm-border)" }}>
               <p className="text-sm mb-2" style={{ color: "var(--tm-text-2)" }}>{t.languageLabel}</p>

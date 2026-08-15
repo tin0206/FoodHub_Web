@@ -59,10 +59,13 @@ interface AuthFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   icon: LucideIcon;
   error?: string;
+  /** Force the red "has-error" outline without a per-field message (e.g. both
+   * fields on a "wrong email or password" response, where only one shows text). */
+  invalid?: boolean;
   isPassword?: boolean;
 }
 
-export function AuthField({ label, icon: Icon, error, isPassword, type, ...inputProps }: AuthFieldProps) {
+export function AuthField({ label, icon: Icon, error, invalid, isPassword, type, ...inputProps }: AuthFieldProps) {
   const id = useId();
   const [reveal, setReveal] = useState(false);
   const resolvedType = isPassword ? (reveal ? "text" : "password") : type;
@@ -76,7 +79,7 @@ export function AuthField({ label, icon: Icon, error, isPassword, type, ...input
         <span className="auth-field-icon">
           <Icon size={17} />
         </span>
-        <input id={id} type={resolvedType} {...inputProps} className={`auth-input${error ? " has-error" : ""}`} />
+        <input id={id} type={resolvedType} {...inputProps} className={`auth-input${error || invalid ? " has-error" : ""}`} />
         {isPassword && (
           <button
             type="button"
