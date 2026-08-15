@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Target, Bell, Palette, LogOut, KeyRound, UserRound } from "lucide-react";
+import { User, Target, Palette, LogOut, KeyRound, UserRound } from "lucide-react";
 import { logout, updateCachedUser } from "@/lib/auth";
 import { apiGetMe, apiUpdateMe, apiChangePassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
@@ -541,24 +541,6 @@ export function ProfileEditor() {
                   );
                 })}
               </div>
-            </div>
-          </SectionCard>
-
-          {/* Notifications */}
-          <SectionCard icon={<Bell size={18} color="#2563EB" />} iconBg="#DBEAFE" title={t.notifications} subtitle={t.manageNotificationPrefs}>
-            <div className="space-y-4">
-              {(
-                [
-                  ["notifyRecommendations", t.notifyRecipeRecommendations],
-                  ["notifyNewFeatures", t.notifyFeaturesUpdates],
-                  ["notifyWeeklySummary", t.notifyWeeklyNutritionSummary],
-                ] as const
-              ).map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <p className="text-sm" style={{ color: "var(--tm-text-2)" }}>{label}</p>
-                  <Toggle checked={formData[key]} onChange={(v) => set(key, v)} />
-                </div>
-              ))}
             </div>
           </SectionCard>
 

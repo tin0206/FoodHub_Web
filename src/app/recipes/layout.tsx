@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Fraunces, Outfit } from "next/font/google";
 import Link from "next/link";
 import { ChefHat } from "lucide-react";
+import { ForceLightTheme } from "@/components/force-light-theme";
 import "../landing.css";
 
 const display = Fraunces({
@@ -30,27 +31,29 @@ export default function RecipesPublicLayout({
 }) {
   return (
     <div className={`${display.variable} ${sans.variable} landing-root`}>
-      <header className="landing-subheader">
-        <Link href="/" className="landing-subbrand">
-          <ChefHat size={20} strokeWidth={2.25} />
-          <span>FoodHub</span>
-        </Link>
-        <nav className="landing-nav" aria-label="Primary">
-          <Link href="/login" className="landing-subnav-link">
-            Sign in
+      <ForceLightTheme>
+        <header className="landing-subheader">
+          <Link href="/" className="landing-subbrand">
+            <ChefHat size={20} strokeWidth={2.25} />
+            <span>FoodHub</span>
           </Link>
-          <Link href="/signup" className="landing-subnav-cta">
-            Create account
-          </Link>
-        </nav>
-      </header>
+          <nav className="landing-nav" aria-label="Primary">
+            <Link href="/login" className="landing-subnav-link">
+              Sign in
+            </Link>
+            <Link href="/signup" className="landing-subnav-cta">
+              Create account
+            </Link>
+          </nav>
+        </header>
 
-      <main className="landing-subpage-main">{children}</main>
+        <main className="landing-subpage-main">{children}</main>
 
-      <footer className="landing-footer">
-        <span className="landing-footer-brand">FoodHub</span>
-        <span className="landing-footer-meta">Cook smarter · Eat better</span>
-      </footer>
+        <footer className="landing-footer">
+          <span className="landing-footer-brand">FoodHub</span>
+          <span className="landing-footer-meta">Cook smarter · Eat better</span>
+        </footer>
+      </ForceLightTheme>
     </div>
   );
 }
