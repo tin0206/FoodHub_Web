@@ -67,9 +67,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
     <div className="flex-1 flex flex-col items-center justify-center">
       <div
         className="w-17 h-17 rounded-[18px] flex items-center justify-center mb-3"
-        style={{ backgroundColor: dark ? '#1E293B' : '#E5E7EB' }}
+        style={{ backgroundColor: dark ? 'var(--tm-subtle)' : '#E5E7EB' }}
       >
-        <BookOpen size={34} color={dark ? '#94A3B8' : '#6B7280'} />
+        <BookOpen size={34} color={dark ? 'var(--tm-text-2)' : '#6B7280'} />
       </div>
       <p className="text-[17px] font-bold mb-1" style={{ color: 'var(--tm-text)' }}>{t.noRecipesYet}</p>
       <p className="text-xs text-center mb-3.5 max-w-60" style={{ color: 'var(--tm-text-3)' }}>

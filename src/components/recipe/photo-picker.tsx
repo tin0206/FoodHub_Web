@@ -68,9 +68,9 @@ export function PhotoPicker({
               ? { height: 100, background: `linear-gradient(135deg, ${theme.start}, ${theme.end})`, color: 'rgba(255,255,255,0.9)' }
               : {
                   height: 100,
-                  backgroundColor: dark ? '#1E1E1E' : '#FAFBFA',
-                  borderColor: dark ? '#3A3A3A' : 'var(--tm-border-i)',
-                  color: dark ? '#64748B' : '#9CA3AF',
+                  backgroundColor: dark ? 'var(--tm-subtle)' : '#FAFBFA',
+                  borderColor: 'var(--tm-border-i)',
+                  color: dark ? 'var(--tm-text-3)' : '#9CA3AF',
                 }
           }
         >

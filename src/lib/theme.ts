@@ -10,16 +10,19 @@ const LIGHT = {
   '--tm-subtle': '#EEF2EF',
 }
 
+// Mirrors the Flutter app's ThemeData.dark (ColorScheme.fromSeed(seedColor: 0xFF059669,
+// brightness: dark), scaffoldBackgroundColor 0x0A0A0A, cardColor 0x141414, dividerColor
+// 0x2A2A2A, inputDecorationTheme.fillColor 0x1E1E1E) instead of a generic slate palette.
 const DARK = {
-  '--tm-bg': '#0F172A',
-  '--tm-surface': '#1E293B',
-  '--tm-border': '#334155',
-  '--tm-border-s': '#334155',
-  '--tm-border-i': '#475569',
-  '--tm-text': '#F1F5F9',
-  '--tm-text-2': '#94A3B8',
-  '--tm-text-3': '#64748B',
-  '--tm-subtle': '#1E293B',
+  '--tm-bg': '#0A0A0A',
+  '--tm-surface': '#141414',
+  '--tm-border': '#2A2A2A',
+  '--tm-border-s': '#2A2A2A',
+  '--tm-border-i': '#3A3A3A',
+  '--tm-text': '#F5F5F5',
+  '--tm-text-2': '#A3A3A3',
+  '--tm-text-3': '#737373',
+  '--tm-subtle': '#1E1E1E',
 }
 
 export function applyTheme(dark: boolean) {
