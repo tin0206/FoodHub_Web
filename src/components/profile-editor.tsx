@@ -23,6 +23,7 @@ interface ProfileForm {
   proteinTarget: string;
   dietaryRestrictions: string[];
   language: string;
+  theme: string;
   notifyRecommendations: boolean;
   notifyNewFeatures: boolean;
   notifyWeeklySummary: boolean;
@@ -55,6 +56,7 @@ function toForm(user: ApiUser): ProfileForm {
     proteinTarget: user.protein_target != null ? String(user.protein_target) : "",
     dietaryRestrictions: user.dietary_restrictions ?? [],
     language: user.language || "en",
+    theme: user.theme === "dark" ? "dark" : "light",
     notifyRecommendations: user.notify_recommendations ?? true,
     notifyNewFeatures: user.notify_new_features ?? true,
     notifyWeeklySummary: user.notify_weekly_summary ?? true,
@@ -214,6 +216,7 @@ export function ProfileEditor() {
         setFormData(form);
         // Backend is the source of truth for the saved preference — sync the live app language to it.
         setLang(u.language === "vi" ? "vi" : "en");
+        applyTheme(u.theme === "dark");
       })
       .catch((err) => {
         if (cancelled) return;
@@ -264,7 +267,7 @@ export function ProfileEditor() {
   function toggleTheme() {
     const next = !dark;
     applyTheme(next);
-    localStorage.setItem("fh_profile", JSON.stringify({ theme: next ? "dark" : "light" }));
+    set("theme", next ? "dark" : "light");
   }
 
   function selectLanguage(code: Lang) {
@@ -295,6 +298,7 @@ export function ProfileEditor() {
         dietary_restrictions: formData.dietaryRestrictions,
         primary_goal: formData.primaryGoal || null,
         language: formData.language,
+        theme: formData.theme,
         notify_recommendations: formData.notifyRecommendations,
         notify_new_features: formData.notifyNewFeatures,
         notify_weekly_summary: formData.notifyWeeklySummary,
@@ -305,6 +309,7 @@ export function ProfileEditor() {
       setSavedData(form);
       setFormData(form);
       updateCachedUser(updated);
+      applyTheme(updated.theme === "dark");
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 1500);
     } catch (err) {
@@ -318,6 +323,7 @@ export function ProfileEditor() {
     if (savedData) {
       setFormData(savedData);
       setLang(savedData.language === "vi" ? "vi" : "en");
+      applyTheme(savedData.theme === "dark");
     }
     setFieldErrors(NO_ERRORS);
     setSaveError("");

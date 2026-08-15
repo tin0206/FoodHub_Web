@@ -30,3 +30,17 @@ export function applyTheme(dark: boolean) {
   }
   window.dispatchEvent(new CustomEvent('themechange', { detail: { dark } }))
 }
+
+/** Reads the persisted theme: API-backed user cache, then the legacy local profile. */
+export function readStoredTheme(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const user = JSON.parse(localStorage.getItem('fh_current_user') ?? 'null')
+    if (user?.theme === 'dark') return true
+    if (user?.theme === 'light') return false
+    const profile = JSON.parse(localStorage.getItem('fh_profile') ?? '{}')
+    return profile.theme === 'dark'
+  } catch {
+    return false
+  }
+}

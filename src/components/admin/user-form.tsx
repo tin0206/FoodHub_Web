@@ -129,6 +129,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           dietary_restrictions: [...restrictions],
           primary_goal: primaryGoal.trim() || null,
           language: "en",
+          theme: "light",
           notify_recommendations: true,
           notify_new_features: true,
           notify_weekly_summary: true,

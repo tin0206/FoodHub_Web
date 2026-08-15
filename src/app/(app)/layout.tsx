@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
-import { applyTheme } from "@/lib/theme";
+import { applyTheme, readStoredTheme } from "@/lib/theme";
 import { setLang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import { ChefHat, Home, Search, Heart, User, LogOut, ShieldCheck } from "lucide-react";
@@ -44,15 +44,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     setIsAdmin(isAdminRole(user.role));
     // Boot the app in the user's saved language before Profile ever loads.
     if (user.language) setLang(user.language === "vi" ? "vi" : "en");
+    applyTheme(user.theme ? user.theme === "dark" : readStoredTheme());
   }, [router]);
-
-  // Restore saved theme on every page load
-  useEffect(() => {
-    try {
-      const profile = JSON.parse(localStorage.getItem('fh_profile') ?? '{}')
-      applyTheme(profile.theme === 'dark')
-    } catch {}
-  }, []);
 
   function handleLogout() {
     logout();

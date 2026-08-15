@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChefHat, LayoutDashboard, BarChart3, BookOpen, Users, User, LogOut, ArrowLeft } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
-import { applyTheme } from "@/lib/theme";
+import { applyTheme, readStoredTheme } from "@/lib/theme";
 import { useStrings } from "@/lib/use-strings";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 
@@ -38,14 +38,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
     setAllowed(true);
+    if (user.theme) {
+      applyTheme(user.theme === "dark");
+    } else {
+      applyTheme(readStoredTheme());
+    }
   }, [router]);
-
-  useEffect(() => {
-    try {
-      const profile = JSON.parse(localStorage.getItem("fh_profile") ?? "{}");
-      applyTheme(profile.theme === "dark");
-    } catch {}
-  }, []);
 
   function handleLogout() {
     logout();

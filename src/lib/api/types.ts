@@ -14,6 +14,7 @@ export interface ApiUser {
   dietary_restrictions: string[];
   primary_goal?: string | null;
   language: string;
+  theme: string;
   notify_recommendations?: boolean;
   notify_new_features?: boolean;
   notify_weekly_summary?: boolean;
@@ -36,6 +37,7 @@ export interface UserProfileUpdate {
   dietary_restrictions?: string[] | null;
   primary_goal?: string | null;
   language?: string | null;
+  theme?: string | null;
   notify_recommendations?: boolean | null;
   notify_new_features?: boolean | null;
   notify_weekly_summary?: boolean | null;

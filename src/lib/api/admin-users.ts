@@ -38,6 +38,7 @@ export interface AdminUserCreate {
   notify_recommendations: boolean;
   notify_new_features: boolean;
   notify_weekly_summary: boolean;
+  theme?: string;
 }
 
 export async function listAdminUsers(params?: {
