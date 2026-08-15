@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { BookOpen, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
+import { useStrings } from "@/lib/use-strings";
 import type { ApiRecipe, RagRecipe } from "@/lib/api/types";
 
 export type RecipeLinkRef = {
@@ -90,6 +91,7 @@ function RecipePreviewModal({
   token?: string;
   onClose: () => void;
 }) {
+  const t = useStrings();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
@@ -102,7 +104,7 @@ function RecipePreviewModal({
       try {
         const numericId = Number(recipeId);
         if (!Number.isFinite(numericId)) {
-          throw new ApiError("This recipe id is not openable in the demo.", 400);
+          throw new ApiError(t.recipeNotOpenableDemo, 400);
         }
         const data = await apiFetch<ApiRecipe>(`/recipes/${numericId}`, {
           token,
@@ -115,7 +117,7 @@ function RecipePreviewModal({
               ? err.message
               : err instanceof Error
                 ? err.message
-                : "Failed to load recipe",
+                : t.failedToLoadRecipe,
           );
         }
       } finally {
@@ -125,6 +127,7 @@ function RecipePreviewModal({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeId, token]);
 
   const imageSrc = recipe?.image_url
@@ -139,7 +142,7 @@ function RecipePreviewModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={titleHint || "Recipe details"}
+        aria-label={titleHint || t.recipeLabel}
         className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-4"
         style={{ backgroundColor: "var(--tm-surface, #fff)" }}
         onClick={(e) => e.stopPropagation()}
@@ -149,14 +152,14 @@ function RecipePreviewModal({
             className="text-base font-bold leading-snug"
             style={{ color: "var(--tm-text, #0F172A)" }}
           >
-            {recipe?.title || titleHint || "Recipe"}
+            {recipe?.title || titleHint || t.recipeLabel}
           </h3>
           <button
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
             style={{ backgroundColor: "var(--tm-subtle, #F3F4F6)" }}
-            aria-label="Close"
+            aria-label={t.close}
           >
             <X size={16} />
           </button>
@@ -164,7 +167,7 @@ function RecipePreviewModal({
 
         {loading && (
           <p className="text-sm" style={{ color: "var(--tm-text-2, #475569)" }}>
-            Loading recipe…
+            {t.loadingRecipe}
           </p>
         )}
         {error && (
@@ -210,7 +213,7 @@ function RecipePreviewModal({
                 className="text-xs font-bold mb-1.5"
                 style={{ color: "var(--tm-text, #0F172A)" }}
               >
-                Ingredients
+                {t.ingredientsLabel}
               </p>
               <ul className="space-y-1">
                 {(recipe.ingredients ?? []).map((line, i) => (
@@ -230,7 +233,7 @@ function RecipePreviewModal({
                 className="text-xs font-bold mb-1.5"
                 style={{ color: "var(--tm-text, #0F172A)" }}
               >
-                Instructions
+                {t.instructionsLabel}
               </p>
               <ol className="space-y-2">
                 {(recipe.directions ?? []).map((line, i) => (
@@ -270,6 +273,7 @@ export function MarkdownReply({
   /** Optional Bearer for opening recipe detail in demo guest session */
   authToken?: string;
 }) {
+  const t = useStrings();
   const { cleaned, ctas } = useMemo(() => {
     const extracted = extractRecipeMarkdownLinks(text);
     return {
@@ -349,7 +353,7 @@ export function MarkdownReply({
             className="text-[11px] font-bold mb-2 tracking-wide"
             style={{ color: "var(--tm-text-3, #6B7280)" }}
           >
-            Open recipe details
+            {t.openRecipeDetailsLabel}
           </p>
           <div className="flex flex-col gap-2">
             {ctas.map((link) => (

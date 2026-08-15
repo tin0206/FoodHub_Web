@@ -8,17 +8,25 @@ import {
   Send,
   ShoppingBasket,
   Sparkles,
+  Bot,
   UtensilsCrossed,
 } from "lucide-react";
 import { apiGetMe } from "@/lib/api/auth";
-import { aiWelcome, aiChat, aiDetectDish, aiDetectIngredients } from "@/lib/api/ai";
+import {
+  aiWelcome,
+  aiChat,
+  aiDetectDish,
+  aiDetectIngredients,
+} from "@/lib/api/ai";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
 import type { ChatHistoryMessage, RagRecipe } from "@/lib/api/types";
+import { loadChatSession, saveChatSession } from "@/lib/chat-session";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { NoteDialog } from "@/components/note-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 
 interface UiMessage {
   id: string;
@@ -43,23 +51,40 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 function ComposeDetectionRow({
-  text, icon, disabled, onEdit,
-}: { text: string; icon: ReactNode; disabled: boolean; onEdit: () => void }) {
+  text,
+  icon,
+  disabled,
+  onEdit,
+}: {
+  text: string;
+  icon: ReactNode;
+  disabled: boolean;
+  onEdit: () => void;
+}) {
   const dark = useDarkMode();
+  const t = useStrings();
   return (
     <div
       className="flex items-start gap-2 rounded-xl px-3 py-2.5 mb-2"
-      style={{ backgroundColor: dark ? "#1E1E1E" : "#F3F4F6", border: "1px solid rgba(5,150,105,0.35)" }}
+      style={{
+        backgroundColor: dark ? "#1E1E1E" : "#F3F4F6",
+        border: "1px solid rgba(5,150,105,0.35)",
+      }}
     >
       {icon}
-      <p className="flex-1 text-[13px] leading-snug" style={{ color: "var(--tm-text)" }}>{text}</p>
+      <p
+        className="flex-1 text-[13px] leading-snug"
+        style={{ color: "var(--tm-text)" }}
+      >
+        {text}
+      </p>
       <button
         type="button"
         onClick={onEdit}
         disabled={disabled}
         className="shrink-0 disabled:opacity-40"
         style={{ color: "var(--tm-text-3)" }}
-        aria-label="Edit"
+        aria-label={t.edit}
       >
         <Pencil size={15} />
       </button>
@@ -68,7 +93,12 @@ function ComposeDetectionRow({
 }
 
 function DetectionConfirmDialog({
-  title, text, inputImageUrl, outputImageUrl, onSave, onCancel,
+  title,
+  text,
+  inputImageUrl,
+  outputImageUrl,
+  onSave,
+  onCancel,
 }: {
   title: string;
   text: string;
@@ -77,6 +107,7 @@ function DetectionConfirmDialog({
   onSave: (text: string) => void;
   onCancel: () => void;
 }) {
+  const t = useStrings();
   const [value, setValue] = useState(text);
   const detectedImageUrl = outputImageUrl || inputImageUrl;
 
@@ -93,14 +124,22 @@ function DetectionConfirmDialog({
         className="w-full max-w-md rounded-2xl p-4 max-h-[85vh] overflow-y-auto"
         style={{ backgroundColor: "var(--tm-surface)" }}
       >
-        <p className="text-sm font-bold mb-3" style={{ color: "var(--tm-text)" }}>{title}</p>
+        <p
+          className="text-sm font-bold mb-3"
+          style={{ color: "var(--tm-text)" }}
+        >
+          {title}
+        </p>
 
         {detectedImageUrl && (
-          <div className="w-full rounded-lg mb-3 flex items-center justify-center overflow-hidden" style={{ backgroundColor: "var(--tm-subtle)" }}>
+          <div
+            className="w-full rounded-lg mb-3 flex items-center justify-center overflow-hidden"
+            style={{ backgroundColor: "var(--tm-subtle)" }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={resolveMediaUrl(detectedImageUrl)}
-              alt="Detection result"
+              alt={t.detectionResultAlt}
               className="w-full max-h-80 object-contain"
             />
           </div>
@@ -111,9 +150,12 @@ function DetectionConfirmDialog({
           onChange={(e) => setValue(e.target.value)}
           rows={4}
           autoFocus
-          placeholder="Edit before adding to your message…"
+          placeholder={t.editBeforeAddingHint}
           className="w-full px-2.5 py-2 rounded-xl text-xs resize-none focus:outline-none"
-          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+          style={{
+            backgroundColor: "var(--tm-subtle)",
+            color: "var(--tm-text-2)",
+          }}
         />
 
         <div className="flex gap-2 mt-3">
@@ -121,9 +163,12 @@ function DetectionConfirmDialog({
             type="button"
             onClick={onCancel}
             className="flex-1 py-2 rounded-lg text-xs font-semibold"
-            style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+            style={{
+              backgroundColor: "var(--tm-subtle)",
+              color: "var(--tm-text-2)",
+            }}
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -131,7 +176,7 @@ function DetectionConfirmDialog({
             className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
             style={{ backgroundColor: "#059669" }}
           >
-            Use this
+            {t.useThisLabel}
           </button>
         </div>
       </div>
@@ -140,19 +185,27 @@ function DetectionConfirmDialog({
 }
 
 export default function RecsPage() {
+  const t = useStrings();
   const listRef = useRef<HTMLDivElement>(null);
   const dishInputRef = useRef<HTMLInputElement>(null);
   const ingredientsInputRef = useRef<HTMLInputElement>(null);
   const startedRef = useRef(false);
 
-  const [profile, setProfile] = useState<UserProfileForChat>({ dietaryRestrictions: [], primaryGoal: "" });
+  const [profile, setProfile] = useState<UserProfileForChat>({
+    dietaryRestrictions: [],
+    primaryGoal: "",
+  });
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [history, setHistory] = useState<ChatHistoryMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [composeDishText, setComposeDishText] = useState<string | null>(null);
-  const [composeIngredientsText, setComposeIngredientsText] = useState<string | null>(null);
-  const [editingField, setEditingField] = useState<"dish" | "ingredients" | null>(null);
+  const [composeIngredientsText, setComposeIngredientsText] = useState<
+    string | null
+  >(null);
+  const [editingField, setEditingField] = useState<
+    "dish" | "ingredients" | null
+  >(null);
   const [pendingDetection, setPendingDetection] = useState<{
     kind: "dish" | "ingredients";
     text: string;
@@ -176,7 +229,10 @@ export default function RecsPage() {
     });
   }
 
-  async function bootstrapWelcome(dietaryRestrictions: string[], primaryGoal: string) {
+  async function bootstrapWelcome(
+    dietaryRestrictions: string[],
+    primaryGoal: string,
+  ) {
     setIsBootstrapping(true);
     setError("");
     setMessages([]);
@@ -194,11 +250,19 @@ export default function RecsPage() {
         primaryGoal: primaryGoal || undefined,
       });
       setSessionId(response.session_id || sid);
-      const reply = response.reply.trim() || "Hello! I'm your culinary companion. Tell me what you'd like to cook.";
-      setMessages([{ id: `a-${Date.now()}`, role: "assistant", text: reply, recipes: response.recipes }]);
-      if (response.reply.trim()) setHistory([{ role: "assistant", content: response.reply }]);
+      const reply = response.reply.trim() || t.aiWelcomeFallback;
+      setMessages([
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: reply,
+          recipes: response.recipes,
+        },
+      ]);
+      if (response.reply.trim())
+        setHistory([{ role: "assistant", content: response.reply }]);
     } catch (err) {
-      const msg = errorMessage(err, "Unable to reach the AI companion.");
+      const msg = errorMessage(err, t.unableToReachAi);
       setError(msg);
       setMessages([{ id: `err-${Date.now()}`, role: "assistant", text: msg }]);
     } finally {
@@ -210,6 +274,19 @@ export default function RecsPage() {
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+
+    const persisted = loadChatSession();
+    if (persisted) {
+      setSessionId(persisted.sessionId);
+      setMessages(persisted.messages);
+      setHistory(persisted.history);
+      setComposeDishText(persisted.composeDishText);
+      setComposeIngredientsText(persisted.composeIngredientsText);
+      setLastSentMessage(persisted.lastSentMessage);
+      setLastSentIngredients(persisted.lastSentIngredients);
+      setIsBootstrapping(false);
+    }
+
     let cancelled = false;
     apiGetMe()
       .then((u) => {
@@ -219,17 +296,39 @@ export default function RecsPage() {
           primaryGoal: u.primary_goal ?? "",
         };
         setProfile(p);
-        void bootstrapWelcome(p.dietaryRestrictions, p.primaryGoal);
+        if (!persisted) void bootstrapWelcome(p.dietaryRestrictions, p.primaryGoal);
       })
       .catch(() => {
         if (cancelled) return;
-        void bootstrapWelcome([], "");
+        if (!persisted) void bootstrapWelcome([], "");
       });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the conversation in sessionStorage so a page reload doesn't lose it — cleared on logout.
+  useEffect(() => {
+    if (!sessionId || messages.length === 0) return;
+    saveChatSession({
+      sessionId,
+      messages,
+      history,
+      composeDishText,
+      composeIngredientsText,
+      lastSentMessage,
+      lastSentIngredients,
+    });
+  }, [
+    sessionId,
+    messages,
+    history,
+    composeDishText,
+    composeIngredientsText,
+    lastSentMessage,
+    lastSentIngredients,
+  ]);
 
   useEffect(() => {
     scrollToBottom();
@@ -239,21 +338,30 @@ export default function RecsPage() {
     const text = composeIngredientsText?.trim();
     if (!text) return [];
     let values = text;
-    const prefix = "Ingredients detected:";
-    if (values.toLowerCase().startsWith(prefix.toLowerCase())) values = values.slice(prefix.length);
-    return values.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+    const prefix = t.ingredientsDetectedPrefix;
+    if (values.toLowerCase().startsWith(prefix.toLowerCase()))
+      values = values.slice(prefix.length);
+    return values
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
 
   function buildMergedPrompt(userQuery: string): string {
     const parts: string[] = [];
     if (composeDishText?.trim()) parts.push(composeDishText.trim());
-    if (composeIngredientsText?.trim()) parts.push(composeIngredientsText.trim());
+    if (composeIngredientsText?.trim())
+      parts.push(composeIngredientsText.trim());
     const trimmed = userQuery.trim();
     if (trimmed) parts.push(trimmed);
     return parts.join("\n");
   }
 
-  async function sendToAi(merged: string, ingredients: string[], baseHistory: ChatHistoryMessage[]) {
+  async function sendToAi(
+    merged: string,
+    ingredients: string[],
+    baseHistory: ChatHistoryMessage[],
+  ) {
     try {
       const response = await aiChat({
         message: merged,
@@ -264,13 +372,28 @@ export default function RecsPage() {
         ingredients,
       });
       if (response.session_id) setSessionId(response.session_id);
-      const reply = response.reply.trim() || "(Empty reply)";
-      setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: "assistant", text: reply, recipes: response.recipes }]);
-      setHistory([...baseHistory, { role: "user", content: merged }, { role: "assistant", content: reply }]);
+      const reply = response.reply.trim() || t.emptyReply;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: reply,
+          recipes: response.recipes,
+        },
+      ]);
+      setHistory([
+        ...baseHistory,
+        { role: "user", content: merged },
+        { role: "assistant", content: reply },
+      ]);
     } catch (err) {
-      const msg = errorMessage(err, "Unable to reach the AI companion.");
+      const msg = errorMessage(err, t.unableToReachAi);
       setError(msg);
-      setMessages((prev) => [...prev, { id: `err-${Date.now()}`, role: "assistant", text: msg }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: `err-${Date.now()}`, role: "assistant", text: msg },
+      ]);
     } finally {
       setIsSending(false);
       scrollToBottom();
@@ -288,7 +411,10 @@ export default function RecsPage() {
     }
 
     const ingredients = ingredientsForApi();
-    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", text: merged }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: "user", text: merged },
+    ]);
     setLastSentMessage(merged);
     setLastSentIngredients(ingredients);
     setIsSending(true);
@@ -308,7 +434,10 @@ export default function RecsPage() {
       if (copy.length && copy[copy.length - 1].role === "assistant") copy.pop();
       return copy;
     });
-    if (baseHistory.length && baseHistory[baseHistory.length - 1].role === "assistant") {
+    if (
+      baseHistory.length &&
+      baseHistory[baseHistory.length - 1].role === "assistant"
+    ) {
       baseHistory = baseHistory.slice(0, -1);
     }
     if (
@@ -337,40 +466,46 @@ export default function RecsPage() {
       if (kind === "dish") {
         const result = await aiDetectDish(file);
         const names = result.results.length
-          ? result.results.slice(0, 5).map((r) => r.dishName).filter(Boolean)
+          ? result.results
+              .slice(0, 5)
+              .map((r) => r.dishName)
+              .filter(Boolean)
           : result.dishName
             ? [result.dishName]
             : result.suggestedRecipes.slice(0, 5);
         if (names.length) {
           setPendingDetection({
             kind: "dish",
-            text: `Dishes detected: ${names[0]}`,
+            text: `${t.dishesDetectedPrefix} ${names[0]}`,
             inputImageUrl: result.imageUrl || undefined,
           });
         } else {
-          setError("Could not recognize a dish in that photo.");
+          setError(t.couldNotRecognizeDish);
         }
       } else {
         const result = await aiDetectIngredients(file);
         if (result.ingredients.length) {
           setPendingDetection({
             kind: "ingredients",
-            text: `Ingredients detected: ${result.ingredients.join(", ")}`,
+            text: `${t.ingredientsDetectedPrefix} ${result.ingredients.join(", ")}`,
             inputImageUrl: result.imageUrl || undefined,
             outputImageUrl: result.annotatedImageUrl || undefined,
           });
         } else {
-          setError("No ingredients detected in that photo.");
+          setError(t.noIngredientsDetected);
         }
       }
     } catch (err) {
-      setError(errorMessage(err, "Unable to analyze the photo."));
+      setError(errorMessage(err, t.unableToAnalyzePhoto));
     } finally {
       setIsDetecting(false);
     }
   }
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>, kind: "dish" | "ingredients") {
+  function onFileChange(
+    e: React.ChangeEvent<HTMLInputElement>,
+    kind: "dish" | "ingredients",
+  ) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (file) void handleDetect(file, kind);
@@ -382,48 +517,78 @@ export default function RecsPage() {
   const hasIngredients = !!ingredientsText;
 
   const lastAssistantIndex = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "assistant") return i;
+    for (let i = messages.length - 1; i >= 0; i--)
+      if (messages[i].role === "assistant") return i;
     return -1;
   })();
 
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: "var(--tm-bg)" }}>
+    <div
+      className="flex flex-col h-full"
+      style={{ backgroundColor: "var(--tm-bg)" }}
+    >
       {/* Header */}
       <div
         className="flex items-center gap-2.5 px-4 h-14 border-b shrink-0"
-        style={{ backgroundColor: "var(--tm-surface)", borderColor: "var(--tm-border-s)" }}
+        style={{
+          backgroundColor: "var(--tm-surface)",
+          borderColor: "var(--tm-border-s)",
+        }}
       >
-        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#059669" }}>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "#059669" }}
+        >
           <Sparkles size={16} color="white" />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold truncate" style={{ color: "var(--tm-text)" }}>AI Companion</p>
-          <p className="text-[11px] truncate" style={{ color: "var(--tm-text-3)" }}>Personalized recipe recommendations</p>
-        </div>
+        <p
+          className="text-sm font-bold truncate flex-1"
+          style={{ color: "var(--tm-text)" }}
+        >
+          {t.aiCompanion}
+        </p>
         <button
           type="button"
           onClick={() => setConfirmReset(true)}
           disabled={busy}
           className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40"
-          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
-          aria-label="Reset conversation"
-          title="Reset conversation"
+          style={{
+            backgroundColor: "var(--tm-subtle)",
+            color: "var(--tm-text-2)",
+          }}
+          aria-label={t.resetLabel}
+          title={t.resetLabel}
         >
           <RefreshCw size={16} />
         </button>
       </div>
 
       {/* Messages */}
-      <div ref={listRef} className="flex-1 overflow-y-auto py-3 space-y-3 min-h-0">
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto py-3 space-y-3 min-h-0"
+      >
         {messages.map((m, index) => {
           const isUser = m.role === "user";
-          const showRerun = !busy && !isUser && index === lastAssistantIndex && !!lastSentMessage;
+          const showRerun =
+            !busy &&
+            !isUser &&
+            index === lastAssistantIndex &&
+            !!lastSentMessage;
           return (
-            <div key={m.id} className={`px-3 flex ${isUser ? "justify-end" : "justify-start"}`}>
-              <div className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}>
+            <div
+              key={m.id}
+              className={`px-3 flex ${isUser ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}
+              >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: "#059669" }}>
-                    <Sparkles size={14} color="white" />
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ backgroundColor: "#059669" }}
+                  >
+                    <Bot size={14} color="white" />
                   </div>
                 )}
                 <div>
@@ -431,12 +596,21 @@ export default function RecsPage() {
                     className={`rounded-2xl px-3.5 py-2.5 ${isUser ? "rounded-tr-md" : "rounded-tl-md"}`}
                     style={
                       isUser
-                        ? { background: "linear-gradient(135deg, #059669 0%, #047857 100%)", color: "#fff" }
-                        : { backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }
+                        ? {
+                            background:
+                              "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                            color: "#fff",
+                          }
+                        : {
+                            backgroundColor: "var(--tm-surface)",
+                            border: "1px solid var(--tm-border-i)",
+                          }
                     }
                   >
                     {isUser ? (
-                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
+                        {m.text}
+                      </p>
                     ) : (
                       <MarkdownReply text={m.text} recipes={m.recipes} />
                     )}
@@ -446,9 +620,12 @@ export default function RecsPage() {
                       type="button"
                       onClick={() => void handleRerun()}
                       className="mt-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg"
-                      style={{ color: "#059669", backgroundColor: "rgba(5,150,105,0.12)" }}
+                      style={{
+                        color: "#059669",
+                        backgroundColor: "rgba(5,150,105,0.12)",
+                      }}
                     >
-                      Rerun
+                      {t.rerun}
                     </button>
                   )}
                 </div>
@@ -456,11 +633,18 @@ export default function RecsPage() {
             </div>
           );
         })}
-        {busy && <TypingIndicator label={isBootstrapping ? "Starting session…" : "Thinking…"} />}
+        {busy && (
+          <TypingIndicator
+            label={isBootstrapping ? t.startingSession : t.waitingForAi}
+          />
+        )}
       </div>
 
       {error && (
-        <div className="mx-3 mb-2 rounded-xl px-3 py-2 text-[12px]" style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}>
+        <div
+          className="mx-3 mb-2 rounded-xl px-3 py-2 text-[12px]"
+          style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+        >
           {error}
         </div>
       )}
@@ -468,7 +652,10 @@ export default function RecsPage() {
       {/* Compose */}
       <div
         className="shrink-0 px-3 pb-3 pt-2 border-t"
-        style={{ backgroundColor: "var(--tm-surface)", borderColor: "var(--tm-border-i)" }}
+        style={{
+          backgroundColor: "var(--tm-surface)",
+          borderColor: "var(--tm-border-i)",
+        }}
       >
         {hasDish && (
           <ComposeDetectionRow
@@ -493,24 +680,35 @@ export default function RecsPage() {
             onClick={() => dishInputRef.current?.click()}
             disabled={busy || isDetecting}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium disabled:opacity-50"
-            style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
+            style={{
+              borderColor: "var(--tm-border-i)",
+              color: "var(--tm-text-2)",
+              backgroundColor: "var(--tm-subtle)",
+            }}
           >
-            <Camera size={14} /> Dish photo
+            <Camera size={14} /> {t.dishPhotoLabel}
           </button>
           <button
             type="button"
             onClick={() => ingredientsInputRef.current?.click()}
             disabled={busy || isDetecting}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium disabled:opacity-50"
-            style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
+            style={{
+              borderColor: "var(--tm-border-i)",
+              color: "var(--tm-text-2)",
+              backgroundColor: "var(--tm-subtle)",
+            }}
           >
-            <ShoppingBasket size={14} /> Ingredients photo
+            <ShoppingBasket size={14} /> {t.ingredientsPhotoLabel}
           </button>
         </div>
 
         <div
           className="flex items-center gap-2 h-11 rounded-full border px-3"
-          style={{ borderColor: "var(--tm-border-i)", backgroundColor: "var(--tm-subtle)" }}
+          style={{
+            borderColor: "var(--tm-border-i)",
+            backgroundColor: "var(--tm-subtle)",
+          }}
         >
           <input
             value={input}
@@ -522,14 +720,18 @@ export default function RecsPage() {
               }
             }}
             disabled={busy}
-            placeholder={isDetecting ? "Analyzing photo…" : "Ask for recipes…"}
+            placeholder={isDetecting ? t.analyzingPhoto : t.askForRecipesHint}
             className="flex-1 bg-transparent text-sm focus:outline-none"
             style={{ color: "var(--tm-text)" }}
           />
           <button
             type="button"
             onClick={() => void handleSubmit()}
-            disabled={busy || isDetecting || (!input.trim() && !hasDish && !hasIngredients)}
+            disabled={
+              busy ||
+              isDetecting ||
+              (!input.trim() && !hasDish && !hasIngredients)
+            }
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40"
             style={{ backgroundColor: "#059669" }}
           >
@@ -538,18 +740,35 @@ export default function RecsPage() {
         </div>
       </div>
 
-      <input ref={dishInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFileChange(e, "dish")} />
-      <input ref={ingredientsInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFileChange(e, "ingredients")} />
+      <input
+        ref={dishInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onFileChange(e, "dish")}
+      />
+      <input
+        ref={ingredientsInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onFileChange(e, "ingredients")}
+      />
 
       {pendingDetection && (
         <DetectionConfirmDialog
-          title={pendingDetection.kind === "dish" ? "Dish recognized — is this right?" : "Ingredients detected — is this right?"}
+          title={
+            pendingDetection.kind === "dish"
+              ? t.dishRecognizedTitle
+              : t.ingredientsDetectedTitle
+          }
           text={pendingDetection.text}
           inputImageUrl={pendingDetection.inputImageUrl}
           outputImageUrl={pendingDetection.outputImageUrl}
           onSave={(text) => {
             const trimmed = text.trim();
-            if (pendingDetection.kind === "dish") setComposeDishText(trimmed || null);
+            if (pendingDetection.kind === "dish")
+              setComposeDishText(trimmed || null);
             else setComposeIngredientsText(trimmed || null);
             setPendingDetection(null);
           }}
@@ -559,8 +778,14 @@ export default function RecsPage() {
 
       {editingField && (
         <NoteDialog
-          title={editingField === "dish" ? "Edit detected dish" : "Edit detected ingredients"}
-          initialNote={(editingField === "dish" ? composeDishText : composeIngredientsText) ?? ""}
+          title={
+            editingField === "dish" ? t.editDishesLabel : t.editIngredientsLabel
+          }
+          initialNote={
+            (editingField === "dish"
+              ? composeDishText
+              : composeIngredientsText) ?? ""
+          }
           accentColor="#059669"
           onSave={(text) => {
             const trimmed = text.trim();
@@ -574,9 +799,9 @@ export default function RecsPage() {
 
       {confirmReset && (
         <ConfirmDialog
-          title="Reset chat?"
-          message="This clears your current conversation and starts a new session."
-          confirmLabel="Reset"
+          title={t.resetChatTitle}
+          message={t.resetChatDesc}
+          confirmLabel={t.resetLabel}
           confirmColor="#059669"
           onConfirm={() => void handleReset()}
           onCancel={() => setConfirmReset(false)}

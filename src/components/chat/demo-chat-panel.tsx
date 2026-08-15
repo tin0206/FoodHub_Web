@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { ChefHat, RotateCcw, Send, Sparkles } from "lucide-react";
+import { Bot, ChefHat, RotateCcw, Send } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { aiChat, aiWelcome } from "@/lib/api/ai";
 import type { ChatHistoryMessage, RagRecipe } from "@/lib/api/types";
@@ -435,7 +435,7 @@ export function DemoChatPanel({
                         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                         style={{ backgroundColor: "#059669" }}
                       >
-                        <Sparkles size={14} color="white" />
+                        <Bot size={14} color="white" />
                       </div>
                     )}
                     <div>

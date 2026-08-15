@@ -1,5 +1,6 @@
 import { ApiError, setAccessToken, getAccessToken } from "@/lib/api-client";
 import { apiLogin, apiSignup, apiForgotPassword } from "@/lib/api/auth";
+import { clearChatSession } from "@/lib/chat-session";
 import type { ApiUser } from "@/lib/api/types";
 
 export interface LoginCredentials {
@@ -145,6 +146,7 @@ export function hasAccessToken(): boolean {
 export function logout(): void {
   setAccessToken(null);
   localStorage.removeItem("fh_current_user");
+  clearChatSession();
 }
 
 /** Dev shortcut for mock Overview/Users only — no JWT, Recipes API & chat will fail. */

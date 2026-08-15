@@ -115,6 +115,36 @@ export function getStrings(lang: Lang) {
     unableToReachAi: vi
       ? 'Không thể kết nối với trợ lý AI. Vui lòng thử lại.'
       : 'Unable to reach AI assistant. Please try again.',
+    rerun: vi ? 'Chạy lại' : 'Rerun',
+    aiWelcomeFallback: vi
+      ? "Xin chào! Tôi là trợ lý ẩm thực của bạn. Hãy cho tôi biết bạn muốn nấu gì."
+      : "Hello! I'm your culinary companion. Tell me what you'd like to cook.",
+    emptyReply: vi ? '(Không có phản hồi)' : '(Empty reply)',
+
+    // Dish photo / ingredients photo detection
+    dishPhotoLabel: vi ? 'Ảnh món ăn' : 'Dish photo',
+    ingredientsPhotoLabel: vi ? 'Ảnh nguyên liệu' : 'Ingredients photo',
+    analyzingPhoto: vi ? 'Đang phân tích ảnh…' : 'Analyzing photo…',
+    dishesDetectedPrefix: vi ? 'Món ăn nhận diện được:' : 'Dishes detected:',
+    ingredientsDetectedPrefix: vi ? 'Nguyên liệu nhận diện được:' : 'Ingredients detected:',
+    couldNotRecognizeDish: vi ? 'Không nhận diện được món ăn trong ảnh đó.' : 'Could not recognize a dish in that photo.',
+    noIngredientsDetected: vi ? 'Không phát hiện nguyên liệu nào trong ảnh đó.' : 'No ingredients detected in that photo.',
+    unableToAnalyzePhoto: vi ? 'Không thể phân tích ảnh.' : 'Unable to analyze the photo.',
+    dishRecognizedTitle: vi ? 'Đã nhận diện món ăn — có đúng không?' : 'Dish recognized — is this right?',
+    ingredientsDetectedTitle: vi ? 'Đã phát hiện nguyên liệu — có đúng không?' : 'Ingredients detected — is this right?',
+    detectionResultAlt: vi ? 'Kết quả nhận diện' : 'Detection result',
+    editBeforeAddingHint: vi ? 'Chỉnh sửa trước khi thêm vào tin nhắn…' : 'Edit before adding to your message…',
+    useThisLabel: vi ? 'Dùng cái này' : 'Use this',
+
+    // ── Recipe preview (chat link) ────────────────────────────────────────
+    close: vi ? 'Đóng' : 'Close',
+    recipeLabel: vi ? 'Công thức' : 'Recipe',
+    loadingRecipe: vi ? 'Đang tải công thức…' : 'Loading recipe…',
+    failedToLoadRecipe: vi ? 'Không thể tải công thức' : 'Failed to load recipe',
+    openRecipeDetailsLabel: vi ? 'Xem chi tiết công thức' : 'Open recipe details',
+    recipeNotOpenableDemo: vi
+      ? 'Không thể mở công thức này trong bản demo.'
+      : 'This recipe id is not openable in the demo.',
 
     // ── Recipe detail / cooking mode ───────────────────────────────────────
     addPhoto: vi ? 'Thêm ảnh' : 'Add Photo',
