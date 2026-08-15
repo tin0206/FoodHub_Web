@@ -201,8 +201,13 @@ export interface IngredientsDetectionResult {
   annotatedImageUrl: string;
 }
 
-export async function aiDetectIngredients(file: File): Promise<IngredientsDetectionResult> {
-  const accepted = await apiUpload<AiJobAccepted>("/ai/ingredients/detect", file);
+export async function aiDetectIngredients(
+  file: File,
+  language: "en" | "vi" = "en",
+): Promise<IngredientsDetectionResult> {
+  const accepted = await apiUpload<AiJobAccepted>("/ai/ingredients/detect", file, {
+    fields: { language },
+  });
   const detail = await waitForResult(accepted.task_id);
   const payload = (detail.output_payload ?? {}) as Record<string, unknown>;
   return {

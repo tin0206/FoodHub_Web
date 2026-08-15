@@ -179,13 +179,16 @@ export async function apiFetch<T = unknown>(
 export async function apiUpload<T = unknown>(
   path: string,
   file: File,
-  fieldName = "file",
+  options?: { fieldName?: string; fields?: Record<string, string> },
 ): Promise<T> {
   const base = getApiBaseUrl();
   const url = `${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`;
 
   const form = new FormData();
-  form.append(fieldName, file, file.name);
+  form.append(options?.fieldName ?? "file", file, file.name);
+  for (const [key, value] of Object.entries(options?.fields ?? {})) {
+    form.append(key, value);
+  }
 
   const headers: Record<string, string> = { Accept: "application/json" };
   const token = getAccessToken();

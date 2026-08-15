@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Camera,
+  Loader2,
   Pencil,
   RefreshCw,
   Send,
@@ -26,6 +27,7 @@ import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { NoteDialog } from "@/components/note-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
 import { useStrings } from "@/lib/use-strings";
 
 interface UiMessage {
@@ -88,6 +90,29 @@ function ComposeDetectionRow({
       >
         <Pencil size={15} />
       </button>
+    </div>
+  );
+}
+
+function DetectingBanner({ kind }: { kind: "dish" | "ingredients" }) {
+  const t = useStrings();
+  const Icon = kind === "dish" ? UtensilsCrossed : ShoppingBasket;
+  return (
+    <div
+      className="flex items-center gap-2 rounded-xl px-3 py-2.5 mb-2"
+      style={{
+        backgroundColor: "rgba(5,150,105,0.1)",
+        border: "1px solid rgba(5,150,105,0.35)",
+      }}
+    >
+      <Icon size={16} color="#059669" />
+      <p
+        className="flex-1 text-[13px] leading-snug"
+        style={{ color: "var(--tm-text)" }}
+      >
+        {t.analyzingPhoto}
+      </p>
+      <Loader2 size={16} className="animate-spin" color="#059669" />
     </div>
   );
 }
@@ -186,6 +211,7 @@ function DetectionConfirmDialog({
 
 export default function RecsPage() {
   const t = useStrings();
+  const lang = useLang();
   const listRef = useRef<HTMLDivElement>(null);
   const dishInputRef = useRef<HTMLInputElement>(null);
   const ingredientsInputRef = useRef<HTMLInputElement>(null);
@@ -214,7 +240,10 @@ export default function RecsPage() {
   } | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectingKind, setDetectingKind] = useState<
+    "dish" | "ingredients" | null
+  >(null);
+  const isDetecting = detectingKind !== null;
   const [error, setError] = useState("");
   const [lastSentMessage, setLastSentMessage] = useState<string | null>(null);
   const [lastSentIngredients, setLastSentIngredients] = useState<string[]>([]);
@@ -460,7 +489,7 @@ export default function RecsPage() {
   }
 
   async function handleDetect(file: File, kind: "dish" | "ingredients") {
-    setIsDetecting(true);
+    setDetectingKind(kind);
     setError("");
     try {
       if (kind === "dish") {
@@ -483,7 +512,7 @@ export default function RecsPage() {
           setError(t.couldNotRecognizeDish);
         }
       } else {
-        const result = await aiDetectIngredients(file);
+        const result = await aiDetectIngredients(file, lang);
         if (result.ingredients.length) {
           setPendingDetection({
             kind: "ingredients",
@@ -498,7 +527,7 @@ export default function RecsPage() {
     } catch (err) {
       setError(errorMessage(err, t.unableToAnalyzePhoto));
     } finally {
-      setIsDetecting(false);
+      setDetectingKind(null);
     }
   }
 
@@ -674,6 +703,8 @@ export default function RecsPage() {
           />
         )}
 
+        {detectingKind && <DetectingBanner kind={detectingKind} />}
+
         <div className="flex gap-2 mb-2">
           <button
             type="button"
@@ -686,7 +717,12 @@ export default function RecsPage() {
               backgroundColor: "var(--tm-subtle)",
             }}
           >
-            <Camera size={14} /> {t.dishPhotoLabel}
+            {detectingKind === "dish" ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Camera size={14} />
+            )}{" "}
+            {t.dishPhotoLabel}
           </button>
           <button
             type="button"
@@ -699,7 +735,12 @@ export default function RecsPage() {
               backgroundColor: "var(--tm-subtle)",
             }}
           >
-            <ShoppingBasket size={14} /> {t.ingredientsPhotoLabel}
+            {detectingKind === "ingredients" ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <ShoppingBasket size={14} />
+            )}{" "}
+            {t.ingredientsPhotoLabel}
           </button>
         </div>
 
