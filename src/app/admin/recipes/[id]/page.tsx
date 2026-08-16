@@ -33,6 +33,7 @@ import type {
   RecipeVisibility,
 } from "@/lib/api/types";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ingredientLines } from "@/components/recipe/recipe-view-content";
 
 const LOCALES = ["en", "vi"] as const;
 
@@ -422,7 +423,7 @@ export default function AdminRecipeDetailPage() {
             </span>
           </div>
           <ul className="space-y-1.5">
-            {(recipe.ingredients ?? []).map((line, i) => (
+            {ingredientLines(recipe).map((line, i) => (
               <li
                 key={i}
                 className="flex items-start gap-2.5 text-[13px]"
@@ -435,7 +436,7 @@ export default function AdminRecipeDetailPage() {
                 {line}
               </li>
             ))}
-            {(recipe.ingredients ?? []).length === 0 && (
+            {ingredientLines(recipe).length === 0 && (
               <li className="text-xs" style={{ color: "var(--tm-text-3)" }}>
                 {t.adminNoIngredients}
               </li>

@@ -2,13 +2,14 @@ import { apiFetch } from "@/lib/api-client";
 import type {
   ApiRecipe,
   ApiRecipeTranslation,
+  RecipeIngredientItem,
   RecipeTranslationUpsert,
   RecipeVisibility,
 } from "@/lib/api/types";
 
 export type RecipeWritePayload = {
   title: string;
-  ingredients: string[];
+  ingredient_items: RecipeIngredientItem[];
   directions: string[];
   dietary_restrictions?: string[];
   estimated_servings?: number | null;
@@ -52,7 +53,7 @@ export async function createRecipe(
     method: "POST",
     body: {
       title: body.title,
-      ingredients: body.ingredients,
+      ingredient_items: body.ingredient_items,
       directions: body.directions,
       dietary_restrictions: body.dietary_restrictions ?? [],
       estimated_servings: body.estimated_servings ?? undefined,

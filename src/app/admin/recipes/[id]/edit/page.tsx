@@ -81,6 +81,7 @@ export default function AdminRecipeEditPage() {
         id: recipe.id,
         title: recipe.title,
         ingredients: recipe.ingredients ?? [],
+        mapped_ingredients: recipe.mapped_ingredients ?? [],
         directions: recipe.directions ?? [],
         dietary_restrictions: recipe.dietary_restrictions ?? [],
         estimated_servings: recipe.estimated_servings,

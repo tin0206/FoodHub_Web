@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Clock, Flame, ShoppingBasket, ListOrdered, Tag } from 'lucide-react'
+import { ArrowLeft, Clock, Users, ShoppingBasket, ListOrdered, Tag } from 'lucide-react'
 import { ApiError, resolveMediaUrl } from '@/lib/api-client'
 import { getRecipe, updateRecipe, uploadRecipeImage } from '@/lib/api/recipes'
 import type { ApiRecipe } from '@/lib/api/types'
-import { getOrEstimateMeta, setRecipeMeta } from '@/lib/recipe-meta'
+import { getOrEstimateMeta, setRecipeMeta, estimateStats } from '@/lib/recipe-meta'
 import { parseRecipeIdFromSlug, buildRecipeSlug } from '@/lib/recipe-slug'
 import { recipeCardTheme } from '@/components/recipe/recipe-card-theme'
 import { SectionCard } from '@/components/recipe/section-card'
@@ -16,6 +16,13 @@ import { PhotoPicker } from '@/components/recipe/photo-picker'
 import { inlineInputClass } from '@/components/recipe/form-styles'
 import LoadingOverlay from '@/components/loading-overlay'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import {
+  IngredientPicker,
+  mappedIngredientsToRows,
+  newIngredientRow,
+  rowsToIngredientItems,
+  type IngredientRowValue,
+} from '@/components/recipe/ingredient-picker'
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback
@@ -36,8 +43,8 @@ export default function EditPersonalRecipePage() {
   const [imagePreview, setImagePreview] = useState('')
   const [imageCleared, setImageCleared] = useState(false)
   const [minutes, setMinutes] = useState('')
-  const [calories, setCalories] = useState('')
-  const [ingredients, setIngredients] = useState<string[]>([''])
+  const [servings, setServings] = useState('')
+  const [ingredientRows, setIngredientRows] = useState<IngredientRowValue[]>([newIngredientRow()])
   const [steps, setSteps] = useState<string[]>([''])
   const [labels, setLabels] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
@@ -58,8 +65,10 @@ export default function EditPersonalRecipePage() {
         setTitle(r.title)
         setImagePreview(resolveMediaUrl(r.image_url))
         setMinutes(String(meta.cookingMinutes))
-        setCalories(String(meta.calories))
-        setIngredients(r.ingredients.length ? r.ingredients : [''])
+        setServings(r.estimated_servings != null ? String(r.estimated_servings) : '')
+        setIngredientRows(
+          r.mapped_ingredients?.length ? mappedIngredientsToRows(r.mapped_ingredients) : [newIngredientRow()],
+        )
         setSteps(r.directions.length ? r.directions : [''])
         setLabels(new Set(r.dietary_restrictions))
       })
@@ -97,15 +106,16 @@ export default function EditPersonalRecipePage() {
 
   async function handleSave() {
     if (!recipe || saving) return
-    const cleanIngredients = ingredients.map(s => s.trim()).filter(Boolean)
+    const ingredientItems = rowsToIngredientItems(ingredientRows)
     const cleanSteps = steps.map(s => s.trim()).filter(Boolean)
     const mins = Number.parseInt(minutes, 10)
-    const cals = Number.parseInt(calories, 10)
+    const servingsNum = servings.trim() ? Number.parseInt(servings, 10) : null
     if (
-      !title.trim() || cleanIngredients.length === 0 || cleanSteps.length === 0 ||
-      !Number.isFinite(mins) || mins <= 0 || !Number.isFinite(cals) || cals <= 0
+      !title.trim() || ingredientItems.length === 0 || cleanSteps.length === 0 ||
+      !Number.isFinite(mins) || mins <= 0 ||
+      (servings.trim() && (!Number.isFinite(servingsNum) || (servingsNum as number) <= 0))
     ) {
-      setError('Title, time, calories, ingredients and instructions are required.')
+      setError('Title, time, ingredients and instructions are required.')
       return
     }
     setError('')
@@ -113,12 +123,16 @@ export default function EditPersonalRecipePage() {
     try {
       const updated = await updateRecipe(recipe.id, {
         title: title.trim(),
-        ingredients: cleanIngredients,
+        ingredient_items: ingredientItems,
         directions: cleanSteps,
         dietary_restrictions: [...labels],
+        estimated_servings: servingsNum,
         ...(imageCleared && !imageFile ? { image_url: null } : {}),
       })
-      setRecipeMeta(updated.id, { cookingMinutes: mins, calories: cals })
+      // Cooking time has no server equivalent — cache it locally. Calories are
+      // seeded from the same rough estimate used before nutrition existed;
+      // getOrEstimateMeta() prefers the real server-computed value once it's there.
+      setRecipeMeta(updated.id, { cookingMinutes: mins, calories: estimateStats(updated).calories })
 
       let finalId = updated.id
       if (imageFile) {
@@ -197,20 +211,20 @@ export default function EditPersonalRecipePage() {
                 />
                 <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>min</span>
                 <span className="w-3" />
-                <Flame size={16} color={theme.start} />
+                <Users size={16} color={theme.start} />
                 <input
                   type="number"
-                  value={calories}
-                  onChange={e => setCalories(e.target.value)}
+                  value={servings}
+                  onChange={e => setServings(e.target.value)}
                   placeholder="0"
                   className={inlineInputClass}
                   style={{ width: 56, color: 'var(--tm-text)' }}
                 />
-                <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>cal</span>
+                <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>servings</span>
               </div>
             </SectionCard>
             <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients" accent={theme.start}>
-              <LineListEditor values={ingredients} onChange={setIngredients} placeholder={i => `Ingredient ${i + 1}`} addLabel="Add ingredient" accent={theme.start} />
+              <IngredientPicker rows={ingredientRows} onChange={setIngredientRows} accent={theme.start} addLabel="Add ingredient" />
             </SectionCard>
             <SectionCard icon={<ListOrdered size={15} />} title="Instructions" accent={theme.start}>
               <LineListEditor values={steps} onChange={setSteps} placeholder={i => `Step ${i + 1}…`} variant="number" addLabel="Add step" accent={theme.start} />

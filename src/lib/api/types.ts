@@ -45,10 +45,59 @@ export interface UserProfileUpdate {
 
 export type RecipeVisibility = "private" | "public";
 
+/** One purchasable/measurable unit for a catalog ingredient (e.g. "g", "quả"). */
+export interface IngredientCatalogUnit {
+  unit: string;
+  grams_per_unit: number;
+}
+
+/** A row from GET /ingredients/search. */
+export interface IngredientCatalogEntry {
+  id: number;
+  name: string;
+  natural_name: string;
+  units: IngredientCatalogUnit[];
+}
+
+/** POST/PATCH /recipes body item — replaces the old free-text `ingredients: string[]`. */
+export interface RecipeIngredientItem {
+  mapped_id: number;
+  amount: number;
+  unit: string;
+}
+
+/** A resolved catalog ingredient on a recipe response. */
+export interface MappedIngredient {
+  mapped_id: number;
+  mapped_name: string;
+  natural_name: string;
+  amount: number;
+  unit: string;
+  total_grams: number;
+  grams_per_serving: number;
+}
+
+export interface RecipeNutritionIngredient {
+  display_string: string;
+  grams: number;
+  /** Keyed by nutrient label, e.g. "Calories (kcal)", "Protein (g)". */
+  nutrition: Record<string, number>;
+}
+
+export interface RecipeNutrition {
+  per_serving: Record<string, number>;
+  total: Record<string, number>;
+  ingredients: RecipeNutritionIngredient[];
+}
+
 export interface ApiRecipe {
   id: number;
   title: string;
+  /** Legacy free-text display list — still returned, but no longer writable (see `ingredient_items`). */
   ingredients: string[];
+  /** Catalog-mapped ingredients with amount/unit/grams, when the recipe has been migrated. */
+  mapped_ingredients?: MappedIngredient[];
+  nutrition?: RecipeNutrition | null;
   directions: string[];
   ner: string[];
   estimated_servings?: number | null;

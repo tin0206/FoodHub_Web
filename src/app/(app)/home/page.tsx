@@ -142,7 +142,11 @@ function AddRecipePanel({
     try {
       const created = await createRecipe({
         title: trimmedName,
-        ingredients: cleanIngredients,
+        // TODO: the API dropped free-text `ingredients` for `ingredient_items`
+        // (catalog mapped_id + amount + unit) — this form still collects plain
+        // text, so creation won't actually persist ingredients until it's
+        // reworked to use the catalog picker again.
+        ingredient_items: [],
         directions: cleanSteps,
         dietary_restrictions: [...labels],
         estimated_servings: Math.min(12, Math.max(1, Math.round(cals / 200))),

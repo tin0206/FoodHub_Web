@@ -1,5 +1,9 @@
 import { apiFetch, apiUpload } from "@/lib/api-client";
-import type { ApiRecipe, RecipeSearchResult } from "@/lib/api/types";
+import type {
+  ApiRecipe,
+  IngredientCatalogEntry,
+  RecipeSearchResult,
+} from "@/lib/api/types";
 
 export {
   getRecipe,
@@ -60,6 +64,19 @@ export async function getDietaryRestrictions(): Promise<string[]> {
     { auth: false },
   );
   return res.dietary_restrictions;
+}
+
+/** Catalog ingredient lookup for the ingredient picker (mapped_id + amount + unit). */
+export async function searchIngredients(
+  q: string,
+  limit = 8,
+): Promise<IngredientCatalogEntry[]> {
+  if (!q.trim()) return [];
+  const res = await apiFetch<{ ingredients: IngredientCatalogEntry[] }>(
+    "/ingredients/search",
+    { query: { q: q.trim(), limit } },
+  );
+  return res.ingredients;
 }
 
 /** Uploads a recipe photo. Endpoint/response shape inferred from REST convention — verify against the API. */
