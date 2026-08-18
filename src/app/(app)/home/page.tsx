@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Plus, X, Clock, Flame, ShoppingBasket, ListOrdered, Tag } from 'lucide-react'
+import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag } from 'lucide-react'
 import { hasAccessToken } from '@/lib/auth'
 import { ApiError } from '@/lib/api-client'
 import { listRecipes, createRecipe, uploadRecipeImage } from '@/lib/api/recipes'
 import type { ApiRecipe } from '@/lib/api/types'
 import LoadingOverlay from '@/components/loading-overlay'
 import { RecipeCard, type RecipeCardData } from '@/components/recipe/recipe-card'
-import { setRecipeMeta, getOrEstimateMeta } from '@/lib/recipe-meta'
+import { setRecipeMeta, getOrEstimateMeta, estimateStats } from '@/lib/recipe-meta'
 import { buildRecipeSlug } from '@/lib/recipe-slug'
 import { useDarkMode } from '@/lib/use-dark-mode'
 import { useStrings } from '@/lib/use-strings'
@@ -98,7 +98,7 @@ function AddRecipePanel({
   const [imagePreview, setImagePreview] = useState('')
   const [name, setName] = useState('')
   const [minutes, setMinutes] = useState('')
-  const [calories, setCalories] = useState('')
+  const [servings, setServings] = useState('2')
   const [ingredients, setIngredients] = useState<string[]>([''])
   const [steps, setSteps] = useState<string[]>([''])
   const [labels, setLabels] = useState<Set<string>>(new Set())
@@ -129,10 +129,10 @@ function AddRecipePanel({
     const cleanIngredients = ingredients.map(s => s.trim()).filter(Boolean)
     const cleanSteps = steps.map(s => s.trim()).filter(Boolean)
     const mins = Number.parseInt(minutes, 10)
-    const cals = Number.parseInt(calories, 10)
+    const servingsNum = Number.parseInt(servings, 10)
 
     if (!trimmedName || cleanIngredients.length === 0 || cleanSteps.length === 0 ||
-      !Number.isFinite(mins) || mins <= 0 || !Number.isFinite(cals) || cals <= 0) {
+      !Number.isFinite(servingsNum) || servingsNum <= 0) {
       setError(t.fillAllFields)
       return
     }
@@ -142,16 +142,16 @@ function AddRecipePanel({
     try {
       const created = await createRecipe({
         title: trimmedName,
-        // TODO: the API dropped free-text `ingredients` for `ingredient_items`
-        // (catalog mapped_id + amount + unit) — this form still collects plain
-        // text, so creation won't actually persist ingredients until it's
-        // reworked to use the catalog picker again.
-        ingredient_items: [],
+        ingredients: cleanIngredients,
         directions: cleanSteps,
         dietary_restrictions: [...labels],
-        estimated_servings: Math.min(12, Math.max(1, Math.round(cals / 200))),
+        estimated_servings: servingsNum,
       })
-      setRecipeMeta(created.id, { cookingMinutes: mins, calories: cals })
+      // Cooking time has no API field — cache it locally when the user gave one,
+      // same fallback chain getOrEstimateMeta() already uses everywhere else.
+      if (Number.isFinite(mins) && mins > 0) {
+        setRecipeMeta(created.id, { cookingMinutes: mins, calories: estimateStats(created).calories })
+      }
 
       let finalRecipe = created
       if (imageFile) {
@@ -222,16 +222,16 @@ function AddRecipePanel({
             />
             <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{t.minSuffix}</span>
             <span className="w-3" />
-            <Flame size={16} color="#059669" />
+            <Users size={16} color="#059669" />
             <input
               type="number"
-              value={calories}
-              onChange={e => setCalories(e.target.value)}
-              placeholder="0"
+              value={servings}
+              onChange={e => setServings(e.target.value)}
+              placeholder="2"
               className={inlineInputClass}
               style={{ width: 56, color: 'var(--tm-text)' }}
             />
-            <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{t.calSuffix}</span>
+            <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{t.servingsSuffix}</span>
           </div>
         </SectionCard>
 

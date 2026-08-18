@@ -16,13 +16,6 @@ import { PhotoPicker } from '@/components/recipe/photo-picker'
 import { inlineInputClass } from '@/components/recipe/form-styles'
 import LoadingOverlay from '@/components/loading-overlay'
 import { useDarkMode } from '@/lib/use-dark-mode'
-import {
-  IngredientPicker,
-  mappedIngredientsToRows,
-  newIngredientRow,
-  rowsToIngredientItems,
-  type IngredientRowValue,
-} from '@/components/recipe/ingredient-picker'
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback
@@ -44,7 +37,7 @@ export default function EditPersonalRecipePage() {
   const [imageCleared, setImageCleared] = useState(false)
   const [minutes, setMinutes] = useState('')
   const [servings, setServings] = useState('')
-  const [ingredientRows, setIngredientRows] = useState<IngredientRowValue[]>([newIngredientRow()])
+  const [ingredients, setIngredients] = useState<string[]>([''])
   const [steps, setSteps] = useState<string[]>([''])
   const [labels, setLabels] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
@@ -66,9 +59,7 @@ export default function EditPersonalRecipePage() {
         setImagePreview(resolveMediaUrl(r.image_url))
         setMinutes(String(meta.cookingMinutes))
         setServings(r.estimated_servings != null ? String(r.estimated_servings) : '')
-        setIngredientRows(
-          r.mapped_ingredients?.length ? mappedIngredientsToRows(r.mapped_ingredients) : [newIngredientRow()],
-        )
+        setIngredients(r.ingredients.length ? r.ingredients : [''])
         setSteps(r.directions.length ? r.directions : [''])
         setLabels(new Set(r.dietary_restrictions))
       })
@@ -106,12 +97,12 @@ export default function EditPersonalRecipePage() {
 
   async function handleSave() {
     if (!recipe || saving) return
-    const ingredientItems = rowsToIngredientItems(ingredientRows)
+    const cleanIngredients = ingredients.map(s => s.trim()).filter(Boolean)
     const cleanSteps = steps.map(s => s.trim()).filter(Boolean)
     const mins = Number.parseInt(minutes, 10)
     const servingsNum = servings.trim() ? Number.parseInt(servings, 10) : null
     if (
-      !title.trim() || ingredientItems.length === 0 || cleanSteps.length === 0 ||
+      !title.trim() || cleanIngredients.length === 0 || cleanSteps.length === 0 ||
       !Number.isFinite(mins) || mins <= 0 ||
       (servings.trim() && (!Number.isFinite(servingsNum) || (servingsNum as number) <= 0))
     ) {
@@ -123,7 +114,7 @@ export default function EditPersonalRecipePage() {
     try {
       const updated = await updateRecipe(recipe.id, {
         title: title.trim(),
-        ingredient_items: ingredientItems,
+        ingredients: cleanIngredients,
         directions: cleanSteps,
         dietary_restrictions: [...labels],
         estimated_servings: servingsNum,
@@ -224,7 +215,7 @@ export default function EditPersonalRecipePage() {
               </div>
             </SectionCard>
             <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients" accent={theme.start}>
-              <IngredientPicker rows={ingredientRows} onChange={setIngredientRows} accent={theme.start} addLabel="Add ingredient" />
+              <LineListEditor values={ingredients} onChange={setIngredients} placeholder={i => `Ingredient ${i + 1}`} addLabel="Add ingredient" accent={theme.start} />
             </SectionCard>
             <SectionCard icon={<ListOrdered size={15} />} title="Instructions" accent={theme.start}>
               <LineListEditor values={steps} onChange={setSteps} placeholder={i => `Step ${i + 1}…`} variant="number" addLabel="Add step" accent={theme.start} />

@@ -26,13 +26,6 @@ import {
   type RecipeWritePayload,
 } from "@/lib/api/admin-recipes";
 import type { ApiRecipe } from "@/lib/api/types";
-import {
-  IngredientPicker,
-  mappedIngredientsToRows,
-  newIngredientRow,
-  rowsToIngredientItems,
-  type IngredientRowValue,
-} from "@/components/recipe/ingredient-picker";
 
 function FieldCard({ children }: { children: React.ReactNode }) {
   return (
@@ -53,7 +46,6 @@ export type RecipeFormInitial = Pick<
   | "id"
   | "title"
   | "ingredients"
-  | "mapped_ingredients"
   | "directions"
   | "dietary_restrictions"
   | "estimated_servings"
@@ -75,13 +67,9 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
       ? String(initial.estimated_servings)
       : "",
   );
-  const [ingredientRows, setIngredientRows] = useState<IngredientRowValue[]>(
-    initial?.mapped_ingredients?.length
-      ? mappedIngredientsToRows(initial.mapped_ingredients)
-      : [newIngredientRow()],
+  const [ingredients, setIngredients] = useState<string[]>(
+    initial && initial.ingredients.length > 0 ? initial.ingredients : [""],
   );
-  const legacyIngredients =
-    initial && !initial.mapped_ingredients?.length ? initial.ingredients : [];
   const [steps, setSteps] = useState<string[]>(
     initial && initial.directions.length > 0 ? initial.directions : [""],
   );
@@ -117,7 +105,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
   async function handleSave() {
     if (saving) return;
     const trimmedTitle = title.trim();
-    const ingredientItems = rowsToIngredientItems(ingredientRows);
+    const cleanIngredients = ingredients.map((s) => s.trim()).filter(Boolean);
     const cleanSteps = steps.map((s) => s.trim()).filter(Boolean);
     const servingsNum = servings.trim()
       ? Number.parseInt(servings, 10)
@@ -125,7 +113,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
 
     if (
       !trimmedTitle ||
-      ingredientItems.length === 0 ||
+      cleanIngredients.length === 0 ||
       cleanSteps.length === 0
     ) {
       setError(t.adminRecipeFieldsRequired);
@@ -141,7 +129,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
 
     const payload: RecipeWritePayload = {
       title: trimmedTitle,
-      ingredient_items: ingredientItems,
+      ingredients: cleanIngredients,
       directions: cleanSteps,
       dietary_restrictions: [...labels],
       estimated_servings: servingsNum,
@@ -271,17 +259,44 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               {t.adminIngredientsHeading}
             </span>
           </div>
-          {legacyIngredients.length > 0 && (
-            <p className="text-[11px] mb-2" style={hintStyle}>
-              Not yet mapped to the ingredient catalog — old list: {legacyIngredients.join(", ")}
-            </p>
-          )}
-          <IngredientPicker
-            rows={ingredientRows}
-            onChange={setIngredientRows}
-            accent={accent}
-            addLabel={t.adminAddIngredient}
-          />
+          <div className="space-y-1.5">
+            {ingredients.map((val, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: accent }}
+                />
+                <input
+                  value={val}
+                  onChange={(e) =>
+                    updateAt(ingredients, setIngredients, i, e.target.value)
+                  }
+                  placeholder={t.adminIngredientHint(i)}
+                  className="flex-1 text-[13px] bg-transparent focus:outline-none py-1"
+                  style={inputStyle}
+                />
+                {ingredients.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeAt(ingredients, setIngredients, i)}
+                    className="shrink-0"
+                    style={{ color: "var(--tm-text-3)" }}
+                    aria-label="Remove ingredient"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIngredients([...ingredients, ""])}
+            className="mt-2 flex items-center gap-1 text-xs font-semibold"
+            style={{ color: accent }}
+          >
+            <Plus size={14} /> {t.adminAddIngredient}
+          </button>
         </FieldCard>
 
         <FieldCard>

@@ -195,7 +195,9 @@
   background: rgba(255, 255, 255, 0.22);
 }
 
-/* Secondary CTA for light (non-hero) backgrounds, e.g. the library section. */
+/* Secondary CTA for light (non-hero) backgrounds, e.g. the library section.
+   Needs its own fill + a stronger border than --lh-line so it doesn't
+   disappear into the section's light minty background. */
 .landing-btn-outline {
   display: inline-flex;
   align-items: center;
@@ -206,13 +208,14 @@
   padding: 0.8rem 1.25rem;
   border-radius: 999px;
   color: var(--lh-ink);
-  border: 1px solid var(--lh-line);
-  background: transparent;
-  transition: transform 0.2s ease, background 0.2s ease;
+  border: 1.5px solid rgba(12, 26, 20, 0.32);
+  background: rgba(255, 255, 255, 0.65);
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .landing-btn-outline:hover {
-  background: rgba(12, 26, 20, 0.05);
+  background: #fff;
+  border-color: rgba(12, 26, 20, 0.45);
   transform: translateY(-1px);
 }
 
