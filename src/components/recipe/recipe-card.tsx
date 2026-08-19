@@ -46,7 +46,7 @@ export function RecipeCard({
     stats.push({ icon: Users, text: `Serves ${recipe.servings}` });
   }
 
-  const cardClass = `rounded-[20px] overflow-hidden ${className ?? ""}`;
+  const cardClass = `rounded-[20px] overflow-hidden h-full flex flex-col ${className ?? ""}`;
   const cardStyle = {
     backgroundColor: "var(--tm-surface)",
     boxShadow: dark
@@ -55,17 +55,17 @@ export function RecipeCard({
   };
 
   const inner = (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
       <RecipeImageHeader
         imageUrl={recipe.imageUrl}
         cardId={recipe.id}
         labels={recipe.labels}
         height={180}
       />
-      <div className="px-3 pt-2.5 pb-2.5">
+      <div className="px-3 pt-2.5 pb-2.5 flex-1 flex flex-col">
         <div className="flex items-start gap-2.5">
           <p
-            className="flex-1 font-extrabold text-[16px] leading-tight tracking-tight line-clamp-2 text-left"
+            className="flex-1 min-h-[2.5rem] font-extrabold text-[16px] leading-tight tracking-tight line-clamp-2 text-left"
             style={{ color: "var(--tm-text)" }}
           >
             {recipe.name}
@@ -130,9 +130,9 @@ export function RecipeCard({
           </div>
         )}
 
-        {footer && <div className="mt-2.5">{footer}</div>}
+        {footer && <div className="mt-auto pt-2.5">{footer}</div>}
       </div>
-    </>
+    </div>
   );
 
   if (onTap) {

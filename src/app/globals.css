@@ -48,3 +48,15 @@ select,
 label {
   cursor: pointer;
 }
+
+/* Scrollable rows that navigate via arrow buttons instead of a visible scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

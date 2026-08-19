@@ -1,8 +1,17 @@
 import { apiFetch } from "@/lib/api-client";
-import type { ApiFavorite } from "@/lib/api/types";
+import type { ApiFavorite, TopFavoriteRecipe } from "@/lib/api/types";
 
 export async function listFavorites(lang?: string): Promise<ApiFavorite[]> {
   return apiFetch<ApiFavorite[]>("/favorites", { query: { lang } });
+}
+
+/** Most-favorited recipes site-wide (top 10), for the home screen's "Top Recipes" row. */
+export async function getTopFavorites(
+  lang?: string,
+): Promise<TopFavoriteRecipe[]> {
+  return apiFetch<TopFavoriteRecipe[]>("/favorites/top-favorites", {
+    query: { lang },
+  });
 }
 
 export async function addFavorite(

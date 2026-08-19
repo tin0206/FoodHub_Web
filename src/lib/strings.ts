@@ -39,6 +39,18 @@ export function getStrings(lang: Lang) {
     unableToLoadRecipes: vi
       ? "Không thể tải công thức."
       : "Unable to load recipes.",
+    personalRecipesTitle: vi ? "Công thức của tôi" : "Personal Recipes",
+    topRecipesTitle: vi ? "Công thức nổi bật" : "Top Recipes",
+    recommendedRecipesTitle: vi ? "Gợi ý cho bạn" : "Recommended for You",
+    unableToLoadTopRecipes: vi
+      ? "Không thể tải công thức nổi bật."
+      : "Unable to load top recipes.",
+    noTopRecipesYet: vi
+      ? "Chưa có công thức nổi bật"
+      : "No top recipes yet",
+    recommendedComingSoon: vi
+      ? "Gợi ý cá nhân hóa sẽ sớm ra mắt"
+      : "Personalized recommendations are coming soon",
     fillAllFields: vi
       ? "Vui lòng điền đầy đủ thông tin."
       : "Please fill in all required fields.",

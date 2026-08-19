@@ -141,6 +141,14 @@ export interface ApiFavorite {
   updated_at: string;
 }
 
+/** GET /favorites/top-favorites row — most-favorited recipes site-wide. */
+export interface TopFavoriteRecipe {
+  id: number;
+  recipe_id: number;
+  recipe: ApiRecipe;
+  favorite_count: number;
+}
+
 export interface ChatHistoryMessage {
   role: "user" | "assistant";
   content: string;

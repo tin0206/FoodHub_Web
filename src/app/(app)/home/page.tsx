@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag } from 'lucide-react'
+import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag, Heart, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import { hasAccessToken } from '@/lib/auth'
 import { ApiError } from '@/lib/api-client'
 import { listRecipes, createRecipe, uploadRecipeImage } from '@/lib/api/recipes'
-import type { ApiRecipe } from '@/lib/api/types'
+import { getTopFavorites } from '@/lib/api/favorites'
+import type { ApiRecipe, TopFavoriteRecipe } from '@/lib/api/types'
 import LoadingOverlay from '@/components/loading-overlay'
 import { RecipeCard, type RecipeCardData } from '@/components/recipe/recipe-card'
 import { setRecipeMeta, getOrEstimateMeta, estimateStats } from '@/lib/recipe-meta'
@@ -64,7 +65,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   const dark = useDarkMode()
   const t = useStrings()
   return (
-    <div className="flex-1 flex flex-col items-center justify-center">
+    <div className="py-8 flex flex-col items-center justify-center">
       <div
         className="w-17 h-17 rounded-[18px] flex items-center justify-center mb-3"
         style={{ backgroundColor: dark ? 'var(--tm-subtle)' : '#E5E7EB' }}
@@ -83,6 +84,111 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         <Plus size={16} />
         {t.addFirstRecipe}
       </button>
+    </div>
+  )
+}
+
+// ─── Home sections (Personal / Top / Recommended) ──────────────────────────────
+
+// Shared card width so Personal/Top/Recommended rows line up at the same size.
+const RECIPE_ROW_CARD_CLASS = 'w-48 shrink-0 snap-start'
+
+function SectionHeading({ title, count }: { title: string; count?: number }) {
+  return (
+    <div className="mb-2.5">
+      <p className="text-sm font-bold" style={{ color: 'var(--tm-text)' }}>
+        {title}
+        {count != null && (
+          <span className="font-medium" style={{ color: 'var(--tm-text-3)' }}> - {count}</span>
+        )}
+      </p>
+    </div>
+  )
+}
+
+/** Horizontal-scrolling strip of fixed-width cards — used for Personal/Top rows.
+ * No visible scrollbar; navigated via the arrow buttons instead. Scrolls within
+ * its own bounds only (no negative-margin bleed), so the page around it never
+ * picks up a horizontal scrollbar of its own. */
+function RecipeRow({ children }: { children: React.ReactNode }) {
+  const dark = useDarkMode()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  function updateArrows() {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }
+
+  useEffect(() => {
+    updateArrows()
+    const el = scrollRef.current
+    if (!el) return
+    const onResize = () => updateArrows()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [children])
+
+  function scrollByAmount(dir: 1 | -1) {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' })
+  }
+
+  const arrowStyle = {
+    backgroundColor: dark ? 'rgba(20,20,20,0.85)' : 'rgba(255,255,255,0.92)',
+    boxShadow: dark ? '0 4px 12px rgba(0,0,0,0.5)' : '0 4px 12px rgba(12,26,20,0.16)',
+    color: 'var(--tm-text)',
+  }
+
+  return (
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        onScroll={updateArrows}
+        className="no-scrollbar flex gap-3 overflow-x-auto overflow-y-hidden pb-1 snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+      >
+        {children}
+      </div>
+      {canScrollLeft && (
+        <button
+          type="button"
+          onClick={() => scrollByAmount(-1)}
+          aria-label="Scroll left"
+          className="absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+          style={arrowStyle}
+        >
+          <ChevronLeft size={16} />
+        </button>
+      )}
+      {canScrollRight && (
+        <button
+          type="button"
+          onClick={() => scrollByAmount(1)}
+          aria-label="Scroll right"
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+          style={arrowStyle}
+        >
+          <ChevronRight size={16} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function EmptyRow({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div
+      className="flex items-center gap-2.5 rounded-2xl px-4 py-5"
+      style={{ backgroundColor: 'var(--tm-subtle)' }}
+    >
+      {icon}
+      <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{text}</p>
     </div>
   )
 }
@@ -279,6 +385,8 @@ export default function HomePage() {
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null)
   const [loadError, setLoadError] = useState('')
   const [view, setView] = useState<View>('list')
+  const [topRecipes, setTopRecipes] = useState<TopFavoriteRecipe[] | null>(null)
+  const [topLoadError, setTopLoadError] = useState('')
 
   async function loadRecipes() {
     if (!hasAccessToken()) {
@@ -296,8 +404,25 @@ export default function HomePage() {
     }
   }
 
+  async function loadTopRecipes() {
+    if (!hasAccessToken()) {
+      setTopRecipes([])
+      return
+    }
+    setTopLoadError('')
+    try {
+      const top = await getTopFavorites()
+      setTopRecipes(top)
+    } catch (err) {
+      setTopRecipes([])
+      setTopLoadError(errorMessage(err, t.unableToLoadTopRecipes))
+    }
+  }
+
   useEffect(() => {
     loadRecipes()
+    loadTopRecipes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleSaved(recipe: ApiRecipe) {
@@ -355,20 +480,62 @@ export default function HomePage() {
         </div>
       )}
 
-      {recipes.length === 0 && !loadError ? (
-        <EmptyState onAdd={() => setView('add')} />
-      ) : (
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pt-1 content-start">
-          {recipes.map(recipe => (
-            <RecipeCard
-              key={recipe.id}
-              recipe={toCardData(recipe)}
-              onTap={() => openDetail(recipe)}
-              onAction={() => openDetail(recipe)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pt-1 space-y-5">
+        {/* Personal Recipes */}
+        <section>
+          <SectionHeading title={t.personalRecipesTitle} count={recipes.length} />
+          {recipes.length === 0 && !loadError ? (
+            <EmptyState onAdd={() => setView('add')} />
+          ) : (
+            <RecipeRow>
+              {recipes.map(recipe => (
+                <div key={recipe.id} className={RECIPE_ROW_CARD_CLASS}>
+                  <RecipeCard
+                    recipe={toCardData(recipe)}
+                    onTap={() => openDetail(recipe)}
+                    onAction={() => openDetail(recipe)}
+                  />
+                </div>
+              ))}
+            </RecipeRow>
+          )}
+        </section>
+
+        {/* Recommended for You — no data source yet */}
+        <section>
+          <SectionHeading title={t.recommendedRecipesTitle} />
+          <EmptyRow icon={<Sparkles size={18} color="var(--tm-text-3)" />} text={t.recommendedComingSoon} />
+        </section>
+
+        {/* Top Recipes — most-favorited site-wide */}
+        <section>
+          <SectionHeading title={t.topRecipesTitle} />
+          {topLoadError ? (
+            <EmptyRow icon={<Heart size={18} color="var(--tm-text-3)" />} text={topLoadError} />
+          ) : topRecipes === null ? (
+            <EmptyRow icon={<Heart size={18} color="var(--tm-text-3)" />} text={t.loading} />
+          ) : topRecipes.length === 0 ? (
+            <EmptyRow icon={<Heart size={18} color="var(--tm-text-3)" />} text={t.noTopRecipesYet} />
+          ) : (
+            <RecipeRow>
+              {topRecipes.map(fav => (
+                <div key={fav.id} className={RECIPE_ROW_CARD_CLASS}>
+                  <RecipeCard
+                    recipe={toCardData(fav.recipe)}
+                    onTap={() => openDetail(fav.recipe)}
+                    onAction={() => openDetail(fav.recipe)}
+                    footer={
+                      <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'var(--tm-text-3)' }}>
+                        <Heart size={11} color="#EF4444" fill="#EF4444" /> {fav.favorite_count}
+                      </span>
+                    }
+                  />
+                </div>
+              ))}
+            </RecipeRow>
+          )}
+        </section>
+      </div>
     </div>
   )
 }
