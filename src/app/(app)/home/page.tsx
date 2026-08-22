@@ -91,7 +91,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 // ─── Home sections (Personal / Top / Recommended) ──────────────────────────────
 
 // Shared card width so Personal/Top/Recommended rows line up at the same size.
-const RECIPE_ROW_CARD_CLASS = 'w-48 shrink-0 snap-start'
+const RECIPE_ROW_CARD_CLASS = 'w-68 shrink-0 snap-start'
 
 function SectionHeading({ title, count }: { title: string; count?: number }) {
   return (
@@ -387,6 +387,8 @@ export default function HomePage() {
   const [view, setView] = useState<View>('list')
   const [topRecipes, setTopRecipes] = useState<TopFavoriteRecipe[] | null>(null)
   const [topLoadError, setTopLoadError] = useState('')
+  const rowContainerRef = useRef<HTMLDivElement>(null)
+  const [topVisibleLimit, setTopVisibleLimit] = useState<number | null>(null)
 
   async function loadRecipes() {
     if (!hasAccessToken()) {
@@ -423,6 +425,27 @@ export default function HomePage() {
     loadRecipes()
     loadTopRecipes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Top Recipes shows as many cards as fit in the row before it would need to
+  // scroll, times 1.5 — giving a slight, intentional overflow so the arrow
+  // nav has something to reveal, without dumping all (up to 10) fetched cards
+  // in at once. The backend itself caps top-favorites at 10 regardless.
+  useEffect(() => {
+    const el = rowContainerRef.current
+    if (!el) return
+    function applyWidth(width: number) {
+      // Card step must track RECIPE_ROW_CARD_CLASS: `w-68` (272px) + `gap-3` (12px).
+      const cardStep = 272 + 12
+      const visibleCount = Math.max(1, Math.floor(width / cardStep))
+      setTopVisibleLimit(Math.ceil(visibleCount * 1.5))
+    }
+    applyWidth(el.clientWidth)
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) applyWidth(entry.contentRect.width)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   function handleSaved(recipe: ApiRecipe) {
@@ -480,7 +503,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pt-1 space-y-5">
+      <div ref={rowContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pt-1 space-y-5">
         {/* Personal Recipes */}
         <section>
           <SectionHeading title={t.personalRecipesTitle} count={recipes.length} />
@@ -518,7 +541,7 @@ export default function HomePage() {
             <EmptyRow icon={<Heart size={18} color="var(--tm-text-3)" />} text={t.noTopRecipesYet} />
           ) : (
             <RecipeRow>
-              {topRecipes.map(fav => (
+              {topRecipes.slice(0, topVisibleLimit ?? topRecipes.length).map(fav => (
                 <div key={fav.id} className={RECIPE_ROW_CARD_CLASS}>
                   <RecipeCard
                     recipe={toCardData(fav.recipe)}

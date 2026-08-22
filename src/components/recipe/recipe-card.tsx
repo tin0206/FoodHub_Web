@@ -50,8 +50,8 @@ export function RecipeCard({
   const cardStyle = {
     backgroundColor: "var(--tm-surface)",
     boxShadow: dark
-      ? "0 6px 14px rgba(0,0,0,0.45)"
-      : `0 6px 18px ${theme.start}2E`,
+      ? "0 4px 12px rgba(0,0,0,0.35)"
+      : "0 2px 8px rgba(12,26,20,0.08)",
   };
 
   const inner = (
