@@ -113,13 +113,15 @@ export type ApiFetchOptions = {
   /** Override Bearer token (e.g. demo fingerprint session). */
   token?: string | null;
   query?: Record<string, string | number | boolean | null | undefined>;
+  /** Aborts the request — pass an AbortController's signal to cancel stale in-flight requests. */
+  signal?: AbortSignal;
 };
 
 export async function apiFetch<T = unknown>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const { method = "GET", body, auth = true, token, query } = options;
+  const { method = "GET", body, auth = true, token, query, signal } = options;
   const base = getApiBaseUrl();
   const url = new URL(
     `${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`,
@@ -152,6 +154,7 @@ export async function apiFetch<T = unknown>(
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   if (res.status === 204) {

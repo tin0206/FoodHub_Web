@@ -11,6 +11,8 @@ export interface ApiUser {
   weight?: number | null;
   calorie_target?: number | null;
   protein_target?: number | null;
+  carb_target?: number | null;
+  fat_target?: number | null;
   dietary_restrictions: string[];
   primary_goal?: string | null;
   language: string;
@@ -34,6 +36,8 @@ export interface UserProfileUpdate {
   weight?: number | null;
   calorie_target?: number | null;
   protein_target?: number | null;
+  carb_target?: number | null;
+  fat_target?: number | null;
   dietary_restrictions?: string[] | null;
   primary_goal?: string | null;
   language?: string | null;

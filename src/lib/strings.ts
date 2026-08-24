@@ -269,6 +269,8 @@ export function getStrings(lang: Lang) {
     primaryGoalLabel: vi ? "Mục tiêu chính" : "Primary Goal",
     dailyCalorieTarget: vi ? "Mục tiêu calo hàng ngày" : "Daily Calorie Target",
     targetProtein: vi ? "Protein mục tiêu (g/ngày)" : "Target Protein (g/day)",
+    targetCarb: vi ? "Tinh bột mục tiêu (g/ngày)" : "Target Carbs (g/day)",
+    targetFat: vi ? "Chất béo mục tiêu (g/ngày)" : "Target Fat (g/day)",
     dietaryRestrictionsLabel: vi
       ? "Chế độ ăn đặc biệt"
       : "Dietary Restrictions",
@@ -339,7 +341,7 @@ export function getStrings(lang: Lang) {
         Alcoholic: "Có cồn",
         Beverage: "Đồ uống",
         "Dairy Free": "Không sữa",
-        "Egg Free": "Không trứng",
+        "Non-Alcoholic": "Không cồn",
         "Gluten Free": "Không gluten",
         "Nut Free": "Không hạt",
         Pescetarian: "Hải sản",

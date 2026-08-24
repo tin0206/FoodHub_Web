@@ -20,6 +20,8 @@ interface ProfileForm {
   primaryGoal: string;
   calorieTarget: string;
   proteinTarget: string;
+  carbTarget: string;
+  fatTarget: string;
   dietaryRestrictions: string[];
   language: string;
   theme: string;
@@ -33,11 +35,13 @@ interface FieldErrors {
   weight: string;
   calorieTarget: string;
   proteinTarget: string;
+  carbTarget: string;
+  fatTarget: string;
 }
 
 const PRIMARY_GOALS = ["Balanced Nutrition", "Weight Loss", "Muscle Gain", "High Protein"];
-const DIETARY_TAGS = ["Dairy Free", "Egg Free", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
-const NO_ERRORS: FieldErrors = { age: "", weight: "", calorieTarget: "", proteinTarget: "" };
+const DIETARY_TAGS = ["Dairy Free", "Non-Alcoholic", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
+const NO_ERRORS: FieldErrors = { age: "", weight: "", calorieTarget: "", proteinTarget: "", carbTarget: "", fatTarget: "" };
 
 function isPositiveNumber(v: string) {
   if (!v.trim()) return true; // optional
@@ -53,6 +57,8 @@ function toForm(user: ApiUser): ProfileForm {
     primaryGoal: user.primary_goal ?? "",
     calorieTarget: user.calorie_target != null ? String(user.calorie_target) : "",
     proteinTarget: user.protein_target != null ? String(user.protein_target) : "",
+    carbTarget: user.carb_target != null ? String(user.carb_target) : "",
+    fatTarget: user.fat_target != null ? String(user.fat_target) : "",
     dietaryRestrictions: user.dietary_restrictions ?? [],
     language: user.language || "en",
     theme: user.theme === "dark" ? "dark" : "light",
@@ -281,6 +287,8 @@ export function ProfileEditor() {
       weight: !isPositiveNumber(formData.weight) ? t.mustBePositiveNumber : "",
       calorieTarget: !isPositiveNumber(formData.calorieTarget) ? t.mustBePositiveNumber : "",
       proteinTarget: !isPositiveNumber(formData.proteinTarget) ? t.mustBePositiveNumber : "",
+      carbTarget: !isPositiveNumber(formData.carbTarget) ? t.mustBePositiveNumber : "",
+      fatTarget: !isPositiveNumber(formData.fatTarget) ? t.mustBePositiveNumber : "",
     };
     setFieldErrors(errors);
     if (Object.values(errors).some(Boolean)) return;
@@ -294,6 +302,8 @@ export function ProfileEditor() {
         weight: formData.weight.trim() ? Number(formData.weight) : null,
         calorie_target: formData.calorieTarget.trim() ? Number(formData.calorieTarget) : null,
         protein_target: formData.proteinTarget.trim() ? Number(formData.proteinTarget) : null,
+        carb_target: formData.carbTarget.trim() ? Number(formData.carbTarget) : null,
+        fat_target: formData.fatTarget.trim() ? Number(formData.fatTarget) : null,
         dietary_restrictions: formData.dietaryRestrictions,
         primary_goal: formData.primaryGoal || null,
         language: formData.language,
@@ -517,6 +527,30 @@ export function ProfileEditor() {
                   placeholder="120"
                 />
                 {fieldErrors.proteinTarget && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.proteinTarget}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.targetCarb}</label>
+                <input
+                  type="text"
+                  value={formData.carbTarget}
+                  onChange={(e) => { set("carbTarget", e.target.value); clearError("carbTarget"); }}
+                  className={inputCls}
+                  style={{ ...inputStyle, borderColor: fieldErrors.carbTarget ? "#f87171" : "var(--tm-border-i)" }}
+                  placeholder="250"
+                />
+                {fieldErrors.carbTarget && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.carbTarget}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.targetFat}</label>
+                <input
+                  type="text"
+                  value={formData.fatTarget}
+                  onChange={(e) => { set("fatTarget", e.target.value); clearError("fatTarget"); }}
+                  className={inputCls}
+                  style={{ ...inputStyle, borderColor: fieldErrors.fatTarget ? "#f87171" : "var(--tm-border-i)" }}
+                  placeholder="65"
+                />
+                {fieldErrors.fatTarget && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.fatTarget}</p>}
               </div>
             </div>
             <div>

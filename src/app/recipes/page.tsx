@@ -131,19 +131,22 @@ export default function PublicRecipesPage() {
     const token = tokenRef.current;
     if (!ready || !token) return;
     let cancelled = false;
+    const controller = new AbortController();
     async function run() {
       setLoading(true);
       setLoadError("");
       try {
+        const dietary =
+          selectedCategory && dietaryOptions.includes(selectedCategory)
+            ? selectedCategory
+            : undefined;
         const result = await searchRecipes({
-          q: debouncedQuery || selectedCategory || undefined,
-          dietaryRestriction:
-            selectedCategory && dietaryOptions.includes(selectedCategory)
-              ? selectedCategory
-              : undefined,
+          q: debouncedQuery || (selectedCategory && !dietary ? selectedCategory : undefined),
+          dietaryRestriction: dietary,
           skip: page * PAGE_SIZE,
           limit: PAGE_SIZE,
           token: token!,
+          signal: controller.signal,
         });
         if (cancelled) return;
         setRecipes(result.recipes);
@@ -163,6 +166,7 @@ export default function PublicRecipesPage() {
     run();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [ready, debouncedQuery, selectedCategory, dietaryOptions, page, retryToken]);
 

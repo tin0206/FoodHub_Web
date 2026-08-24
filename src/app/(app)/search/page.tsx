@@ -151,6 +151,7 @@ export default function SearchPage() {
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     async function run() {
       setLoading(true);
       setLoadError("");
@@ -167,6 +168,7 @@ export default function SearchPage() {
           dietaryRestriction: dietary,
           skip: page * PAGE_SIZE,
           limit: PAGE_SIZE,
+          signal: controller.signal,
         });
         if (cancelled) return;
         const currentUserId = getCurrentUser()?.id;
@@ -188,6 +190,7 @@ export default function SearchPage() {
     run();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [
     debouncedQuery,

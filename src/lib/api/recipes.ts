@@ -40,6 +40,8 @@ export async function searchRecipes(params?: {
   lang?: string;
   /** Override Bearer token — e.g. a guest demo session for public browsing. */
   token?: string;
+  /** Aborts this request — pass an AbortController's signal to cancel stale searches. */
+  signal?: AbortSignal;
 }): Promise<RecipeSearchResult> {
   const res = await apiFetch<{ total_count: number; recipes: ApiRecipe[] }>(
     "/recipes/search",
@@ -53,6 +55,7 @@ export async function searchRecipes(params?: {
         lang: params?.lang,
       },
       token: params?.token,
+      signal: params?.signal,
     },
   );
   return { totalCount: res.total_count, recipes: res.recipes };
