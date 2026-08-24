@@ -49,9 +49,7 @@ export function RecipeCard({
   const cardClass = `rounded-[20px] overflow-hidden h-full flex flex-col ${className ?? ""}`;
   const cardStyle = {
     backgroundColor: "var(--tm-surface)",
-    boxShadow: dark
-      ? "0 4px 12px rgba(0,0,0,0.35)"
-      : "0 2px 8px rgba(12,26,20,0.08)",
+    border: `1px solid ${dark ? "#2A2A2A" : "var(--tm-border-i)"}`,
   };
 
   const inner = (

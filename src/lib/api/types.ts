@@ -185,11 +185,19 @@ export interface RagRecipe {
   estimated_servings?: number | null;
 }
 
+/** One AI-suggested reply choice — rendered as a tappable card instead of free text. */
+export interface ChatOption {
+  index: number;
+  label: string;
+  rationale: string;
+}
+
 export interface ChatResponse {
   task_id: string;
   reply: string;
   phase: string;
   session_id?: string | null;
   recipes: RagRecipe[];
+  options: ChatOption[];
   known_info?: Record<string, unknown>;
 }

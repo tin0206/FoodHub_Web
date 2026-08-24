@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Camera,
+  ChevronRight,
   Loader2,
   Pencil,
   RefreshCw,
@@ -20,7 +21,7 @@ import {
   aiDetectIngredients,
 } from "@/lib/api/ai";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
-import type { ChatHistoryMessage, RagRecipe } from "@/lib/api/types";
+import type { ChatHistoryMessage, ChatOption, RagRecipe } from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
@@ -35,6 +36,7 @@ interface UiMessage {
   role: "user" | "assistant";
   text: string;
   recipes?: RagRecipe[];
+  options?: ChatOption[];
 }
 
 interface UserProfileForChat {
@@ -286,6 +288,7 @@ export default function RecsPage() {
           role: "assistant",
           text: reply,
           recipes: response.recipes,
+          options: response.options,
         },
       ]);
       if (response.reply.trim())
@@ -409,6 +412,7 @@ export default function RecsPage() {
           role: "assistant",
           text: reply,
           recipes: response.recipes,
+          options: response.options,
         },
       ]);
       setHistory([
@@ -481,6 +485,26 @@ export default function RecsPage() {
     setError("");
     scrollToBottom();
     await sendToAi(lastSentMessage, lastSentIngredients, baseHistory);
+  }
+
+  // Sends the tapped option's label as a plain chat message (same as Rerun) instead of the
+  // dedicated selected_option_index request — the backend errors on `message: null`.
+  async function handleSelectOption(option: ChatOption) {
+    if (busy || !sessionId) return;
+    setMessages((prev) => {
+      const next = [...prev];
+      if (next.length && next[next.length - 1].role === "assistant") {
+        next[next.length - 1] = { ...next[next.length - 1], options: [] };
+      }
+      next.push({ id: `u-${Date.now()}`, role: "user", text: option.label });
+      return next;
+    });
+    setLastSentMessage(option.label);
+    setLastSentIngredients([]);
+    setIsSending(true);
+    setError("");
+    scrollToBottom();
+    await sendToAi(option.label, [], history);
   }
 
   async function handleReset() {
@@ -599,11 +623,11 @@ export default function RecsPage() {
       >
         {messages.map((m, index) => {
           const isUser = m.role === "user";
+          const isLatestAiMessage = !busy && !isUser && index === lastAssistantIndex;
+          const options = m.options ?? [];
+          const showOptions = isLatestAiMessage && options.length > 0;
           const showRerun =
-            !busy &&
-            !isUser &&
-            index === lastAssistantIndex &&
-            !!lastSentMessage;
+            isLatestAiMessage && !!lastSentMessage && options.length === 0;
           return (
             <div
               key={m.id}
@@ -644,6 +668,50 @@ export default function RecsPage() {
                       <MarkdownReply text={m.text} recipes={m.recipes} />
                     )}
                   </div>
+                  {showOptions && (
+                    <div className="mt-1.5 space-y-1.5">
+                      {options.map((opt) => (
+                        <button
+                          key={opt.index}
+                          type="button"
+                          onClick={() => void handleSelectOption(opt)}
+                          className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:opacity-80"
+                          style={{
+                            backgroundColor: "var(--tm-surface)",
+                            border: "1px solid var(--tm-border-i)",
+                          }}
+                        >
+                          <span
+                            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-white"
+                            style={{ backgroundColor: "#059669" }}
+                          >
+                            {opt.index}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span
+                              className="block text-[13px] font-bold"
+                              style={{ color: "var(--tm-text)" }}
+                            >
+                              {opt.label}
+                            </span>
+                            {opt.rationale && (
+                              <span
+                                className="block text-[11.5px] mt-0.5"
+                                style={{ color: "var(--tm-text-3)" }}
+                              >
+                                {opt.rationale}
+                              </span>
+                            )}
+                          </span>
+                          <ChevronRight
+                            size={16}
+                            color="var(--tm-text-3)"
+                            className="shrink-0"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {showRerun && (
                     <button
                       type="button"

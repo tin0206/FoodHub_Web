@@ -1,4 +1,4 @@
-import type { ChatHistoryMessage, RagRecipe } from "@/lib/api/types";
+import type { ChatHistoryMessage, ChatOption, RagRecipe } from "@/lib/api/types";
 
 const CHAT_SESSION_KEY = "fh_recs_chat_session";
 
@@ -7,6 +7,7 @@ export interface PersistedChatMessage {
   role: "user" | "assistant";
   text: string;
   recipes?: RagRecipe[];
+  options?: ChatOption[];
 }
 
 export interface PersistedChatSession {

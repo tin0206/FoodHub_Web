@@ -3,6 +3,7 @@ import type {
   AiJobAccepted,
   AiRequestDetail,
   ChatHistoryMessage,
+  ChatOption,
   ChatResponse,
   RagRecipe,
 } from "@/lib/api/types";
@@ -46,6 +47,17 @@ function parseRecipes(value: unknown): RagRecipe[] {
     }));
 }
 
+function parseOptions(value: unknown): ChatOption[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+    .map((json) => ({
+      index: typeof json.index === "number" ? json.index : 0,
+      label: typeof json.label === "string" ? json.label : "",
+      rationale: typeof json.rationale === "string" ? json.rationale : "",
+    }));
+}
+
 function parseChatPayload(
   detail: AiRequestDetail,
   fallbackSessionId?: string | null,
@@ -66,6 +78,7 @@ function parseChatPayload(
         ? String(payload.session_id)
         : fallbackSessionId ?? null,
     recipes: parseRecipes(payload.recipes),
+    options: parseOptions(payload.options),
     known_info:
       payload.known_info && typeof payload.known_info === "object"
         ? (payload.known_info as Record<string, unknown>)
@@ -153,6 +166,36 @@ export async function aiChat(input: {
       dietary_restrictions: input.dietaryRestrictions ?? [],
       ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
       ingredients: input.ingredients ?? [],
+    },
+  });
+
+  const detail = await waitForResult(accepted.task_id, { token: input.token });
+  return parseChatPayload(detail, accepted.session_id ?? input.sessionId);
+}
+
+/**
+ * POST /ai/chat with `selected_option_index` (mirrors mobile's `AiService.selectOption()`).
+ * NOT used by the recs UI — the backend errors on `message: null`, so the screen instead
+ * resends the option's label through `aiChat()`, same as Rerun. Kept for API parity.
+ */
+export async function aiSelectOption(input: {
+  sessionId: string;
+  selectedOptionIndex: number;
+  conversationHistory?: ChatHistoryMessage[];
+  dietaryRestrictions?: string[];
+  primaryGoal?: string;
+  token?: string;
+}): Promise<ChatResponse> {
+  const accepted = await apiFetch<AiJobAccepted>("/ai/chat", {
+    method: "POST",
+    token: input.token,
+    body: {
+      session_id: input.sessionId,
+      selected_option_index: input.selectedOptionIndex,
+      message: null,
+      conversation_history: input.conversationHistory ?? [],
+      dietary_restrictions: input.dietaryRestrictions ?? [],
+      ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
     },
   });
 
