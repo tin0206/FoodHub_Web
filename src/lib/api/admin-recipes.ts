@@ -119,3 +119,61 @@ export async function deleteRecipeTranslation(
     method: "DELETE",
   });
 }
+
+// ─── Aisle mapping job ────────────────────────────────────────────────────
+
+export type AisleMappingJobStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface AisleMappingJob {
+  task_id: string;
+  status: AisleMappingJobStatus;
+  force: boolean;
+  recipe_id?: number;
+  total: number;
+  processed: number;
+  mapped: number;
+  skipped: number;
+  failed: number;
+  error_message?: string;
+}
+
+export function isAisleJobActive(job: AisleMappingJob | undefined): boolean {
+  return job?.status === "pending" || job?.status === "processing";
+}
+
+export interface AisleMappingStatus {
+  total: number;
+  mapped: number;
+  missing: number;
+  aisles: string[];
+  already_running: boolean;
+  job?: AisleMappingJob;
+}
+
+export async function getAisleMappingStatus(): Promise<AisleMappingStatus> {
+  return apiFetch<AisleMappingStatus>("/admin/recipes/aisles");
+}
+
+export async function startAisleMapping(params?: {
+  force?: boolean;
+  recipeId?: number;
+}): Promise<AisleMappingStatus> {
+  return apiFetch<AisleMappingStatus>("/admin/recipes/map-aisles", {
+    method: "POST",
+    body: {
+      force: params?.force ?? false,
+      recipe_id: params?.recipeId,
+    },
+  });
+}
+
+export async function stopAisleMapping(): Promise<AisleMappingStatus> {
+  return apiFetch<AisleMappingStatus>("/admin/recipes/map-aisles/stop", {
+    method: "POST",
+  });
+}

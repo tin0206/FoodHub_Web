@@ -20,6 +20,7 @@ import { hasAccessToken } from "@/lib/auth";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
 import { listAdminRecipes } from "@/lib/api/admin-recipes";
 import type { ApiRecipe, RecipeVisibility } from "@/lib/api/types";
+import { AisleMapCard } from "@/components/admin/aisle-map-card";
 
 type VisibilityFilter = "" | RecipeVisibility;
 
@@ -140,6 +141,8 @@ export default function AdminRecipesPage() {
           </Link>
         </div>
       </div>
+
+      <AisleMapCard />
 
       <div
         className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3"

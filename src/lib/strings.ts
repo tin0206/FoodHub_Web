@@ -491,6 +491,35 @@ export function getStrings(lang: Lang) {
       : "Failed to load recipes",
     adminRecipesTitle: vi ? "Công thức" : "Recipes",
     adminNewRecipe: vi ? "Công thức mới" : "New Recipe",
+
+    // ── Aisle mapping job (admin recipes) ──────────────────────────────────
+    adminMapAislesTitle: vi ? "Gán khu hàng" : "Map aisles",
+    adminMappedStat: (mapped: number, total: number) =>
+      vi ? `${mapped} / ${total} công thức đã gán` : `${mapped} / ${total} recipes mapped`,
+    adminMissingStat: (n: number) =>
+      vi ? `${n} công thức chưa có khu hàng` : `${n} recipe${n === 1 ? "" : "s"} missing aisle`,
+    adminProcessedStat: (processed: number, total: number) =>
+      vi ? `${processed} / ${total} đã xử lý` : `${processed} / ${total} processed`,
+    adminMapAislesButton: vi ? "Gán khu hàng" : "Map aisles",
+    adminRemapAislesButton: vi ? "Gán lại toàn bộ" : "Remap aisles",
+    adminMappingAislesButton: vi ? "Đang gán khu hàng…" : "Mapping aisles…",
+    adminStopButton: vi ? "Dừng" : "Stop",
+    adminRemapConfirmTitle: vi ? "Gán lại toàn bộ khu hàng?" : "Remap all aisles?",
+    adminRemapConfirmMessage: vi
+      ? "Tất cả công thức đã có khu hàng sẽ được AI gán lại từ đầu. Việc này tốn nhiều token AI hơn."
+      : "Every recipe that already has an aisle will be re-mapped by the AI from scratch. This uses more AI tokens than mapping only what's missing.",
+    adminRemapConfirmButton: vi ? "Gán lại" : "Remap",
+    adminAisleMappingStoppedToast: vi ? "Đã dừng gán khu hàng." : "Aisle mapping stopped.",
+    adminAisleMappingFinishedToast: vi ? "Đã gán khu hàng xong." : "Aisle mapping finished.",
+    adminUnableToLoadAisleStatus: vi
+      ? "Không thể tải trạng thái gán khu hàng."
+      : "Unable to load aisle mapping status.",
+    adminUnableToStartAisleMapping: vi
+      ? "Không thể bắt đầu gán khu hàng."
+      : "Unable to start aisle mapping.",
+    adminUnableToStopAisleMapping: vi
+      ? "Không thể dừng gán khu hàng."
+      : "Unable to stop aisle mapping.",
     adminSearchRecipesHint: vi
       ? "Tìm theo tên, id, nguyên liệu…"
       : "Search by title, id, ingredients…",
