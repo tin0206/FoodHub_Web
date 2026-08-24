@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag, Heart, ChevronLeft, ChevronRight, RefreshCw, Loader2 } from 'lucide-react'
+import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag, Heart, ChevronLeft, ChevronRight, RefreshCw, Loader2, CalendarDays } from 'lucide-react'
 import { hasAccessToken } from '@/lib/auth'
 import { ApiError } from '@/lib/api-client'
 import { listRecipes, createRecipe, uploadRecipeImage } from '@/lib/api/recipes'
 import { getTopFavorites } from '@/lib/api/favorites'
-import { getTodaySuggestions, refreshTodaySuggestions, localIsoDate, type MealSuggestion } from '@/lib/api/meals'
+import { getTodaySuggestions, refreshTodaySuggestions, getMealPlan, localIsoDate, type MealSuggestion, type MealPlan } from '@/lib/api/meals'
 import type { ApiRecipe, TopFavoriteRecipe } from '@/lib/api/types'
 import { getLang } from '@/lib/i18n'
 import LoadingOverlay from '@/components/loading-overlay'
@@ -423,6 +423,7 @@ export default function HomePage() {
   const [suggestionsError, setSuggestionsError] = useState('')
   const suggestionPollRef = useRef<number | null>(null)
   const suggestionDateRef = useRef(localIsoDate())
+  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
 
   async function loadRecipes() {
     if (!hasAccessToken()) {
@@ -452,6 +453,19 @@ export default function HomePage() {
     } catch (err) {
       setTopRecipes([])
       setTopLoadError(errorMessage(err, t.unableToLoadTopRecipes))
+    }
+  }
+
+  async function loadMealPlan() {
+    if (!hasAccessToken()) {
+      setMealPlan(null)
+      return
+    }
+    try {
+      const plan = await getMealPlan(suggestionDateRef.current, getLang())
+      setMealPlan(plan)
+    } catch {
+      setMealPlan(null)
     }
   }
 
@@ -509,6 +523,7 @@ export default function HomePage() {
     loadRecipes()
     loadTopRecipes()
     loadSuggestions()
+    loadMealPlan()
     return () => stopSuggestionPoll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -608,6 +623,27 @@ export default function HomePage() {
               ))}
             </RecipeRow>
           )}
+        </section>
+
+        {/* Today's meal plan */}
+        <section>
+          <button
+            type="button"
+            onClick={() => router.push('/meal-plan')}
+            className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left"
+            style={{ backgroundColor: 'var(--tm-surface)', boxShadow: '0 3px 10px rgba(12,26,20,0.06)' }}
+          >
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#0596691A' }}>
+              <CalendarDays size={18} color="#059669" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold truncate" style={{ color: 'var(--tm-text)' }}>{t.todaysMealPlan}</span>
+              <span className="block text-xs mt-0.5" style={{ color: 'var(--tm-text-3)' }}>
+                {t.mealPlanPreview(mealPlan?.slots.reduce((sum, s) => sum + s.items.length, 0) ?? 0)}
+              </span>
+            </span>
+            <span className="text-xs font-bold shrink-0" style={{ color: '#059669' }}>{t.openMealPlan}</span>
+          </button>
         </section>
 
         {/* Recommended for You — today's AI-generated meal picks */}

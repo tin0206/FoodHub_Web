@@ -60,6 +60,42 @@ export function getStrings(lang: Lang) {
       ? "Không thể tạo gợi ý."
       : "Unable to generate suggestions.",
     noSuggestionsForMeal: vi ? "Chưa có công thức" : "No recipes yet",
+
+    // ── Meal plan / shopping list ─────────────────────────────────────────
+    todaysMealPlan: vi ? "Kế hoạch bữa ăn hôm nay" : "Today's Meal Plan",
+    mealPlanPreview: (n: number) =>
+      vi ? `${n} món đã lên kế hoạch` : `${n} dish${n === 1 ? "" : "es"} planned`,
+    openMealPlan: vi ? "Xem" : "Open",
+    unableToLoadMealPlan: vi
+      ? "Không thể tải kế hoạch bữa ăn."
+      : "Unable to load meal plan.",
+    shoppingList: vi ? "Danh sách mua sắm" : "Shopping List",
+    addExtraMeal: vi ? "Thêm bữa phụ" : "Add extra meal",
+    extraMealHint: vi ? "VD: Ăn vặt buổi chiều" : "e.g. Afternoon snack",
+    addDish: vi ? "Thêm món" : "Add dish",
+    emptyMealSlot: vi ? "Chưa có món nào" : "No dishes yet",
+    mealPlanHint: vi
+      ? "Kế hoạch được lưu tự động khi bạn thêm hoặc xóa món."
+      : "Your plan saves automatically as you add or remove dishes.",
+    addFromSearch: vi ? "Tìm công thức" : "Search recipes",
+    noSearchResultsShort: vi ? "Không tìm thấy" : "No results found",
+    unableToLoadShoppingList: vi
+      ? "Không thể tải danh sách mua sắm."
+      : "Unable to load shopping list.",
+    organizingShoppingList: vi
+      ? "Đang tổng hợp danh sách mua sắm..."
+      : "Organizing your shopping list…",
+    emptyShoppingList: vi
+      ? "Danh sách mua sắm trống"
+      : "Your shopping list is empty",
+    purchasedItems: vi ? "Đã mua" : "Purchased",
+    shoppingListAllDone: vi
+      ? "Đã mua xong tất cả! Chúc bạn nấu ăn ngon."
+      : "All done — happy cooking!",
+    plannedServings: (n: number) =>
+      vi
+        ? `Dùng cho ${n % 1 === 0 ? n.toFixed(0) : n} khẩu phần`
+        : `For ${n % 1 === 0 ? n.toFixed(0) : n} serving${n === 1 ? "" : "s"}`,
     fillAllFields: vi
       ? "Vui lòng điền đầy đủ thông tin."
       : "Please fill in all required fields.",

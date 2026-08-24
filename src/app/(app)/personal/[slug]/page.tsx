@@ -89,7 +89,7 @@ export default function PersonalRecipeDetailPage() {
     <div className="h-full p-3">
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
-          <button onClick={() => router.push('/home')} className="p-1" style={{ color: 'var(--tm-text-2)' }}>
+          <button onClick={() => router.back()} className="p-1" style={{ color: 'var(--tm-text-2)' }}>
             <ArrowLeft size={18} />
           </button>
           <p className="text-sm font-semibold truncate flex-1" style={{ color: 'var(--tm-text)' }}>
