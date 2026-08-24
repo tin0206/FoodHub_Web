@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Target, Palette, LogOut, KeyRound, UserRound } from "lucide-react";
+import { User, Target, Palette, LogOut, KeyRound, UserRound, ChevronRight } from "lucide-react";
 import { logout, updateCachedUser } from "@/lib/auth";
 import { apiGetMe, apiUpdateMe, apiChangePassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
@@ -467,14 +467,6 @@ export function ProfileEditor() {
                 {fieldErrors.weight && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.weight}</p>}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowChangePassword(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border"
-              style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text-2)", backgroundColor: "var(--tm-subtle)" }}
-            >
-              <KeyRound size={13} /> {t.changePasswordLabel}
-            </button>
           </SectionCard>
 
           {/* Nutrition Goals */}
@@ -576,6 +568,21 @@ export function ProfileEditor() {
                 })}
               </div>
             </div>
+          </SectionCard>
+
+          {/* Security */}
+          <SectionCard icon={<KeyRound size={18} color="#EA580C" />} iconBg="#FFEDD5" title={t.securityLabel} subtitle={t.changePasswordLabel}>
+            <button
+              type="button"
+              onClick={() => setShowChangePassword(true)}
+              className="flex items-center justify-between w-full text-sm py-1"
+              style={{ color: "var(--tm-text)" }}
+            >
+              <span className="flex items-center gap-2">
+                <KeyRound size={15} color="var(--tm-text-3)" /> {t.changePasswordLabel}
+              </span>
+              <ChevronRight size={16} color="var(--tm-text-3)" />
+            </button>
           </SectionCard>
 
           {/* Cancel + Save changes */}

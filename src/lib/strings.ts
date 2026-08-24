@@ -51,6 +51,15 @@ export function getStrings(lang: Lang) {
     recommendedComingSoon: vi
       ? "Gợi ý cá nhân hóa sẽ sớm ra mắt"
       : "Personalized recommendations are coming soon",
+    breakfastLabel: vi ? "Bữa sáng" : "Breakfast",
+    lunchLabel: vi ? "Bữa trưa" : "Lunch",
+    dinnerLabel: vi ? "Bữa tối" : "Dinner",
+    refreshSuggestions: vi ? "Làm mới gợi ý" : "Refresh suggestions",
+    suggestionsPending: vi ? "Đang tạo gợi ý..." : "Generating suggestions…",
+    suggestionsFailed: vi
+      ? "Không thể tạo gợi ý."
+      : "Unable to generate suggestions.",
+    noSuggestionsForMeal: vi ? "Chưa có công thức" : "No recipes yet",
     fillAllFields: vi
       ? "Vui lòng điền đầy đủ thông tin."
       : "Please fill in all required fields.",
@@ -271,6 +280,8 @@ export function getStrings(lang: Lang) {
     targetProtein: vi ? "Protein mục tiêu (g/ngày)" : "Target Protein (g/day)",
     targetCarb: vi ? "Tinh bột mục tiêu (g/ngày)" : "Target Carbs (g/day)",
     targetFat: vi ? "Chất béo mục tiêu (g/ngày)" : "Target Fat (g/day)",
+    dailyCarbTarget: vi ? "Mục tiêu tinh bột hàng ngày" : "Daily Carb Target",
+    dailyFatTarget: vi ? "Mục tiêu chất béo hàng ngày" : "Daily Fat Target",
     dietaryRestrictionsLabel: vi
       ? "Chế độ ăn đặc biệt"
       : "Dietary Restrictions",
@@ -644,6 +655,8 @@ export function getStrings(lang: Lang) {
     adminAgeYears: (age: number) => (vi ? `${age} tuổi` : `${age} years`),
     adminWeightKg: (w: number) => `${w} kg`,
     adminCalorieDay: (c: number) => (vi ? `${c} calo/ngày` : `${c} cal/day`),
+    adminCarbDay: (c: number) => (vi ? `${c} g tinh bột/ngày` : `${c} g carbs/day`),
+    adminFatDay: (c: number) => (vi ? `${c} g chất béo/ngày` : `${c} g fat/day`),
     adminNoneSpecified: vi ? "Chưa xác định" : "None specified",
     adminDeactivateAccount: vi ? "Vô hiệu hóa tài khoản" : "Deactivate Account",
     adminActivateAccount: vi ? "Kích hoạt tài khoản" : "Activate Account",

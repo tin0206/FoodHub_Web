@@ -22,6 +22,8 @@ import {
   Mail,
   CalendarDays,
   Utensils,
+  Wheat,
+  Droplet,
 } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useLang } from "@/lib/use-lang";
@@ -394,6 +396,18 @@ export default function AdminUserDetailPage() {
               icon={Flame}
               label={t.dailyCalorieTarget}
               value={user.calorie_target ? t.adminCalorieDay(user.calorie_target) : "—"}
+              accent={accent}
+            />
+            <InfoRow
+              icon={Wheat}
+              label={t.dailyCarbTarget}
+              value={user.carb_target ? t.adminCarbDay(user.carb_target) : "—"}
+              accent={accent}
+            />
+            <InfoRow
+              icon={Droplet}
+              label={t.dailyFatTarget}
+              value={user.fat_target ? t.adminFatDay(user.fat_target) : "—"}
               accent={accent}
             />
             <InfoRow icon={Flag} label={t.primaryGoalLabel} value={user.primary_goal ? t.goalDisplay(user.primary_goal) : "—"} accent={accent} />

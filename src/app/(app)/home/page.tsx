@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag, Heart, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BookOpen, Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag, Heart, ChevronLeft, ChevronRight, RefreshCw, Loader2 } from 'lucide-react'
 import { hasAccessToken } from '@/lib/auth'
 import { ApiError } from '@/lib/api-client'
 import { listRecipes, createRecipe, uploadRecipeImage } from '@/lib/api/recipes'
 import { getTopFavorites } from '@/lib/api/favorites'
+import { getTodaySuggestions, refreshTodaySuggestions, localIsoDate, type MealSuggestion } from '@/lib/api/meals'
 import type { ApiRecipe, TopFavoriteRecipe } from '@/lib/api/types'
+import { getLang } from '@/lib/i18n'
 import LoadingOverlay from '@/components/loading-overlay'
 import { RecipeCard, type RecipeCardData } from '@/components/recipe/recipe-card'
 import { setRecipeMeta, getOrEstimateMeta, estimateStats } from '@/lib/recipe-meta'
@@ -189,6 +191,33 @@ function EmptyRow({ icon, text }: { icon: React.ReactNode; text: string }) {
     >
       {icon}
       <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{text}</p>
+    </div>
+  )
+}
+
+/** One meal-type row (Breakfast/Lunch/Dinner) inside the Recommended for You section. */
+function SuggestionMealRow({
+  label, recipes, onOpen,
+}: { label: string; recipes: ApiRecipe[]; onOpen: (r: ApiRecipe) => void }) {
+  const t = useStrings()
+  return (
+    <div className="mb-3.5">
+      <p className="text-xs font-semibold mb-1.5" style={{ color: 'var(--tm-text-2)' }}>{label}</p>
+      {recipes.length === 0 ? (
+        <p className="text-xs" style={{ color: 'var(--tm-text-3)' }}>{t.noSuggestionsForMeal}</p>
+      ) : (
+        <RecipeRow>
+          {recipes.map(recipe => (
+            <div key={recipe.id} className={RECIPE_ROW_CARD_CLASS}>
+              <RecipeCard
+                recipe={toCardData(recipe)}
+                onTap={() => onOpen(recipe)}
+                onAction={() => onOpen(recipe)}
+              />
+            </div>
+          ))}
+        </RecipeRow>
+      )}
     </div>
   )
 }
@@ -389,6 +418,11 @@ export default function HomePage() {
   const [topLoadError, setTopLoadError] = useState('')
   const rowContainerRef = useRef<HTMLDivElement>(null)
   const [topVisibleLimit, setTopVisibleLimit] = useState<number | null>(null)
+  const [suggestions, setSuggestions] = useState<MealSuggestion | null>(null)
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true)
+  const [suggestionsError, setSuggestionsError] = useState('')
+  const suggestionPollRef = useRef<number | null>(null)
+  const suggestionDateRef = useRef(localIsoDate())
 
   async function loadRecipes() {
     if (!hasAccessToken()) {
@@ -421,9 +455,61 @@ export default function HomePage() {
     }
   }
 
+  function stopSuggestionPoll() {
+    if (suggestionPollRef.current != null) {
+      window.clearInterval(suggestionPollRef.current)
+      suggestionPollRef.current = null
+    }
+  }
+
+  // Polls every 3s while the AI is still generating today's picks, same cadence
+  // as mobile's Timer.periodic — cancels itself once status leaves "pending".
+  async function pollSuggestionsOnce() {
+    try {
+      const next = await getTodaySuggestions({ lang: getLang(), suggestionDate: suggestionDateRef.current })
+      setSuggestions(next)
+      if (next.status === 'pending') return
+      stopSuggestionPoll()
+      setSuggestionsLoading(false)
+      setSuggestionsError(next.status === 'failed' ? (next.error_message || t.suggestionsFailed) : '')
+    } catch (err) {
+      stopSuggestionPoll()
+      setSuggestionsLoading(false)
+      setSuggestionsError(errorMessage(err, t.suggestionsFailed))
+    }
+  }
+
+  async function loadSuggestions(refresh = false) {
+    stopSuggestionPoll()
+    if (!hasAccessToken()) {
+      setSuggestions(null)
+      setSuggestionsLoading(false)
+      return
+    }
+    setSuggestionsLoading(true)
+    setSuggestionsError('')
+    try {
+      const data = refresh
+        ? await refreshTodaySuggestions({ lang: getLang(), suggestionDate: suggestionDateRef.current })
+        : await getTodaySuggestions({ lang: getLang(), suggestionDate: suggestionDateRef.current })
+      setSuggestions(data)
+      if (data.status === 'pending') {
+        suggestionPollRef.current = window.setInterval(pollSuggestionsOnce, 3000)
+        return
+      }
+      setSuggestionsLoading(false)
+      setSuggestionsError(data.status === 'failed' ? (data.error_message || t.suggestionsFailed) : '')
+    } catch (err) {
+      setSuggestionsLoading(false)
+      setSuggestionsError(errorMessage(err, t.suggestionsFailed))
+    }
+  }
+
   useEffect(() => {
     loadRecipes()
     loadTopRecipes()
+    loadSuggestions()
+    return () => stopSuggestionPoll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -524,10 +610,45 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Recommended for You — no data source yet */}
+        {/* Recommended for You — today's AI-generated meal picks */}
         <section>
-          <SectionHeading title={t.recommendedRecipesTitle} />
-          <EmptyRow icon={<Sparkles size={18} color="var(--tm-text-3)" />} text={t.recommendedComingSoon} />
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-sm font-bold" style={{ color: 'var(--tm-text)' }}>{t.recommendedRecipesTitle}</p>
+            <button
+              type="button"
+              onClick={() => loadSuggestions(true)}
+              disabled={suggestionsLoading}
+              aria-label={t.refreshSuggestions}
+              title={t.refreshSuggestions}
+              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--tm-subtle)', color: 'var(--tm-text-2)' }}
+            >
+              <RefreshCw size={14} className={suggestionsLoading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+          {suggestionsLoading && suggestions?.status !== 'pending' ? (
+            <EmptyRow icon={<Loader2 size={18} className="animate-spin" color="var(--tm-text-3)" />} text={t.loading} />
+          ) : suggestions?.status === 'pending' ? (
+            <EmptyRow icon={<Loader2 size={18} className="animate-spin" color="var(--tm-text-3)" />} text={t.suggestionsPending} />
+          ) : suggestionsError ? (
+            <div className="flex items-center gap-2.5 rounded-2xl px-4 py-5" style={{ backgroundColor: 'var(--tm-subtle)' }}>
+              <p className="text-xs flex-1" style={{ color: 'var(--tm-text-3)' }}>{suggestionsError}</p>
+              <button
+                type="button"
+                onClick={() => loadSuggestions()}
+                className="text-xs font-semibold shrink-0"
+                style={{ color: '#059669' }}
+              >
+                {t.retry}
+              </button>
+            </div>
+          ) : (
+            <>
+              <SuggestionMealRow label={t.breakfastLabel} recipes={suggestions?.breakfast ?? []} onOpen={openDetail} />
+              <SuggestionMealRow label={t.lunchLabel} recipes={suggestions?.lunch ?? []} onOpen={openDetail} />
+              <SuggestionMealRow label={t.dinnerLabel} recipes={suggestions?.dinner ?? []} onOpen={openDetail} />
+            </>
+          )}
         </section>
 
         {/* Top Recipes — most-favorited site-wide */}
