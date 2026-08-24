@@ -65,7 +65,7 @@ export function getStrings(lang: Lang) {
     todaysMealPlan: vi ? "Kế hoạch bữa ăn hôm nay" : "Today's Meal Plan",
     mealPlanPreview: (n: number) =>
       vi ? `${n} món đã lên kế hoạch` : `${n} dish${n === 1 ? "" : "es"} planned`,
-    openMealPlan: vi ? "Xem" : "Open",
+    openMealPlan: vi ? "Xem kế hoạch" : "Open plan",
     unableToLoadMealPlan: vi
       ? "Không thể tải kế hoạch bữa ăn."
       : "Unable to load meal plan.",
