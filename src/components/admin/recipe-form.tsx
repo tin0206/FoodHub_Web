@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Clock,
   Plus,
   X,
   ShoppingBasket,
@@ -25,7 +26,11 @@ import {
   updateRecipe,
   type RecipeWritePayload,
 } from "@/lib/api/admin-recipes";
+import { uploadRecipeImage } from "@/lib/api/recipes";
 import type { ApiRecipe } from "@/lib/api/types";
+import { PhotoPicker } from "@/components/recipe/photo-picker";
+import LoadingOverlay from "@/components/loading-overlay";
+import { getRecipeMeta, setRecipeMeta, estimateStats } from "@/lib/recipe-meta";
 
 function FieldCard({ children }: { children: React.ReactNode }) {
   return (
@@ -60,8 +65,15 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
   const t = useStrings();
   const isCatalog = initial != null && initial.created_by == null;
 
-  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? "");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState(
+    resolveMediaUrl(initial?.image_url ?? "") || "",
+  );
+  const [imageCleared, setImageCleared] = useState(false);
   const [title, setTitle] = useState(initial?.title ?? "");
+  const [minutes, setMinutes] = useState(
+    initial ? String(getRecipeMeta(initial.id)?.cookingMinutes ?? "") : "",
+  );
   const [servings, setServings] = useState(
     initial?.estimated_servings != null
       ? String(initial.estimated_servings)
@@ -102,6 +114,20 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
     });
   }
 
+  function handlePickImage(file: File) {
+    setImageFile(file);
+    setImageCleared(false);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function handleClearImage() {
+    setImageFile(null);
+    setImagePreview("");
+    setImageCleared(true);
+  }
+
   async function handleSave() {
     if (saving) return;
     const trimmedTitle = title.trim();
@@ -110,6 +136,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
     const servingsNum = servings.trim()
       ? Number.parseInt(servings, 10)
       : null;
+    const minutesNum = minutes.trim() ? Number.parseInt(minutes, 10) : null;
 
     if (
       !trimmedTitle ||
@@ -126,6 +153,13 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
       setError(t.adminServingsMustBePositive);
       return;
     }
+    if (
+      minutes.trim() &&
+      (!Number.isFinite(minutesNum) || (minutesNum as number) <= 0)
+    ) {
+      setError(t.adminMinutesMustBePositive);
+      return;
+    }
 
     const payload: RecipeWritePayload = {
       title: trimmedTitle,
@@ -133,7 +167,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
       directions: cleanSteps,
       dietary_restrictions: [...labels],
       estimated_servings: servingsNum,
-      image_url: imageUrl.trim() || null,
+      ...(imageCleared && !imageFile ? { image_url: null } : {}),
     };
 
     setError(null);
@@ -141,6 +175,18 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
     try {
       if (initial) {
         const saved = await updateRecipe(initial.id, payload);
+        // Cooking time has no API field — cache it locally, same fallback
+        // chain getOrEstimateMeta() reads everywhere else.
+        if (Number.isFinite(minutesNum) && (minutesNum as number) > 0) {
+          setRecipeMeta(saved.id, { cookingMinutes: minutesNum as number, calories: estimateStats(saved).calories });
+        }
+        if (imageFile) {
+          try {
+            await uploadRecipeImage(saved.id, imageFile);
+          } catch {
+            setError(t.adminPhotoUploadFailed);
+          }
+        }
         if (saved.id !== initial.id) {
           // Catalog edit clones into a private copy
           router.replace(`/admin/recipes/${saved.id}`);
@@ -149,6 +195,16 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
         router.push(`/admin/recipes/${saved.id}`);
       } else {
         const created = await createRecipe(payload);
+        if (Number.isFinite(minutesNum) && (minutesNum as number) > 0) {
+          setRecipeMeta(created.id, { cookingMinutes: minutesNum as number, calories: estimateStats(created).calories });
+        }
+        if (imageFile) {
+          try {
+            await uploadRecipeImage(created.id, imageFile);
+          } catch {
+            setError(t.adminPhotoUploadFailed);
+          }
+        }
         router.push(`/admin/recipes/${created.id}`);
       }
     } catch (err) {
@@ -166,7 +222,6 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
 
   const inputStyle = { color: "var(--tm-text)" } as const;
   const hintStyle = { color: "var(--tm-text-3)" } as const;
-  const previewSrc = imageUrl ? resolveMediaUrl(imageUrl) || imageUrl : "";
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -198,27 +253,10 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
               className="text-[13px] font-bold"
               style={{ color: "var(--tm-text)" }}
             >
-              {t.adminImageUrlLabel}
+              {t.adminPhotoLabel}
             </span>
           </div>
-          {previewSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewSrc}
-              alt="Recipe"
-              className="w-full h-40 object-cover rounded-xl mb-2"
-            />
-          ) : null}
-          <input
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="/media/recipes/… or https://…"
-            className="w-full text-[13px] bg-transparent focus:outline-none py-1"
-            style={inputStyle}
-          />
-          <p className="text-[11px] mt-1" style={hintStyle}>
-            {t.adminImageUrlHint}
-          </p>
+          <PhotoPicker preview={imagePreview} onPick={handlePickImage} onClear={handleClearImage} />
         </FieldCard>
 
         <FieldCard>
@@ -233,6 +271,20 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
 
         <FieldCard>
           <div className="flex items-center gap-2 flex-wrap">
+            <Clock size={16} color={accent} />
+            <input
+              value={minutes}
+              onChange={(e) =>
+                setMinutes(e.target.value.replace(/[^0-9]/g, ""))
+              }
+              placeholder="0"
+              className="w-14 text-sm bg-transparent focus:outline-none"
+              style={inputStyle}
+            />
+            <span className="text-xs" style={hintStyle}>
+              {t.adminMinutesOptional}
+            </span>
+            <span className="w-2" />
             <Users size={16} color={accent} />
             <input
               value={servings}
@@ -420,6 +472,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
           </button>
         </div>
       </div>
+      {saving && <LoadingOverlay />}
     </div>
   );
 }

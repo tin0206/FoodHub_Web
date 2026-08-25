@@ -46,6 +46,19 @@ function toCardData(recipe: ApiRecipe): RecipeCardData {
   }
 }
 
+/** Personal Recipes shows min + servings instead of min + calories. */
+function toPersonalCardData(recipe: ApiRecipe): RecipeCardData {
+  const meta = getOrEstimateMeta(recipe)
+  return {
+    id: recipe.id,
+    name: recipe.title,
+    imageUrl: recipe.image_url,
+    labels: recipe.dietary_restrictions,
+    cookingMinutes: meta.cookingMinutes,
+    servings: recipe.estimated_servings,
+  }
+}
+
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback
   if (err instanceof Error) return err.message
@@ -615,7 +628,7 @@ export default function HomePage() {
               {recipes.map(recipe => (
                 <div key={recipe.id} className={RECIPE_ROW_CARD_CLASS}>
                   <RecipeCard
-                    recipe={toCardData(recipe)}
+                    recipe={toPersonalCardData(recipe)}
                     onTap={() => openDetail(recipe)}
                     onAction={() => openDetail(recipe)}
                   />

@@ -5,13 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
+  Clock,
   Eye,
   EyeOff,
+  Flame,
   ListOrdered,
   Pencil,
   ShoppingBasket,
   Tag,
   Trash2,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useDarkMode } from "@/lib/use-dark-mode";
@@ -34,6 +37,8 @@ import type {
 } from "@/lib/api/types";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ingredientLines } from "@/components/recipe/recipe-view-content";
+import LoadingOverlay from "@/components/loading-overlay";
+import { getOrEstimateMeta } from "@/lib/recipe-meta";
 
 const LOCALES = ["en", "vi"] as const;
 
@@ -285,6 +290,7 @@ export default function AdminRecipeDetailPage() {
   const isPublic = recipe.visibility === "public";
   const isCatalog = recipe.created_by == null;
   const canDelete = !isCatalog;
+  const meta = getOrEstimateMeta(recipe);
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -360,14 +366,14 @@ export default function AdminRecipeDetailPage() {
         <img
           src={resolveMediaUrl(recipe.image_url)}
           alt={recipe.title}
-          className="w-full h-48 object-cover rounded-2xl mb-3"
+          className="w-full h-72 object-cover rounded-2xl mb-3"
         />
       ) : (
         <div
-          className="w-full h-48 rounded-2xl mb-3 flex items-center justify-center"
+          className="w-full h-72 rounded-2xl mb-3 flex items-center justify-center"
           style={{ backgroundColor: `${accent}14` }}
         >
-          <BookOpen size={36} color={accent} />
+          <BookOpen size={44} color={accent} />
         </div>
       )}
 
@@ -391,6 +397,26 @@ export default function AdminRecipeDetailPage() {
         </span>
         <span className="text-xs" style={{ color: "var(--tm-text-3)" }}>
           #{recipe.id} · {t.adminLocaleLabel} {recipe.locale}
+        </span>
+        <span
+          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+        >
+          <Clock size={11} /> {t.adminMinutesCount(meta.cookingMinutes)}
+        </span>
+        {recipe.estimated_servings != null && (
+          <span
+            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+          >
+            <Users size={11} /> {t.adminServingsCount(recipe.estimated_servings)}
+          </span>
+        )}
+        <span
+          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+        >
+          <Flame size={11} /> {t.adminCaloriesCount(meta.calories)}
         </span>
       </div>
 
@@ -611,6 +637,8 @@ export default function AdminRecipeDetailPage() {
           onCancel={() => setConfirmDeleteRecipe(false)}
         />
       )}
+
+      {(saving || toggling || deleting) && <LoadingOverlay />}
     </div>
   );
 }

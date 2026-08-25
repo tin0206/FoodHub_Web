@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock, Flame, ShoppingBasket, ListOrdered, Tag, Utensils } from 'lucide-react'
+import { Clock, Flame, ShoppingBasket, ListOrdered, Tag, Users, Utensils } from 'lucide-react'
 import { useDarkMode } from '@/lib/use-dark-mode'
 import { useStrings } from '@/lib/use-strings'
 import type { Strings } from '@/lib/strings'
@@ -97,8 +97,13 @@ function NutritionBlock({ nutrition, accent, t }: { nutrition: RecipeNutrition; 
 }
 
 export function RecipeViewContent({
-  recipe, theme, meta,
-}: { recipe: ApiRecipe; theme: RecipeCardTheme; meta: RecipeMeta }) {
+  recipe, theme, meta, secondaryStat = 'all',
+}: {
+  recipe: ApiRecipe
+  theme: RecipeCardTheme
+  meta: RecipeMeta
+  secondaryStat?: 'calories' | 'servings' | 'all'
+}) {
   const dark = useDarkMode()
   const t = useStrings()
   const image = resolveMediaUrl(recipe.image_url)
@@ -124,13 +129,20 @@ export function RecipeViewContent({
           {recipe.title}
         </h1>
 
-        <div className="flex items-center gap-4 mb-3 lg:mb-0 text-sm" style={{ color: 'var(--tm-text-2)' }}>
+        <div className="flex items-center gap-4 mb-3 lg:mb-0 text-sm flex-wrap" style={{ color: 'var(--tm-text-2)' }}>
           <span className="flex items-center gap-1.5">
             <Clock size={14} color={theme.start} /> {meta.cookingMinutes} {t.minSuffix}
           </span>
-          <span className="flex items-center gap-1.5">
-            <Flame size={14} color={theme.start} /> {meta.calories} {t.calSuffix}
-          </span>
+          {(secondaryStat === 'servings' || secondaryStat === 'all') && recipe.estimated_servings != null && (
+            <span className="flex items-center gap-1.5">
+              <Users size={14} color={theme.start} /> {recipe.estimated_servings} {t.servingsSuffix}
+            </span>
+          )}
+          {(secondaryStat === 'calories' || secondaryStat === 'all') && (
+            <span className="flex items-center gap-1.5">
+              <Flame size={14} color={theme.start} /> {meta.calories} {t.calSuffix}
+            </span>
+          )}
         </div>
       </div>
 

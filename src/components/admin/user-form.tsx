@@ -15,6 +15,7 @@ import {
   type AdminUserUpdate,
 } from "@/lib/api/admin-users";
 import type { ApiUser } from "@/lib/api/types";
+import LoadingOverlay from "@/components/loading-overlay";
 
 const DEFAULT_PASSWORD = "123456";
 
@@ -360,6 +361,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           </button>
         </div>
       </div>
+      {saving && <LoadingOverlay />}
     </div>
   );
 }

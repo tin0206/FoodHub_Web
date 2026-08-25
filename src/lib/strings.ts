@@ -633,12 +633,17 @@ export function getStrings(lang: Lang) {
     adminCatalogFormNoticeSuffix: vi
       ? " thuộc về bạn (theo API) — công thức gốc trong catalog không bị ghi đè."
       : " owned by you (API behavior) — the original catalog entry is not overwritten.",
-    adminImageUrlLabel: vi ? "URL hình ảnh" : "Image URL",
-    adminImageUrlHint: vi
-      ? "Dùng đường dẫn media của API hoặc URL tuyệt đối. Để trống nếu không có ảnh."
-      : "Use an API media path or absolute URL. Leave empty for no image.",
+    adminPhotoLabel: vi ? "Ảnh công thức" : "Recipe photo",
+    adminPhotoUploadFailed: vi
+      ? "Đã lưu công thức, nhưng không thể tải ảnh lên."
+      : "Recipe saved, but the photo could not be uploaded.",
     adminRecipeNameHint: vi ? "Tên công thức…" : "Recipe name…",
     adminServingsOptional: vi ? "khẩu phần (tùy chọn)" : "servings (optional)",
+    adminMinutesOptional: vi ? "phút (tùy chọn)" : "min (optional)",
+    adminServingsCount: (n: number) =>
+      vi ? `${n} khẩu phần` : `${n} serving${n === 1 ? "" : "s"}`,
+    adminMinutesCount: (n: number) => (vi ? `${n} phút` : `${n} min`),
+    adminCaloriesCount: (n: number) => (vi ? `${n} calo` : `${n} cal`),
     adminIngredientHint: (i: number) =>
       vi ? `Nguyên liệu ${i + 1}` : `Ingredient ${i + 1}`,
     adminAddIngredient: vi ? "Thêm nguyên liệu" : "Add ingredient",
@@ -651,6 +656,9 @@ export function getStrings(lang: Lang) {
     adminServingsMustBePositive: vi
       ? "Khẩu phần phải là số dương."
       : "Servings must be a positive number.",
+    adminMinutesMustBePositive: vi
+      ? "Thời gian nấu phải là số dương."
+      : "Cooking time must be a positive number.",
     adminFailedSaveRecipe: vi
       ? "Không thể lưu công thức"
       : "Failed to save recipe",
