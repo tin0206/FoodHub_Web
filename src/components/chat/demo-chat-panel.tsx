@@ -8,10 +8,10 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { Bot, ChefHat, RotateCcw, Send } from "lucide-react";
+import { Bot, ChefHat, ChevronRight, RotateCcw, Send } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { aiChat, aiWelcome } from "@/lib/api/ai";
-import type { ChatHistoryMessage, RagRecipe } from "@/lib/api/types";
+import type { ChatHistoryMessage, ChatOption, RagRecipe } from "@/lib/api/types";
 import {
   DEMO_CHAT_LIMIT,
   ensureDemoSession,
@@ -28,6 +28,7 @@ interface UiMessage {
   role: UiRole;
   text: string;
   recipes?: RagRecipe[];
+  options?: ChatOption[];
 }
 
 function newSessionId() {
@@ -137,6 +138,7 @@ export function DemoChatPanel({
           role: "assistant",
           text: reply,
           recipes: response.recipes ?? [],
+          options: response.options ?? [],
         },
       ]);
       setHistory([{ role: "assistant", content: reply }]);
@@ -263,6 +265,7 @@ export function DemoChatPanel({
           role: "assistant",
           text: reply,
           recipes: response.recipes ?? [],
+          options: response.options ?? [],
         },
       ]);
       setHistory([
@@ -296,6 +299,19 @@ export function DemoChatPanel({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     void sendMessage(input);
+  }
+
+  // Tapping an option resends its label as a plain chat message — same flow as Rerun.
+  async function handleSelectOption(option: ChatOption) {
+    if (busy) return;
+    setMessages((prev) => {
+      const next = [...prev];
+      if (next.length && next[next.length - 1].role === "assistant") {
+        next[next.length - 1] = { ...next[next.length - 1], options: [] };
+      }
+      return next;
+    });
+    await sendMessage(option.label);
   }
 
   function handleReset() {
@@ -414,13 +430,15 @@ export function DemoChatPanel({
           >
             {messages.map((m, index) => {
               const isUser = m.role === "user";
+              const isLatestAiMessage = !busy && !isUser && index === lastAssistantIndex;
+              const options = m.options ?? [];
+              const showOptions = isLatestAiMessage && !limitReached && options.length > 0;
               const showRerun =
-                !busy &&
+                isLatestAiMessage &&
                 !limitReached &&
-                !isUser &&
-                index === lastAssistantIndex &&
                 !!lastSent &&
-                messages.length > 1;
+                messages.length > 1 &&
+                options.length === 0;
 
               return (
                 <div
@@ -460,6 +478,10 @@ export function DemoChatPanel({
                           <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
                             {m.text}
                           </p>
+                        ) : showOptions ? (
+                          <p className="text-[13px] leading-relaxed" style={{ color: "var(--tm-text, #0F172A)" }}>
+                            I have some ways to do it:
+                          </p>
                         ) : (
                           <MarkdownReply
                             text={m.text}
@@ -468,6 +490,40 @@ export function DemoChatPanel({
                           />
                         )}
                       </div>
+                      {showOptions && (
+                        <div className="mt-1.5 space-y-1.5">
+                          {options.map((opt) => (
+                            <button
+                              key={opt.index}
+                              type="button"
+                              onClick={() => void handleSelectOption(opt)}
+                              className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:opacity-80"
+                              style={{
+                                backgroundColor: "var(--tm-surface, #fff)",
+                                border: "1px solid var(--tm-border-i, #D1D5DB)",
+                              }}
+                            >
+                              <span
+                                className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-white"
+                                style={{ backgroundColor: "#059669" }}
+                              >
+                                {opt.index}
+                              </span>
+                              <span className="flex-1 min-w-0">
+                                <span className="block text-[13px] font-bold" style={{ color: "var(--tm-text, #0F172A)" }}>
+                                  {opt.label}
+                                </span>
+                                {opt.rationale && (
+                                  <span className="block text-[11.5px] mt-0.5" style={{ color: "var(--tm-text-3, #6B7280)" }}>
+                                    {opt.rationale}
+                                  </span>
+                                )}
+                              </span>
+                              <ChevronRight size={16} color="var(--tm-text-3, #6B7280)" className="shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {showRerun && (
                         <button
                           type="button"

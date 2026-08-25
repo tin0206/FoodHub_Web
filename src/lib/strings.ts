@@ -60,6 +60,7 @@ export function getStrings(lang: Lang) {
       ? "Không thể tạo gợi ý."
       : "Unable to generate suggestions.",
     noSuggestionsForMeal: vi ? "Chưa có công thức" : "No recipes yet",
+    aiHasOptionsIntro: vi ? "Mình có vài cách để làm việc này:" : "I have some ways to do it:",
 
     // ── Meal plan / shopping list ─────────────────────────────────────────
     todaysMealPlan: vi ? "Kế hoạch bữa ăn hôm nay" : "Today's Meal Plan",
