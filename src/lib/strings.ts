@@ -359,6 +359,30 @@ export function getStrings(lang: Lang) {
     mustBeAtLeast6: vi
       ? "Phải ít nhất 6 ký tự"
       : "Must be at least 6 characters",
+    pwReqLength: vi ? "Ít nhất 6 ký tự" : "At least 6 characters",
+    pwReqLetter: vi ? "Có chứa chữ cái" : "Contains a letter",
+    pwReqNumber: vi ? "Có chứa chữ số" : "Contains a number",
+    setPasswordLabel: vi ? "Đặt mật khẩu" : "Set password",
+    setPasswordSubtitle: vi
+      ? "Tài khoản đăng nhập bằng Google — đặt mật khẩu để có thể đăng nhập bằng email."
+      : "Signed in with Google — set a password so you can also sign in with email.",
+    setPasswordSentMessage: vi
+      ? "Đã gửi email đặt mật khẩu. Vui lòng kiểm tra hộp thư."
+      : "We sent you an email to set your password. Please check your inbox.",
+    resetPasswordTitle: vi ? "Đặt lại mật khẩu" : "Reset password",
+    resetPasswordSub: vi
+      ? "Nhập mật khẩu mới cho tài khoản của bạn."
+      : "Enter a new password for your account.",
+    newPasswordLabel: vi ? "Mật khẩu mới" : "New password",
+    confirmNewPasswordLabel: vi ? "Xác nhận mật khẩu mới" : "Confirm new password",
+    resetPasswordCta: vi ? "Đặt lại mật khẩu" : "Reset password",
+    resetPasswordSuccess: vi
+      ? "Đặt lại mật khẩu thành công."
+      : "Password reset successfully.",
+    resetPasswordInvalidLink: vi
+      ? "Liên kết đặt lại mật khẩu không hợp lệ."
+      : "This reset link is invalid.",
+    requestNewLinkLabel: vi ? "Yêu cầu liên kết mới" : "Request a new link",
     passwordsDoNotMatch: vi ? "Mật khẩu không khớp" : "Passwords do not match",
     updateLabel: vi ? "Cập nhật" : "Update",
     passwordUpdated: vi

@@ -1,5 +1,5 @@
 import { ApiError, setAccessToken, getAccessToken } from "@/lib/api-client";
-import { apiLogin, apiSignup, apiForgotPassword } from "@/lib/api/auth";
+import { apiLogin, apiSignup, apiForgotPassword, apiResetPassword, apiGoogleAccessTokenLogin, type ForgotPasswordResult } from "@/lib/api/auth";
 import { clearChatSession } from "@/lib/chat-session";
 import type { ApiUser } from "@/lib/api/types";
 
@@ -114,13 +114,44 @@ export async function signup({
   }
 }
 
-export async function forgotPassword(email: string): Promise<void> {
+export async function loginWithGoogle(accessToken: string): Promise<CurrentUser> {
   try {
-    await apiForgotPassword(email);
+    const res = await apiGoogleAccessTokenLogin(accessToken);
+    return persistSession(res.access_token, res.user);
+  } catch (err) {
+    mapAuthError(err);
+  }
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
+  try {
+    return await apiForgotPassword(email);
   } catch (err) {
     if (err instanceof ApiError) throw new Error(err.message || "Unable to send reset link.");
     throw err instanceof Error ? err : new Error("Unable to send reset link.");
   }
+}
+
+export async function resetPassword(input: {
+  email: string;
+  token: string;
+  newPassword: string;
+}): Promise<void> {
+  try {
+    await apiResetPassword({
+      email: input.email,
+      token: input.token,
+      new_password: input.newPassword,
+    });
+  } catch (err) {
+    if (err instanceof ApiError) throw new Error(err.message || "Unable to reset password.");
+    throw err instanceof Error ? err : new Error("Unable to reset password.");
+  }
+}
+
+/** Google-only account that never set a local password (has_password backend field). */
+export function isGoogleOnlyUser(user: ApiUser): boolean {
+  return user.google_id != null && user.has_password === false;
 }
 
 /** Refreshes the cached session (name/role) after a profile update, without touching the token. */

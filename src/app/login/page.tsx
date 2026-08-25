@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { login, FieldError, getCurrentUser, getPostLoginPath } from "@/lib/auth";
+import { login, loginWithGoogle, FieldError, getCurrentUser, getPostLoginPath } from "@/lib/auth";
+import { requestGoogleAccessToken } from "@/lib/google-auth";
 import { ChefHat, Mail, Lock } from "lucide-react";
 import {
   AuthField,
@@ -81,8 +82,19 @@ export default function LoginPage() {
     }
   }
 
-  function handleGoogleSignIn() {
-    setAuthError("Google sign-in is not available yet.");
+  async function handleGoogleSignIn() {
+    if (loading || googleLoading) return;
+    try {
+      setGoogleLoading(true);
+      setAuthError("");
+      const accessToken = await requestGoogleAccessToken();
+      const user = await loginWithGoogle(accessToken);
+      router.replace(getPostLoginPath(user));
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Google sign-in failed.");
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   const isLoading = loading || googleLoading;

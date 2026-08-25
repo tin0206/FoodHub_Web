@@ -7,6 +7,9 @@ export interface ApiUser {
   full_name: string | null;
   is_active: boolean;
   role: string;
+  /** False for accounts created via Google Sign-In that never set a password. */
+  has_password?: boolean;
+  google_id?: string | null;
   age?: number | null;
   weight?: number | null;
   calorie_target?: number | null;

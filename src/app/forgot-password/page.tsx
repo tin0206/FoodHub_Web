@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChefHat, Mail, MailCheck } from 'lucide-react'
 import { forgotPassword } from '@/lib/auth'
 import { AuthField, AuthPrimaryButton } from '@/components/auth/auth-widgets'
@@ -12,6 +13,7 @@ import '../auth.css'
 const isValidEmail = (v: string) => v.includes('@')
 
 export default function ForgotPasswordPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
   const [authError, setAuthError] = useState('')
@@ -33,7 +35,13 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true)
       setAuthError('')
-      await forgotPassword(email.trim())
+      const trimmedEmail = email.trim()
+      const result = await forgotPassword(trimmedEmail)
+      if (result.resetToken) {
+        // Dev backend hands the token straight back — skip the inbox step.
+        router.push(`/reset-password?email=${encodeURIComponent(trimmedEmail)}&token=${encodeURIComponent(result.resetToken)}`)
+        return
+      }
       setEmailSent(true)
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Unable to send reset link.')

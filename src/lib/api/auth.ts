@@ -33,6 +33,15 @@ export async function apiSignup(input: {
   });
 }
 
+/** Web equivalent of mobile's Flutter-web Google flow — POSTs a client-obtained OAuth2 access_token. */
+export async function apiGoogleAccessTokenLogin(accessToken: string): Promise<TokenResponse> {
+  return apiFetch<TokenResponse>("/auth/google/access_token", {
+    method: "POST",
+    auth: false,
+    body: { access_token: accessToken },
+  });
+}
+
 export async function apiGetMe(): Promise<ApiUser> {
   return apiFetch<ApiUser>("/users/me");
 }
@@ -44,11 +53,33 @@ export async function apiUpdateMe(payload: UserProfileUpdate): Promise<ApiUser> 
   });
 }
 
-export async function apiForgotPassword(email: string): Promise<void> {
-  await apiFetch<void>("/auth/forgot-password", {
+export interface ForgotPasswordResult {
+  message: string;
+  /** Only populated in dev — prod expects the user to click a link in their email. */
+  resetToken: string | null;
+}
+
+export async function apiForgotPassword(email: string): Promise<ForgotPasswordResult> {
+  const res = await apiFetch<{ message: string; reset_token?: string | null }>(
+    "/auth/forgot-password",
+    {
+      method: "POST",
+      auth: false,
+      body: { email },
+    },
+  );
+  return { message: res.message, resetToken: res.reset_token ?? null };
+}
+
+export async function apiResetPassword(input: {
+  email: string;
+  token: string;
+  new_password: string;
+}): Promise<void> {
+  await apiFetch<void>("/auth/reset-password", {
     method: "POST",
     auth: false,
-    body: { email },
+    body: input,
   });
 }
 

@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { signup, FieldError, getPostLoginPath } from '@/lib/auth'
+import { signup, loginWithGoogle, FieldError, getPostLoginPath } from '@/lib/auth'
+import { requestGoogleAccessToken } from '@/lib/google-auth'
 import { ChefHat, Mail, Lock, User } from 'lucide-react'
 import { AuthField, AuthPrimaryButton, AuthDivider, AuthSocialButton } from '@/components/auth/auth-widgets'
 import { authDisplay, authSans } from '../auth-fonts'
@@ -76,8 +77,19 @@ export default function SignupPage() {
     }
   }
 
-  function handleGoogleSignUp() {
-    setAuthError('Google sign-up is not available yet.')
+  async function handleGoogleSignUp() {
+    if (loading || googleLoading) return
+    try {
+      setGoogleLoading(true)
+      setAuthError('')
+      const accessToken = await requestGoogleAccessToken()
+      const user = await loginWithGoogle(accessToken)
+      router.replace(getPostLoginPath(user))
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Google sign-up failed.')
+    } finally {
+      setGoogleLoading(false)
+    }
   }
 
   const isLoading = loading || googleLoading

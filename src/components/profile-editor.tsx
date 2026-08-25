@@ -2,8 +2,8 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Target, Palette, LogOut, KeyRound, UserRound, ChevronRight } from "lucide-react";
-import { logout, updateCachedUser } from "@/lib/auth";
+import { User, Target, Palette, LogOut, KeyRound, UserRound, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { logout, updateCachedUser, isGoogleOnlyUser, forgotPassword } from "@/lib/auth";
 import { apiGetMe, apiUpdateMe, apiChangePassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
 import type { ApiUser, UserProfileUpdate } from "@/lib/api/types";
@@ -12,6 +12,7 @@ import { setLang, type Lang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import LoadingOverlay from "@/components/loading-overlay";
 import { FlagIcon } from "@/components/flag-icon";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 
 interface ProfileForm {
   fullName: string;
@@ -113,6 +114,36 @@ function SectionCard({
 
 const inputCls = "w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent";
 
+function PasswordField({
+  label, value, onChange,
+}: { label: string; value: string; onChange: (v: string) => void }) {
+  const [reveal, setReveal] = useState(false);
+  return (
+    <div>
+      <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{label}</label>
+      <div className="relative">
+        <input
+          type={reveal ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputCls}
+          style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)", paddingRight: 36 }}
+        />
+        <button
+          type="button"
+          onClick={() => setReveal((v) => !v)}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2"
+          style={{ color: "var(--tm-text-3)" }}
+          tabIndex={-1}
+          aria-label={reveal ? "Hide password" : "Show password"}
+        >
+          {reveal ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
   const t = useStrings();
   const [current, setCurrent] = useState("");
@@ -163,18 +194,12 @@ function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <div className="space-y-3">
+              <PasswordField label={t.currentPassword} value={current} onChange={setCurrent} />
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{t.currentPassword}</label>
-                <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputCls} style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)" }} />
+                <PasswordField label={t.newPassword} value={next} onChange={setNext} />
+                <PasswordRequirements password={next} />
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{t.newPassword}</label>
-                <input type="password" value={next} onChange={(e) => setNext(e.target.value)} className={inputCls} style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)" }} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--tm-text-2)" }}>{t.confirmNewPassword}</label>
-                <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} style={{ borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-bg)" }} />
-              </div>
+              <PasswordField label={t.confirmNewPassword} value={confirm} onChange={setConfirm} />
             </div>
             {error && <p className="mt-3 text-xs" style={{ color: "#f87171" }}>{error}</p>}
             <div className="flex justify-end gap-2 mt-5">
@@ -205,6 +230,9 @@ export function ProfileEditor() {
   const [saveError, setSaveError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(NO_ERRORS);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [setPasswordSent, setSetPasswordSent] = useState(false);
+  const [setPasswordError, setSetPasswordError] = useState("");
   const [actionButtonsVisible, setActionButtonsVisible] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomActionsRef = useRef<HTMLDivElement>(null);
@@ -342,6 +370,25 @@ export function ProfileEditor() {
     router.replace("/login");
   }
 
+  async function handleSetFirstPassword() {
+    if (!user || settingPassword) return;
+    setSettingPassword(true);
+    setSetPasswordError("");
+    setSetPasswordSent(false);
+    try {
+      const result = await forgotPassword(user.email);
+      if (result.resetToken) {
+        router.push(`/reset-password?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(result.resetToken)}&from=profile`);
+        return;
+      }
+      setSetPasswordSent(true);
+    } catch (err) {
+      setSetPasswordError(errorMessage(err, "Unable to send reset link."));
+    } finally {
+      setSettingPassword(false);
+    }
+  }
+
   if (user === undefined) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -359,6 +406,7 @@ export function ProfileEditor() {
   }
 
   const isDirty = JSON.stringify(formData) !== JSON.stringify(savedData);
+  const isGoogleOnly = isGoogleOnlyUser(user);
   const inputStyle = { borderColor: "var(--tm-border-i)", color: "var(--tm-text)", backgroundColor: "var(--tm-surface)" };
   const labelStyle = { color: "var(--tm-text-2)" };
   const errStyle = { color: "#f87171" };
@@ -571,18 +619,34 @@ export function ProfileEditor() {
           </SectionCard>
 
           {/* Security */}
-          <SectionCard icon={<KeyRound size={18} color="#EA580C" />} iconBg="#FFEDD5" title={t.securityLabel} subtitle={t.changePasswordLabel}>
+          <SectionCard
+            icon={<KeyRound size={18} color="#EA580C" />}
+            iconBg="#FFEDD5"
+            title={t.securityLabel}
+            subtitle={isGoogleOnly ? t.setPasswordLabel : t.changePasswordLabel}
+          >
             <button
               type="button"
-              onClick={() => setShowChangePassword(true)}
-              className="flex items-center justify-between w-full text-sm py-1"
+              onClick={() => (isGoogleOnly ? handleSetFirstPassword() : setShowChangePassword(true))}
+              disabled={isGoogleOnly && settingPassword}
+              className="flex items-center justify-between w-full text-sm py-1 disabled:opacity-60"
               style={{ color: "var(--tm-text)" }}
             >
               <span className="flex items-center gap-2">
-                <KeyRound size={15} color="var(--tm-text-3)" /> {t.changePasswordLabel}
+                <KeyRound size={15} color="var(--tm-text-3)" />
+                {isGoogleOnly ? t.setPasswordLabel : t.changePasswordLabel}
               </span>
               <ChevronRight size={16} color="var(--tm-text-3)" />
             </button>
+            {isGoogleOnly && (
+              <p className="text-xs mt-1.5" style={{ color: "var(--tm-text-3)" }}>{t.setPasswordSubtitle}</p>
+            )}
+            {isGoogleOnly && setPasswordSent && (
+              <p className="text-xs mt-2 font-medium" style={{ color: "#059669" }}>{t.setPasswordSentMessage}</p>
+            )}
+            {isGoogleOnly && setPasswordError && (
+              <p className="text-xs mt-2" style={{ color: "#f87171" }}>{setPasswordError}</p>
+            )}
           </SectionCard>
 
           {/* Cancel + Save changes */}
