@@ -528,7 +528,7 @@ export function ProfileEditor() {
                     <button
                       key={goal}
                       type="button"
-                      onClick={() => set("primaryGoal", goal)}
+                      onClick={() => set("primaryGoal", active ? "" : goal)}
                       className="py-2.5 px-3 rounded-lg border text-sm text-left transition-colors"
                       style={{
                         backgroundColor: active ? "#ECFDF5" : "var(--tm-surface)",

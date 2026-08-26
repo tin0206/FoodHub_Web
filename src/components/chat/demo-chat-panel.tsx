@@ -480,7 +480,7 @@ export function DemoChatPanel({
                           </p>
                         ) : showOptions ? (
                           <p className="text-[13px] leading-relaxed" style={{ color: "var(--tm-text, #0F172A)" }}>
-                            I have some ways to do it:
+                            {`I've got ${options.length} idea${options.length === 1 ? "" : "s"} for you — pick what works best:`}
                           </p>
                         ) : (
                           <MarkdownReply

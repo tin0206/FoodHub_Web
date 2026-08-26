@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, Heart, Plus } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { getRecipe } from "@/lib/api/recipes";
 import { listFavorites, addFavorite, deleteFavorite } from "@/lib/api/favorites";
@@ -10,6 +10,8 @@ import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { recipeCardTheme } from "./recipe-card-theme";
 import { RecipeViewContent } from "./recipe-view-content";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
+import { AddToPlanDialog } from "@/components/meal-plan/add-to-plan-dialog";
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback;
@@ -29,10 +31,12 @@ export function SaveDetailView({
   onBack: () => void;
 }) {
   const dark = useDarkMode();
+  const t = useStrings();
   const [recipe, setRecipe] = useState<ApiRecipe | null | undefined>(undefined);
   const [error, setError] = useState("");
   const [favoriteId, setFavoriteId] = useState<number | null>(null);
   const [savePending, setSavePending] = useState(false);
+  const [showAddToPlan, setShowAddToPlan] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,11 +115,19 @@ export function SaveDetailView({
         <RecipeViewContent recipe={recipe} theme={theme} meta={meta} />
       </div>
 
-      <div className="border-t px-1 pt-3 shrink-0" style={{ borderColor: "var(--tm-border)" }}>
+      <div className="border-t px-1 pt-3 shrink-0 flex gap-2" style={{ borderColor: "var(--tm-border)" }}>
+        <button
+          onClick={() => setShowAddToPlan(true)}
+          className="flex-1 py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2 text-white"
+          style={{ backgroundColor: "#059669" }}
+        >
+          <Plus size={16} />
+          {t.addToPlanLabel}
+        </button>
         <button
           onClick={toggleSave}
           disabled={savePending}
-          className="w-full py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2 border disabled:opacity-60"
+          className="flex-1 py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2 border disabled:opacity-60"
           style={
             isSaved
               ? { backgroundColor: dark ? "#2A1416" : "#FEF2F2", borderColor: "#DC262640", color: "#DC2626" }
@@ -126,6 +138,10 @@ export function SaveDetailView({
           {isSaved ? "Saved" : "Save"}
         </button>
       </div>
+
+      {showAddToPlan && (
+        <AddToPlanDialog recipe={recipe} onClose={() => setShowAddToPlan(false)} />
+      )}
     </div>
   );
 }

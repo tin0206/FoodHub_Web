@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
 import { useStrings } from "@/lib/use-strings";
 import type { ApiRecipe, RagRecipe } from "@/lib/api/types";
@@ -203,7 +203,7 @@ function RecipePreviewModal({
                       color: "#047857",
                     }}
                   >
-                    {label}
+                    {t.dietaryTagDisplay(label)}
                   </span>
                 ))}
               </div>
@@ -355,21 +355,34 @@ export function MarkdownReply({
           >
             {t.openRecipeDetailsLabel}
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {ctas.map((link) => (
               <button
                 key={`${link.recipeId}-${link.title}`}
                 type="button"
                 disabled={!link.recipeId}
                 onClick={() => link.recipeId && setOpenLink(link)}
-                className="text-left text-[12px] font-semibold px-3 py-2 rounded-xl disabled:opacity-50"
+                className="flex items-center gap-3 text-left px-3.5 py-3 rounded-2xl disabled:opacity-50 transition-colors hover:opacity-90"
                 style={{
-                  backgroundColor: "rgba(5,150,105,0.1)",
-                  color: "#047857",
+                  backgroundColor: "rgba(5,150,105,0.08)",
                   border: "1px solid rgba(5,150,105,0.22)",
                 }}
               >
-                {link.title}
+                <span
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: "rgba(5,150,105,0.16)" }}
+                >
+                  <BookOpen size={18} color="#059669" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-bold leading-snug" style={{ color: "#047857" }}>
+                    {link.title}
+                  </span>
+                  <span className="block text-[11px] mt-0.5" style={{ color: "var(--tm-text-3, #6B7280)" }}>
+                    {t.tapToViewRecipe}
+                  </span>
+                </span>
+                <ChevronRight size={18} color="#059669" className="shrink-0" />
               </button>
             ))}
           </div>

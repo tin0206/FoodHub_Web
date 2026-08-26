@@ -22,6 +22,7 @@ import { LabelChips } from '@/components/recipe/label-chips'
 import { LineListEditor } from '@/components/recipe/line-list-editor'
 import { PhotoPicker } from '@/components/recipe/photo-picker'
 import { inlineInputClass } from '@/components/recipe/form-styles'
+import { AddToPlanDialog } from '@/components/meal-plan/add-to-plan-dialog'
 
 type View = 'list' | 'add'
 
@@ -210,8 +211,8 @@ function EmptyRow({ icon, text }: { icon: React.ReactNode; text: string }) {
 
 /** One meal-type row (Breakfast/Lunch/Dinner) inside the Recommended for You section. */
 function SuggestionMealRow({
-  label, recipes, onOpen,
-}: { label: string; recipes: ApiRecipe[]; onOpen: (r: ApiRecipe) => void }) {
+  label, recipes, onOpen, onAddToPlan,
+}: { label: string; recipes: ApiRecipe[]; onOpen: (r: ApiRecipe) => void; onAddToPlan: (r: ApiRecipe) => void }) {
   const t = useStrings()
   return (
     <div className="mb-3.5">
@@ -226,6 +227,7 @@ function SuggestionMealRow({
                 recipe={toCardData(recipe)}
                 onTap={() => onOpen(recipe)}
                 onAction={() => onOpen(recipe)}
+                onAddToPlan={() => onAddToPlan(recipe)}
               />
             </div>
           ))}
@@ -437,6 +439,7 @@ export default function HomePage() {
   const suggestionPollRef = useRef<number | null>(null)
   const suggestionDateRef = useRef(localIsoDate())
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
+  const [addToPlanRecipe, setAddToPlanRecipe] = useState<ApiRecipe | null>(null)
 
   async function loadRecipes() {
     if (!hasAccessToken()) {
@@ -571,6 +574,12 @@ export default function HomePage() {
     router.push(`/personal/${buildRecipeSlug(recipe.id, recipe.title)}`)
   }
 
+  /** Recommended-for-you / Top Recipes cards aren't owned by the user — open the
+   * read-only search detail view instead of the edit/delete-capable personal one. */
+  function openCatalogDetail(recipe: ApiRecipe) {
+    router.push(`/search/${buildRecipeSlug(recipe.id, recipe.title)}`)
+  }
+
   if (recipes === null) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -588,6 +597,7 @@ export default function HomePage() {
   }
 
   return (
+    <>
     <div className="flex flex-col h-full p-3">
       {/* Greeting hero */}
       <div
@@ -693,9 +703,9 @@ export default function HomePage() {
             </div>
           ) : (
             <>
-              <SuggestionMealRow label={t.breakfastLabel} recipes={suggestions?.breakfast ?? []} onOpen={openDetail} />
-              <SuggestionMealRow label={t.lunchLabel} recipes={suggestions?.lunch ?? []} onOpen={openDetail} />
-              <SuggestionMealRow label={t.dinnerLabel} recipes={suggestions?.dinner ?? []} onOpen={openDetail} />
+              <SuggestionMealRow label={t.breakfastLabel} recipes={suggestions?.breakfast ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} />
+              <SuggestionMealRow label={t.lunchLabel} recipes={suggestions?.lunch ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} />
+              <SuggestionMealRow label={t.dinnerLabel} recipes={suggestions?.dinner ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} />
             </>
           )}
         </section>
@@ -715,8 +725,9 @@ export default function HomePage() {
                 <div key={fav.id} className={RECIPE_ROW_CARD_CLASS}>
                   <RecipeCard
                     recipe={toCardData(fav.recipe)}
-                    onTap={() => openDetail(fav.recipe)}
-                    onAction={() => openDetail(fav.recipe)}
+                    onTap={() => openCatalogDetail(fav.recipe)}
+                    onAction={() => openCatalogDetail(fav.recipe)}
+                    onAddToPlan={() => setAddToPlanRecipe(fav.recipe)}
                     footer={
                       <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'var(--tm-text-3)' }}>
                         <Heart size={11} color="#EF4444" fill="#EF4444" /> {fav.favorite_count}
@@ -730,5 +741,13 @@ export default function HomePage() {
         </section>
       </div>
     </div>
+    {addToPlanRecipe && (
+      <AddToPlanDialog
+        recipe={addToPlanRecipe}
+        onClose={() => setAddToPlanRecipe(null)}
+        onAdded={() => loadMealPlan()}
+      />
+    )}
+    </>
   )
 }

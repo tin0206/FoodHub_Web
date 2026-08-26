@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Minus, X, ShoppingCart, UtensilsCrossed, Trash2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
 import {
-  getMealPlan, replaceMealPlan, addExtraMealSlot, deleteMealSlot, isMainSlot, localIsoDate,
+  getMealPlan, replaceMealPlan, addExtraMealSlot, deleteMealSlot, isMainSlot, localIsoDate, slotDisplayLabel,
   type MealPlan, type MealSlot, type MealPlanItem,
 } from '@/lib/api/meals'
 import type { ApiRecipe } from '@/lib/api/types'
@@ -114,7 +114,7 @@ function SlotCard({
         <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#0596691A' }}>
           <UtensilsCrossed size={15} color="#059669" />
         </span>
-        <p className="text-sm font-bold flex-1 truncate" style={{ color: 'var(--tm-text)' }}>{slot.label}</p>
+        <p className="text-sm font-bold flex-1 truncate" style={{ color: 'var(--tm-text)' }}>{slotDisplayLabel(slot, t)}</p>
         {onDeleteSlot && (
           <button
             type="button"
@@ -202,7 +202,7 @@ export default function MealPlanPage() {
   }
 
   function openRecipe(item: MealPlanItem) {
-    router.push(`/personal/${buildRecipeSlug(item.recipe_id, item.recipe?.title ?? '')}`)
+    router.push(`/search/${buildRecipeSlug(item.recipe_id, item.recipe?.title ?? '')}`)
   }
 
   async function addRecipeToSlot(slot: MealSlot, recipe: ApiRecipe) {

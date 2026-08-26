@@ -2,8 +2,9 @@
 
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Clock, Flame, Users } from "lucide-react";
+import { ArrowRight, Clock, Flame, Plus, Users } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useStrings } from "@/lib/use-strings";
 import { recipeCardTheme } from "./recipe-card-theme";
 import { RecipeImageHeader } from "./recipe-image-header";
 
@@ -21,16 +22,23 @@ export function RecipeCard({
   recipe,
   onTap,
   onAction,
+  actionIcon: ActionIcon = ArrowRight,
+  onAddToPlan,
   footer,
   className,
 }: {
   recipe: RecipeCardData;
   onTap?: () => void;
   onAction?: () => void;
+  /** Icon for the bottom-right action button — defaults to an arrow (open recipe). */
+  actionIcon?: LucideIcon;
+  /** Shows a "+" badge over the top-right of the image — adds this recipe to today's meal plan. */
+  onAddToPlan?: () => void;
   footer?: ReactNode;
   className?: string;
 }) {
   const dark = useDarkMode();
+  const t = useStrings();
   const theme = recipeCardTheme(recipe.id, recipe.labels);
 
   const stats: { icon: LucideIcon; text: string; color?: string }[] = [];
@@ -54,12 +62,28 @@ export function RecipeCard({
 
   const inner = (
     <div className="flex flex-col flex-1 min-h-0">
-      <RecipeImageHeader
-        imageUrl={recipe.imageUrl}
-        cardId={recipe.id}
-        labels={recipe.labels}
-        height={180}
-      />
+      <div className="relative">
+        <RecipeImageHeader
+          imageUrl={recipe.imageUrl}
+          cardId={recipe.id}
+          labels={recipe.labels}
+          height={180}
+        />
+        {onAddToPlan && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToPlan();
+            }}
+            className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "#059669", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
+            aria-label="Add to meal plan"
+          >
+            <Plus size={17} color="white" />
+          </button>
+        )}
+      </div>
       <div className="px-3 pt-2.5 pb-2.5 flex-1 flex flex-col">
         <div className="flex items-start gap-2.5">
           <p
@@ -80,11 +104,10 @@ export function RecipeCard({
                 width: 38,
                 height: 38,
                 background: `linear-gradient(135deg, ${theme.start}, ${theme.end})`,
-                boxShadow: `0 4px 10px ${theme.start}66`,
               }}
               aria-label="Open recipe"
             >
-              <ArrowRight size={17} color="white" />
+              <ActionIcon size={17} color="white" />
             </button>
           )}
         </div>
@@ -122,7 +145,7 @@ export function RecipeCard({
                   color: dark ? `${theme.start}E6` : theme.end,
                 }}
               >
-                {label}
+                {t.dietaryTagDisplay(label)}
               </span>
             ))}
           </div>

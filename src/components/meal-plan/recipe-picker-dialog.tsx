@@ -1,33 +1,72 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
-import { searchRecipes } from "@/lib/api/recipes";
-import { getTodaySuggestions } from "@/lib/api/meals";
+import { Plus, Search, X } from "lucide-react";
+import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
 import type { ApiRecipe } from "@/lib/api/types";
 import { getLang } from "@/lib/i18n";
+import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { useStrings } from "@/lib/use-strings";
-import { RecipeImageHeader } from "@/components/recipe/recipe-image-header";
+import { RecipeCard, type RecipeCardData } from "@/components/recipe/recipe-card";
 
-/** Add-dish picker for a meal plan slot — today's suggestions first, falls back to search. */
+const PAGE_SIZE = 24;
+// The API's `visibility` query param isn't honored server-side, so we over-fetch and
+// filter to public recipes client-side — a meal plan slot can't hold someone else's private recipe.
+const FETCH_LIMIT = 60;
+
+const MEAL_TYPE_CATEGORIES: [string, string][] = [
+  ["🌅", "Breakfast"],
+  ["🥗", "Lunch"],
+  ["🍝", "Dinner"],
+  ["⚡", "Quick Meals"],
+];
+
+const DIETARY_EMOJI: Record<string, string> = {
+  Alcoholic: "🍸",
+  Beverage: "🥤",
+  "Dairy Free": "🥛",
+  "Gluten Free": "🌾",
+  "Nut Free": "🥜",
+  Pescetarian: "🐟",
+  Vegan: "🌱",
+  Vegetarian: "🥦",
+};
+
+function toCardData(recipe: ApiRecipe): RecipeCardData {
+  const meta = getOrEstimateMeta(recipe);
+  return {
+    id: recipe.id,
+    name: recipe.title,
+    imageUrl: recipe.image_url,
+    labels: recipe.dietary_restrictions,
+    cookingMinutes: meta.cookingMinutes,
+    calories: meta.calories,
+  };
+}
+
+/** Add-dish picker for a meal plan slot — search + category filters, same UX as the Search page. */
 export function RecipePickerDialog({
   onPick, onClose,
 }: { onPick: (recipe: ApiRecipe) => void; onClose: () => void }) {
   const t = useStrings();
-  const [suggestions, setSuggestions] = useState<ApiRecipe[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
+  const [dietaryReady, setDietaryReady] = useState(false);
   const [results, setResults] = useState<ApiRecipe[] | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    getTodaySuggestions({ lang: getLang() })
-      .then((data) => {
-        if (cancelled || data.status !== "ready") return;
-        setSuggestions([...data.breakfast, ...data.lunch, ...data.dinner]);
+    getDietaryRestrictions()
+      .then((opts) => {
+        if (!cancelled) setDietaryOptions(opts);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setDietaryReady(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -39,31 +78,42 @@ export function RecipePickerDialog({
   }, [query]);
 
   useEffect(() => {
-    if (!debouncedQuery) {
-      setResults(null);
-      return;
-    }
+    if (!dietaryReady) return;
     let cancelled = false;
     const controller = new AbortController();
-    setSearching(true);
-    searchRecipes({ q: debouncedQuery, limit: 20, lang: getLang(), signal: controller.signal })
+    setLoading(true);
+    const dietary =
+      selectedCategory && dietaryOptions.includes(selectedCategory) ? selectedCategory : undefined;
+    const q = debouncedQuery || (selectedCategory && !dietary ? selectedCategory : undefined);
+    searchRecipes({ q, dietaryRestriction: dietary, limit: FETCH_LIMIT, lang: getLang(), signal: controller.signal })
       .then((res) => {
-        if (!cancelled) setResults(res.recipes);
+        if (!cancelled) {
+          setResults(res.recipes.filter((r) => r.visibility === "public").slice(0, PAGE_SIZE));
+        }
       })
       .catch(() => {
         if (!cancelled) setResults([]);
       })
       .finally(() => {
-        if (!cancelled) setSearching(false);
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [debouncedQuery]);
+  }, [debouncedQuery, selectedCategory, dietaryOptions, dietaryReady]);
 
-  const showingSearch = debouncedQuery !== "";
-  const list = showingSearch ? results ?? [] : suggestions;
+  function toggleCategory(category: string) {
+    setSelectedCategory((prev) => (prev === category ? null : category));
+  }
+
+  const mealTypeLabels = new Set(MEAL_TYPE_CATEGORIES.map(([, label]) => label));
+  const categoryChips: [string, string][] = [
+    ...MEAL_TYPE_CATEGORIES,
+    ...dietaryOptions
+      .filter((d) => !mealTypeLabels.has(d))
+      .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
+  ];
 
   return (
     <div
@@ -75,8 +125,8 @@ export function RecipePickerDialog({
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl flex flex-col"
-        style={{ backgroundColor: "var(--tm-surface)", maxHeight: "80vh" }}
+        className="w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl flex flex-col"
+        style={{ backgroundColor: "var(--tm-surface)", maxHeight: "88vh" }}
       >
         <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
           <p className="text-sm font-bold" style={{ color: "var(--tm-text)" }}>{t.addDish}</p>
@@ -92,7 +142,7 @@ export function RecipePickerDialog({
         </div>
 
         <div className="px-4 pb-3 shrink-0">
-          <div className="relative">
+          <div className="relative mb-3">
             <span
               className="absolute inset-y-0 left-3 flex items-center pointer-events-none"
               style={{ color: "var(--tm-text-3)" }}
@@ -103,42 +153,60 @@ export function RecipePickerDialog({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t.addFromSearch}
+              placeholder={t.searchHint}
               className="w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none"
               style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text)" }}
             />
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            {!dietaryReady
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="inline-block rounded-full animate-pulse"
+                    style={{ width: 76 + (i % 3) * 18, height: 26, backgroundColor: "var(--tm-subtle)" }}
+                  />
+                ))
+              : categoryChips.map(([emoji, label]) => {
+                  const active = selectedCategory === label;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => toggleCategory(label)}
+                      className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full transition-colors"
+                      style={
+                        active
+                          ? { backgroundColor: "#059669", color: "white" }
+                          : { backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }
+                      }
+                    >
+                      <span>{emoji}</span>
+                      {t.categoryDisplay(label)}
+                    </button>
+                  );
+                })}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 pb-3">
-          {!showingSearch && suggestions.length > 0 && (
-            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--tm-text-3)" }}>
-              {t.recommendedRecipesTitle}
-            </p>
-          )}
-          {showingSearch && searching ? (
-            <p className="px-2 py-6 text-xs text-center" style={{ color: "var(--tm-text-3)" }}>{t.loading}</p>
-          ) : list.length === 0 ? (
-            <p className="px-2 py-6 text-xs text-center" style={{ color: "var(--tm-text-3)" }}>
-              {showingSearch ? t.noSearchResultsShort : t.noSuggestionsForMeal}
-            </p>
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {loading ? (
+            <p className="py-8 text-xs text-center" style={{ color: "var(--tm-text-3)" }}>{t.loading}</p>
+          ) : !results || results.length === 0 ? (
+            <p className="py-8 text-xs text-center" style={{ color: "var(--tm-text-3)" }}>{t.noSearchResultsShort}</p>
           ) : (
-            list.map((recipe) => (
-              <button
-                key={recipe.id}
-                type="button"
-                onClick={() => onPick(recipe)}
-                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors"
-                style={{ color: "var(--tm-text)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--tm-subtle)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                <div className="w-11 h-11 rounded-lg overflow-hidden shrink-0">
-                  <RecipeImageHeader imageUrl={recipe.image_url} cardId={recipe.id} labels={recipe.dietary_restrictions} height={44} />
-                </div>
-                <span className="text-sm truncate">{recipe.title}</span>
-              </button>
-            ))
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {results.map((recipe) => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={toCardData(recipe)}
+                  onTap={() => onPick(recipe)}
+                  onAction={() => onPick(recipe)}
+                  actionIcon={Plus}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>

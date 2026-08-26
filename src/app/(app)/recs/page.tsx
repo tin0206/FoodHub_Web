@@ -666,7 +666,7 @@ export default function RecsPage() {
                       </p>
                     ) : showOptions ? (
                       <p className="text-[13px] leading-relaxed" style={{ color: 'var(--tm-text)' }}>
-                        {t.aiHasOptionsIntro}
+                        {t.aiHasOptionsIntro(options.length)}
                       </p>
                     ) : (
                       <MarkdownReply text={m.text} recipes={m.recipes} />

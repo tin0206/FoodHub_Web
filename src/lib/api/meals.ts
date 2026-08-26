@@ -83,6 +83,24 @@ export function isMainSlot(slotKey: string): boolean {
   return MAIN_SLOT_KEYS.has(slotKey);
 }
 
+/** Main slot labels come from the backend in English — localize by slot_key.
+ * Extra (custom) slots keep whatever label the user gave them. */
+export function slotDisplayLabel(
+  slot: Pick<MealSlot, "slot_key" | "label">,
+  t: { breakfastLabel: string; lunchLabel: string; dinnerLabel: string },
+): string {
+  switch (slot.slot_key) {
+    case "breakfast":
+      return t.breakfastLabel;
+    case "lunch":
+      return t.lunchLabel;
+    case "dinner":
+      return t.dinnerLabel;
+    default:
+      return slot.label;
+  }
+}
+
 export async function getMealPlan(date: string, lang?: string): Promise<MealPlan> {
   return apiFetch<MealPlan>(`/meal-plans/${date}`, { query: { lang } });
 }

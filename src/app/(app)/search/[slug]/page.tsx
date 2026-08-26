@@ -18,7 +18,7 @@ export default function SearchRecipeDetailPage() {
 
   return (
     <div className="h-full p-3">
-      <SaveDetailView recipeId={id} onBack={() => router.push('/search')} />
+      <SaveDetailView recipeId={id} onBack={() => router.back()} />
     </div>
   )
 }

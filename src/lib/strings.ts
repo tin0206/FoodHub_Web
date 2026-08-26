@@ -60,10 +60,17 @@ export function getStrings(lang: Lang) {
       ? "Không thể tạo gợi ý."
       : "Unable to generate suggestions.",
     noSuggestionsForMeal: vi ? "Chưa có công thức" : "No recipes yet",
-    aiHasOptionsIntro: vi ? "Mình có vài cách để làm việc này:" : "I have some ways to do it:",
+    aiHasOptionsIntro: (n: number) =>
+      vi
+        ? `Mình có ${n} cách để làm việc này — chọn cách phù hợp nhất nhé:`
+        : `I've got ${n} idea${n === 1 ? "" : "s"} for you — pick what works best:`,
 
     // ── Meal plan / shopping list ─────────────────────────────────────────
     todaysMealPlan: vi ? "Kế hoạch bữa ăn hôm nay" : "Today's Meal Plan",
+    addToPlanTitle: (title: string) => (vi ? `Thêm "${title}" vào...` : `Add "${title}" to...`),
+    addToPlanLabel: vi ? "Thêm vào kế hoạch" : "Add to plan",
+    addedToPlanMessage: (slotLabel: string) =>
+      vi ? `Đã thêm vào ${slotLabel}!` : `Added to ${slotLabel}!`,
     mealPlanPreview: (n: number) =>
       vi ? `${n} món đã lên kế hoạch` : `${n} dish${n === 1 ? "" : "es"} planned`,
     openMealPlan: vi ? "Xem kế hoạch" : "Open plan",
@@ -254,6 +261,7 @@ export function getStrings(lang: Lang) {
     openRecipeDetailsLabel: vi
       ? "Xem chi tiết công thức"
       : "Open recipe details",
+    tapToViewRecipe: vi ? "Nhấn để xem công thức" : "Tap to view recipe",
     recipeNotOpenableDemo: vi
       ? "Không thể mở công thức này trong bản demo."
       : "This recipe id is not openable in the demo.",
