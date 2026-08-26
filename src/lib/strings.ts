@@ -45,9 +45,7 @@ export function getStrings(lang: Lang) {
     unableToLoadTopRecipes: vi
       ? "Không thể tải công thức nổi bật."
       : "Unable to load top recipes.",
-    noTopRecipesYet: vi
-      ? "Chưa có công thức nổi bật"
-      : "No top recipes yet",
+    noTopRecipesYet: vi ? "Chưa có công thức nổi bật" : "No top recipes yet",
     recommendedComingSoon: vi
       ? "Gợi ý cá nhân hóa sẽ sớm ra mắt"
       : "Personalized recommendations are coming soon",
@@ -67,12 +65,15 @@ export function getStrings(lang: Lang) {
 
     // ── Meal plan / shopping list ─────────────────────────────────────────
     todaysMealPlan: vi ? "Kế hoạch bữa ăn hôm nay" : "Today's Meal Plan",
-    addToPlanTitle: (title: string) => (vi ? `Thêm "${title}" vào...` : `Add "${title}" to...`),
-    addToPlanLabel: vi ? "Thêm vào kế hoạch" : "Add to plan",
+    addToPlanTitle: (title: string) =>
+      vi ? `Thêm "${title}" vào...` : `Add "${title}" to...`,
+    addToPlanLabel: vi ? "Thêm vào thực đơn" : "Add to plan",
     addedToPlanMessage: (slotLabel: string) =>
       vi ? `Đã thêm vào ${slotLabel}!` : `Added to ${slotLabel}!`,
     mealPlanPreview: (n: number) =>
-      vi ? `${n} món đã lên kế hoạch` : `${n} dish${n === 1 ? "" : "es"} planned`,
+      vi
+        ? `${n} món đã lên kế hoạch`
+        : `${n} dish${n === 1 ? "" : "es"} planned`,
     openMealPlan: vi ? "Xem kế hoạch" : "Open plan",
     unableToLoadMealPlan: vi
       ? "Không thể tải kế hoạch bữa ăn."
@@ -383,7 +384,9 @@ export function getStrings(lang: Lang) {
       ? "Nhập mật khẩu mới cho tài khoản của bạn."
       : "Enter a new password for your account.",
     newPasswordLabel: vi ? "Mật khẩu mới" : "New password",
-    confirmNewPasswordLabel: vi ? "Xác nhận mật khẩu mới" : "Confirm new password",
+    confirmNewPasswordLabel: vi
+      ? "Xác nhận mật khẩu mới"
+      : "Confirm new password",
     resetPasswordCta: vi ? "Đặt lại mật khẩu" : "Reset password",
     resetPasswordSuccess: vi
       ? "Đặt lại mật khẩu thành công."
@@ -528,22 +531,34 @@ export function getStrings(lang: Lang) {
     // ── Aisle mapping job (admin recipes) ──────────────────────────────────
     adminMapAislesTitle: vi ? "Gán khu hàng" : "Map aisles",
     adminMappedStat: (mapped: number, total: number) =>
-      vi ? `${mapped} / ${total} công thức đã gán` : `${mapped} / ${total} recipes mapped`,
+      vi
+        ? `${mapped} / ${total} công thức đã gán`
+        : `${mapped} / ${total} recipes mapped`,
     adminMissingStat: (n: number) =>
-      vi ? `${n} công thức chưa có khu hàng` : `${n} recipe${n === 1 ? "" : "s"} missing aisle`,
+      vi
+        ? `${n} công thức chưa có khu hàng`
+        : `${n} recipe${n === 1 ? "" : "s"} missing aisle`,
     adminProcessedStat: (processed: number, total: number) =>
-      vi ? `${processed} / ${total} đã xử lý` : `${processed} / ${total} processed`,
+      vi
+        ? `${processed} / ${total} đã xử lý`
+        : `${processed} / ${total} processed`,
     adminMapAislesButton: vi ? "Gán khu hàng" : "Map aisles",
     adminRemapAislesButton: vi ? "Gán lại toàn bộ" : "Remap aisles",
     adminMappingAislesButton: vi ? "Đang gán khu hàng…" : "Mapping aisles…",
     adminStopButton: vi ? "Dừng" : "Stop",
-    adminRemapConfirmTitle: vi ? "Gán lại toàn bộ khu hàng?" : "Remap all aisles?",
+    adminRemapConfirmTitle: vi
+      ? "Gán lại toàn bộ khu hàng?"
+      : "Remap all aisles?",
     adminRemapConfirmMessage: vi
       ? "Tất cả công thức đã có khu hàng sẽ được AI gán lại từ đầu. Việc này tốn nhiều token AI hơn."
       : "Every recipe that already has an aisle will be re-mapped by the AI from scratch. This uses more AI tokens than mapping only what's missing.",
     adminRemapConfirmButton: vi ? "Gán lại" : "Remap",
-    adminAisleMappingStoppedToast: vi ? "Đã dừng gán khu hàng." : "Aisle mapping stopped.",
-    adminAisleMappingFinishedToast: vi ? "Đã gán khu hàng xong." : "Aisle mapping finished.",
+    adminAisleMappingStoppedToast: vi
+      ? "Đã dừng gán khu hàng."
+      : "Aisle mapping stopped.",
+    adminAisleMappingFinishedToast: vi
+      ? "Đã gán khu hàng xong."
+      : "Aisle mapping finished.",
     adminUnableToLoadAisleStatus: vi
       ? "Không thể tải trạng thái gán khu hàng."
       : "Unable to load aisle mapping status.",
@@ -761,8 +776,10 @@ export function getStrings(lang: Lang) {
     adminAgeYears: (age: number) => (vi ? `${age} tuổi` : `${age} years`),
     adminWeightKg: (w: number) => `${w} kg`,
     adminCalorieDay: (c: number) => (vi ? `${c} calo/ngày` : `${c} cal/day`),
-    adminCarbDay: (c: number) => (vi ? `${c} g tinh bột/ngày` : `${c} g carbs/day`),
-    adminFatDay: (c: number) => (vi ? `${c} g chất béo/ngày` : `${c} g fat/day`),
+    adminCarbDay: (c: number) =>
+      vi ? `${c} g tinh bột/ngày` : `${c} g carbs/day`,
+    adminFatDay: (c: number) =>
+      vi ? `${c} g chất béo/ngày` : `${c} g fat/day`,
     adminNoneSpecified: vi ? "Chưa xác định" : "None specified",
     adminDeactivateAccount: vi ? "Vô hiệu hóa tài khoản" : "Deactivate Account",
     adminActivateAccount: vi ? "Kích hoạt tài khoản" : "Activate Account",
