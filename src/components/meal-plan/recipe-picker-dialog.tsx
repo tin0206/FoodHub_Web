@@ -18,8 +18,9 @@ const MEAL_TYPE_CATEGORIES: [string, string][] = [
   ["🌅", "Breakfast"],
   ["🥗", "Lunch"],
   ["🍝", "Dinner"],
-  ["⚡", "Quick Meals"],
 ];
+
+const HIDDEN_CATEGORIES = new Set(["Quick Meal", "Quick Meals"]);
 
 const DIETARY_EMOJI: Record<string, string> = {
   Alcoholic: "🍸",
@@ -111,7 +112,7 @@ export function RecipePickerDialog({
   const categoryChips: [string, string][] = [
     ...MEAL_TYPE_CATEGORIES,
     ...dietaryOptions
-      .filter((d) => !mealTypeLabels.has(d))
+      .filter((d) => !mealTypeLabels.has(d) && !HIDDEN_CATEGORIES.has(d))
       .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
   ];
 

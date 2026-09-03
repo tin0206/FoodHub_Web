@@ -4,6 +4,8 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, MessageSquare } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
+import { getLang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
@@ -63,6 +65,7 @@ export default function FavoritesPage() {
   const dark = useDarkMode();
   const router = useRouter();
   const t = useStrings();
+  const lang = useLang();
   const [favorites, setFavorites] = useState<ApiFavorite[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -83,7 +86,7 @@ export default function FavoritesPage() {
     let cancelled = false;
     setLoading(true);
     setLoadError("");
-    listFavorites()
+    listFavorites(getLang())
       .then((favs) => {
         if (!cancelled) setFavorites(favs);
       })
@@ -98,7 +101,7 @@ export default function FavoritesPage() {
     return () => {
       cancelled = true;
     };
-  }, [retryToken]);
+  }, [retryToken, lang]);
 
   function openDetail(favorite: ApiFavorite) {
     router.push(`/favorites/${buildRecipeSlug(favorite.recipe.id, favorite.recipe.title)}`);

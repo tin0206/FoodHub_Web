@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Heart, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Heart, Pencil, Plus } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { getRecipe } from "@/lib/api/recipes";
 import { listFavorites, addFavorite, deleteFavorite } from "@/lib/api/favorites";
 import type { ApiRecipe } from "@/lib/api/types";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
+import { buildRecipeSlug } from "@/lib/recipe-slug";
 import { recipeCardTheme } from "./recipe-card-theme";
 import { RecipeViewContent } from "./recipe-view-content";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
+import { getLang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import { AddToPlanDialog } from "@/components/meal-plan/add-to-plan-dialog";
 
@@ -32,6 +36,8 @@ export function SaveDetailView({
 }) {
   const dark = useDarkMode();
   const t = useStrings();
+  const lang = useLang();
+  const router = useRouter();
   const [recipe, setRecipe] = useState<ApiRecipe | null | undefined>(undefined);
   const [error, setError] = useState("");
   const [favoriteId, setFavoriteId] = useState<number | null>(null);
@@ -40,7 +46,7 @@ export function SaveDetailView({
 
   useEffect(() => {
     let cancelled = false;
-    getRecipe(recipeId)
+    getRecipe(recipeId, getLang())
       .then((r) => {
         if (!cancelled) setRecipe(r);
       })
@@ -49,7 +55,7 @@ export function SaveDetailView({
         setRecipe(null);
         setError(errorMessage(err, "Unable to load recipe."));
       });
-    listFavorites()
+    listFavorites(getLang())
       .then((favs) => {
         if (cancelled) return;
         const match = favs.find((f) => f.recipe_id === recipeId);
@@ -59,7 +65,7 @@ export function SaveDetailView({
     return () => {
       cancelled = true;
     };
-  }, [recipeId]);
+  }, [recipeId, lang]);
 
   async function toggleSave() {
     if (!recipe || savePending) return;
@@ -125,6 +131,18 @@ export function SaveDetailView({
           {t.addToPlanLabel}
         </button>
         <button
+          onClick={() => router.push(`/personal/edit/${buildRecipeSlug(recipe.id, recipe.title)}`)}
+          className="flex-1 py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2 border"
+          style={{
+            backgroundColor: dark ? "#15243A" : "#EFF6FF",
+            borderColor: dark ? "#2C4A73" : "#BFDBFE",
+            color: dark ? "#7CB4F5" : "#2563EB",
+          }}
+        >
+          <Pencil size={15} />
+          {t.editRecipeLabel}
+        </button>
+        <button
           onClick={toggleSave}
           disabled={savePending}
           className="flex-1 py-3 rounded-full text-sm font-semibold flex items-center justify-center gap-2 border disabled:opacity-60"
@@ -135,7 +153,7 @@ export function SaveDetailView({
           }
         >
           <Heart size={16} fill={isSaved ? "#DC2626" : "none"} color={isSaved ? "#DC2626" : "var(--tm-text-2)"} />
-          {isSaved ? "Saved" : "Save"}
+          {isSaved ? t.savedLabel : t.saveLabel}
         </button>
       </div>
 

@@ -4,27 +4,55 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { signup, loginWithGoogle, FieldError, getPostLoginPath } from '@/lib/auth'
+import { signup, loginWithGoogle, FieldError, getPostSignupPath } from '@/lib/auth'
 import { requestGoogleAccessToken } from '@/lib/google-auth'
-import { ChefHat, Mail, Lock, User } from 'lucide-react'
+import { ChefHat, Mail, Lock, User, Check, X } from 'lucide-react'
 import { AuthField, AuthPrimaryButton, AuthDivider, AuthSocialButton } from '@/components/auth/auth-widgets'
+import { isPasswordValid } from '@/components/auth/password-requirements'
 import { authDisplay, authSans } from '../auth-fonts'
 import '../auth.css'
 
 const NAME_PATTERN = /^[a-zA-ZÀ-ỹ\s'-]+$/
 const EMAIL_PATTERN = /^[\w.+-]+@[\w-]+(\.[\w-]+)*\.[a-zA-Z]{2,}$/
 
-type Errors = { name: string; email: string; password: string }
+type Errors = { name: string; email: string; password: string; confirmPassword: string }
+
+function Requirement({ met, label }: { met: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11.5px]" style={{ color: met ? "#059669" : "var(--tm-text-3)" }}>
+      {met ? <Check size={12} /> : <X size={12} />}
+      {label}
+    </div>
+  )
+}
+
+// Always English, independent of the app's language setting — a brand-new visitor
+// hasn't chosen a language yet, and shouldn't inherit whatever an earlier session
+// on this browser left in localStorage (unlike the rest of this English-only page).
+function SignupPasswordRequirements({ password }: { password: string }) {
+  if (!password) return null
+  const hasLength = password.length >= 6
+  const hasLetter = /[a-zA-Z]/.test(password)
+  const hasNumber = /[0-9]/.test(password)
+  return (
+    <div className="mt-2 space-y-1">
+      <Requirement met={hasLength} label="At least 6 characters" />
+      <Requirement met={hasLetter} label="Contains a letter" />
+      <Requirement met={hasNumber} label="Contains a number" />
+    </div>
+  )
+}
 
 export default function SignupPage() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [authError, setAuthError] = useState('')
-  const [errors, setErrors] = useState<Errors>({ name: '', email: '', password: '' })
+  const [errors, setErrors] = useState<Errors>({ name: '', email: '', password: '', confirmPassword: '' })
 
   function getNameError(val = name) {
     const trimmed = val.trim()
@@ -44,7 +72,13 @@ export default function SignupPage() {
 
   function getPasswordError(val = password) {
     if (!val) return 'Please enter your password.'
-    if (val.length < 6) return 'Password must be at least 6 characters.'
+    if (!isPasswordValid(val)) return 'Password must be at least 6 characters and contain a letter and a number.'
+    return ''
+  }
+
+  function getConfirmPasswordError(val = confirmPassword, pwd = password) {
+    if (!val) return 'Please confirm your password.'
+    if (val !== pwd) return 'Passwords do not match.'
     return ''
   }
 
@@ -58,14 +92,15 @@ export default function SignupPage() {
     const nameErr = getNameError(nameValue)
     const emailErr = getEmailError(emailValue)
     const passwordErr = getPasswordError(passwordValue)
-    setErrors({ name: nameErr, email: emailErr, password: passwordErr })
-    if (nameErr || emailErr || passwordErr) return
+    const confirmPasswordErr = getConfirmPasswordError(confirmPassword, passwordValue)
+    setErrors({ name: nameErr, email: emailErr, password: passwordErr, confirmPassword: confirmPasswordErr })
+    if (nameErr || emailErr || passwordErr || confirmPasswordErr) return
 
     try {
       setLoading(true)
       setAuthError('')
       const user = await signup({ name: nameValue, email: emailValue, password: passwordValue })
-      router.replace(getPostLoginPath(user))
+      router.replace(getPostSignupPath(user))
     } catch (err: unknown) {
       if (err instanceof FieldError) {
         setErrors(prev => ({ ...prev, [err.field]: err.message }))
@@ -84,7 +119,7 @@ export default function SignupPage() {
       setAuthError('')
       const accessToken = await requestGoogleAccessToken()
       const user = await loginWithGoogle(accessToken)
-      router.replace(getPostLoginPath(user))
+      router.replace(getPostSignupPath(user))
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Google sign-up failed.')
     } finally {
@@ -139,18 +174,36 @@ export default function SignupPage() {
             error={errors.email}
           />
 
+          <div>
+            <AuthField
+              label="Password"
+              icon={Lock}
+              isPassword
+              value={password}
+              onChange={e => {
+                setPassword(e.target.value)
+                if (errors.password) setErrors(prev => ({ ...prev, password: getPasswordError(e.target.value) }))
+                if (confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: getConfirmPasswordError(confirmPassword, e.target.value) }))
+              }}
+              onBlur={() => setErrors(prev => ({ ...prev, password: getPasswordError() }))}
+              placeholder="••••••••"
+              error={errors.password}
+            />
+            <SignupPasswordRequirements password={password} />
+          </div>
+
           <AuthField
-            label="Password"
+            label="Confirm password"
             icon={Lock}
             isPassword
-            value={password}
+            value={confirmPassword}
             onChange={e => {
-              setPassword(e.target.value)
-              if (errors.password) setErrors(prev => ({ ...prev, password: getPasswordError(e.target.value) }))
+              setConfirmPassword(e.target.value)
+              setErrors(prev => ({ ...prev, confirmPassword: getConfirmPasswordError(e.target.value) }))
             }}
-            onBlur={() => setErrors(prev => ({ ...prev, password: getPasswordError() }))}
+            onBlur={() => setErrors(prev => ({ ...prev, confirmPassword: getConfirmPasswordError() }))}
             placeholder="••••••••"
-            error={errors.password}
+            error={errors.confirmPassword}
           />
 
           <AuthPrimaryButton label="Create account" loading={loading} disabled={isLoading} />

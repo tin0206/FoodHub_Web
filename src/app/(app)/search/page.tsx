@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
+import { useLang } from "@/lib/use-lang";
+import { getLang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken, getCurrentUser } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
@@ -24,8 +26,9 @@ const MEAL_TYPE_CATEGORIES: [string, string][] = [
   ["🌅", "Breakfast"],
   ["🥗", "Lunch"],
   ["🍝", "Dinner"],
-  ["⚡", "Quick Meals"],
 ];
+
+const HIDDEN_CATEGORIES = new Set(["Quick Meal", "Quick Meals"]);
 
 const DIETARY_EMOJI: Record<string, string> = {
   Alcoholic: "🍸",
@@ -99,6 +102,7 @@ export default function SearchPage() {
   const dark = useDarkMode();
   const router = useRouter();
   const t = useStrings();
+  const lang = useLang();
   const [query, setQuery] = useState(() => loadSearchState().query);
   const [debouncedQuery, setDebouncedQuery] = useState(() => loadSearchState().query.trim());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => loadSearchState().selectedCategory);
@@ -168,6 +172,7 @@ export default function SearchPage() {
           dietaryRestriction: dietary,
           skip: page * PAGE_SIZE,
           limit: PAGE_SIZE,
+          lang: getLang(),
           signal: controller.signal,
         });
         if (cancelled) return;
@@ -199,6 +204,7 @@ export default function SearchPage() {
     retryToken,
     dietaryReady,
     page,
+    lang,
   ]);
 
   // Scroll results back into view whenever the page changes.
@@ -221,7 +227,7 @@ export default function SearchPage() {
   const categoryChips: [string, string][] = [
     ...MEAL_TYPE_CATEGORIES,
     ...dietaryOptions
-      .filter((d) => !mealTypeLabels.has(d))
+      .filter((d) => !mealTypeLabels.has(d) && !HIDDEN_CATEGORIES.has(d))
       .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
   ];
 

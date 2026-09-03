@@ -78,7 +78,7 @@ export function getStrings(lang: Lang) {
     unableToLoadMealPlan: vi
       ? "Không thể tải kế hoạch bữa ăn."
       : "Unable to load meal plan.",
-    shoppingList: vi ? "Danh sách mua sắm" : "Shopping List",
+    ingredientsDetail: vi ? "Chi tiết nguyên liệu" : "Ingredients Detail",
     addExtraMeal: vi ? "Thêm bữa phụ" : "Add extra meal",
     extraMealHint: vi ? "VD: Ăn vặt buổi chiều" : "e.g. Afternoon snack",
     addDish: vi ? "Thêm món" : "Add dish",
@@ -88,19 +88,19 @@ export function getStrings(lang: Lang) {
       : "Your plan saves automatically as you add or remove dishes.",
     addFromSearch: vi ? "Tìm công thức" : "Search recipes",
     noSearchResultsShort: vi ? "Không tìm thấy" : "No results found",
-    unableToLoadShoppingList: vi
-      ? "Không thể tải danh sách mua sắm."
-      : "Unable to load shopping list.",
-    organizingShoppingList: vi
-      ? "Đang tổng hợp danh sách mua sắm..."
-      : "Organizing your shopping list…",
-    emptyShoppingList: vi
-      ? "Danh sách mua sắm trống"
-      : "Your shopping list is empty",
+    unableToLoadIngredientsDetail: vi
+      ? "Không thể tải chi tiết nguyên liệu."
+      : "Unable to load ingredients detail.",
+    organizingIngredientsDetail: vi
+      ? "Đang tổng hợp chi tiết nguyên liệu..."
+      : "Organizing your ingredients detail…",
+    emptyIngredientsDetail: vi
+      ? "Chưa có nguyên liệu nào cho ngày này"
+      : "No ingredients for this day yet",
     purchasedItems: vi ? "Đã mua" : "Purchased",
-    shoppingListAllDone: vi
-      ? "Đã mua xong tất cả! Chúc bạn nấu ăn ngon."
-      : "All done — happy cooking!",
+    ingredientsDetailAllDone: vi
+      ? "Đã chuẩn bị đủ nguyên liệu! Chúc bạn nấu ăn ngon."
+      : "All set — happy cooking!",
     plannedServings: (n: number) =>
       vi
         ? `Dùng cho ${n % 1 === 0 ? n.toFixed(0) : n} khẩu phần`
@@ -128,6 +128,9 @@ export function getStrings(lang: Lang) {
     addStep: vi ? "Thêm bước" : "Add step",
     labelsLabel: vi ? "Nhãn" : "Labels",
     saveRecipe: vi ? "Lưu công thức" : "Save Recipe",
+    // Recipe detail Save/Saved toggle (favorite a recipe) — distinct from saveRecipe above,
+    // which is the submit button for creating/editing a recipe.
+    saveLabel: vi ? "Lưu" : "Save",
     nutritionLabel: vi ? "Dinh dưỡng" : "Nutrition",
     perServingLabel: vi ? "Mỗi khẩu phần" : "Per serving",
     proteinShort: vi ? "Đạm" : "Protein",
@@ -156,7 +159,6 @@ export function getStrings(lang: Lang) {
         Breakfast: "Bữa sáng",
         Lunch: "Bữa trưa",
         Dinner: "Bữa tối",
-        "Quick Meals": "Nấu nhanh",
         Alcoholic: "Có cồn",
         Beverage: "Đồ uống",
         "Dairy Free": "Không sữa",
@@ -439,6 +441,8 @@ export function getStrings(lang: Lang) {
         "Quick Meal": "Nấu nhanh",
         "Meal Prep": "Chuẩn bị sẵn",
         Breakfast: "Bữa sáng",
+        Lunch: "Bữa trưa",
+        Dinner: "Bữa tối",
       };
       return map[tag] ?? tag;
     },
@@ -850,6 +854,42 @@ export function getStrings(lang: Lang) {
         : `User "${username}" created successfully.`,
     adminSaveUserChanges: vi ? "Lưu thay đổi" : "Save Changes",
     adminAddUserCta: vi ? "Thêm người dùng" : "Add User",
+
+    // ── Onboarding survey (post sign-up) ────────────────────────────────────
+    onboardingWelcomeTitle: vi ? "Chào mừng đến với FoodHub!" : "Welcome to FoodHub!",
+    onboardingWelcomeSubtitle: vi
+      ? "Cho chúng tôi biết một chút về bạn để cá nhân hóa gợi ý món ăn."
+      : "Tell us a bit about yourself so we can personalize your recommendations.",
+    onboardingStepOf: (step: number, total: number) =>
+      vi ? `Bước ${step}/${total}` : `Step ${step} of ${total}`,
+    onboardingStepAboutTitle: vi ? "Về bạn" : "About you",
+    onboardingStepAboutSubtitle: vi
+      ? "Thông tin này giúp chúng tôi ước tính khẩu phần phù hợp."
+      : "This helps us tailor portion and nutrition suggestions.",
+    onboardingStepGoalTitle: vi ? "Mục tiêu của bạn" : "Your goal",
+    onboardingStepGoalSubtitle: vi
+      ? "Bạn muốn tập trung vào điều gì?"
+      : "What would you like to focus on?",
+    onboardingStepDietaryTitle: vi ? "Chế độ ăn" : "Dietary preferences",
+    onboardingStepDietarySubtitle: vi
+      ? "Chọn những chế độ phù hợp với bạn (có thể bỏ qua)."
+      : "Pick any that apply to you (optional).",
+    onboardingSkip: vi ? "Bỏ qua" : "Skip for now",
+    onboardingBack: vi ? "Quay lại" : "Back",
+    onboardingContinue: vi ? "Tiếp tục" : "Continue",
+    onboardingFinish: vi ? "Hoàn tất" : "Finish",
+    onboardingSaving: vi ? "Đang lưu…" : "Saving…",
+    onboardingChangeLaterHint: vi
+      ? "Bạn có thể thay đổi thông tin này bất cứ lúc nào trong Hồ sơ."
+      : "You can change this anytime from your Profile.",
+
+    // ── Recipe fork (edit a public recipe into a personal copy) ────────────
+    editRecipeLabel: vi ? "Chỉnh sửa" : "Edit",
+    newPersonalRecipeTitle: vi ? "Tạo công thức của bạn" : "Make it your own",
+    forkRecipeNotice: vi
+      ? "Chỉnh sửa sẽ tạo một bản sao mới trong Công thức của tôi — công thức gốc không bị thay đổi."
+      : "Editing this will save a new copy to your Personal Recipes — the original stays unchanged.",
+    saveAsNewRecipeLabel: vi ? "Lưu thành công thức mới" : "Save as new recipe",
   };
 }
 

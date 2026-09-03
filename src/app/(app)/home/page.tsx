@@ -15,6 +15,7 @@ import { RecipeCard, type RecipeCardData } from '@/components/recipe/recipe-card
 import { setRecipeMeta, getOrEstimateMeta, estimateStats } from '@/lib/recipe-meta'
 import { buildRecipeSlug } from '@/lib/recipe-slug'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useLang } from '@/lib/use-lang'
 import { useStrings } from '@/lib/use-strings'
 import type { Strings } from '@/lib/strings'
 import { SectionCard } from '@/components/recipe/section-card'
@@ -426,6 +427,7 @@ function AddRecipePanel({
 export default function HomePage() {
   const router = useRouter()
   const t = useStrings()
+  const lang = useLang()
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null)
   const [loadError, setLoadError] = useState('')
   const [view, setView] = useState<View>('list')
@@ -449,7 +451,7 @@ export default function HomePage() {
     }
     setLoadError('')
     try {
-      const mine = await listRecipes({ mine: true })
+      const mine = await listRecipes({ mine: true, lang: getLang() })
       setRecipes(mine)
     } catch (err) {
       setRecipes([])
@@ -464,7 +466,7 @@ export default function HomePage() {
     }
     setTopLoadError('')
     try {
-      const top = await getTopFavorites()
+      const top = await getTopFavorites(getLang())
       setTopRecipes(top)
     } catch (err) {
       setTopRecipes([])
@@ -541,8 +543,11 @@ export default function HomePage() {
     loadSuggestions()
     loadMealPlan()
     return () => stopSuggestionPoll()
+    // Re-runs whenever the active language changes (Profile toggle, or a fresh
+    // login applying the account's saved language) so recipe content refetches
+    // in the right locale instead of staying in whatever it first loaded as.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [lang])
 
   // Top Recipes shows as many cards as fit in the row before it would need to
   // scroll, times 1.5 — giving a slight, intentional overflow so the arrow

@@ -40,8 +40,8 @@ interface FieldErrors {
   fatTarget: string;
 }
 
-const PRIMARY_GOALS = ["Balanced Nutrition", "Weight Loss", "Muscle Gain", "High Protein"];
-const DIETARY_TAGS = ["Dairy Free", "Non-Alcoholic", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
+export const PRIMARY_GOALS = ["Balanced Nutrition", "Weight Loss", "Muscle Gain", "High Protein"];
+export const DIETARY_TAGS = ["Dairy Free", "Non-Alcoholic", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
 const NO_ERRORS: FieldErrors = { age: "", weight: "", calorieTarget: "", proteinTarget: "", carbTarget: "", fatTarget: "" };
 
 function isPositiveNumber(v: string) {

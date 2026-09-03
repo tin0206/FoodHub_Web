@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
 import { getRecipe, deleteRecipe } from '@/lib/api/recipes'
+import { getCurrentUser } from '@/lib/auth'
 import type { ApiRecipe } from '@/lib/api/types'
 import { getOrEstimateMeta } from '@/lib/recipe-meta'
 import { parseRecipeIdFromSlug, buildRecipeSlug } from '@/lib/recipe-slug'
@@ -13,6 +14,8 @@ import { RecipeViewContent } from '@/components/recipe/recipe-view-content'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import LoadingOverlay from '@/components/loading-overlay'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useLang } from '@/lib/use-lang'
+import { getLang } from '@/lib/i18n'
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback
@@ -24,6 +27,7 @@ export default function PersonalRecipeDetailPage() {
   const params = useParams<{ slug: string }>()
   const router = useRouter()
   const dark = useDarkMode()
+  const lang = useLang()
 
   const [recipe, setRecipe] = useState<ApiRecipe | null | undefined>(undefined)
   const [error, setError] = useState('')
@@ -37,9 +41,19 @@ export default function PersonalRecipeDetailPage() {
       return
     }
     let cancelled = false
-    getRecipe(id)
+    getRecipe(id, getLang())
       .then(r => {
-        if (!cancelled) setRecipe(r)
+        if (cancelled) return
+        // A personal recipe only ever belongs to its author — a public/catalog recipe
+        // (or someone else's) opened here (e.g. via a hand-edited URL) has no place in
+        // this "my recipes" view, so send it to the shared recipe detail view instead.
+        const currentUserId = getCurrentUser()?.id
+        const isOwner = r.created_by != null && String(r.created_by) === currentUserId
+        if (!isOwner) {
+          router.replace(`/search/${buildRecipeSlug(r.id, r.title)}`)
+          return
+        }
+        setRecipe(r)
       })
       .catch(err => {
         if (cancelled) return
@@ -49,7 +63,7 @@ export default function PersonalRecipeDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [params.slug, router])
+  }, [params.slug, router, lang])
 
   async function handleDelete() {
     if (!recipe) return

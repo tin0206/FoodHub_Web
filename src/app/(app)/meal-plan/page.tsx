@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Minus, X, ShoppingCart, UtensilsCrossed, Trash2 } from 'lucide-react'
+import { Plus, Minus, X, ClipboardList, UtensilsCrossed, Trash2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
 import {
   getMealPlan, replaceMealPlan, addExtraMealSlot, deleteMealSlot, isMainSlot, localIsoDate, slotDisplayLabel,
@@ -12,6 +12,7 @@ import type { ApiRecipe } from '@/lib/api/types'
 import { getLang } from '@/lib/i18n'
 import { buildRecipeSlug } from '@/lib/recipe-slug'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useLang } from '@/lib/use-lang'
 import { useStrings } from '@/lib/use-strings'
 import { RecipeImageHeader } from '@/components/recipe/recipe-image-header'
 import { RecipePickerDialog } from '@/components/meal-plan/recipe-picker-dialog'
@@ -161,6 +162,7 @@ export default function MealPlanPage() {
   const router = useRouter()
   const dark = useDarkMode()
   const t = useStrings()
+  const lang = useLang()
   const date = localIsoDate()
 
   const [plan, setPlan] = useState<MealPlan | null>(null)
@@ -187,7 +189,7 @@ export default function MealPlanPage() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [lang])
 
   async function save(nextPlan: MealPlan) {
     setSaving(true)
@@ -278,11 +280,11 @@ export default function MealPlanPage() {
         </div>
         <button
           type="button"
-          onClick={() => router.push('/meal-plan/shopping-list')}
+          onClick={() => router.push('/meal-plan/ingredients-detail')}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white shrink-0"
           style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
         >
-          <ShoppingCart size={14} /> {t.shoppingList}
+          <ClipboardList size={14} /> {t.ingredientsDetail}
         </button>
       </div>
 

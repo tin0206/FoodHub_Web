@@ -55,6 +55,11 @@ export function getPostLoginPath(user: CurrentUser): string {
   return isAdminRole(user.role) ? "/admin" : "/home";
 }
 
+/** Post sign-up destination — new (non-admin) accounts see the onboarding survey first. */
+export function getPostSignupPath(user: CurrentUser): string {
+  return isAdminRole(user.role) ? "/admin" : "/onboarding";
+}
+
 function persistSession(token: string, user: ApiUser): CurrentUser {
   setAccessToken(token);
   const current = mapApiUser(user);

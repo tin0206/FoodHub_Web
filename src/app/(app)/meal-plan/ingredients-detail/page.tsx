@@ -10,7 +10,9 @@ import {
 } from '@/lib/api/meals'
 import { getLang } from '@/lib/i18n'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useLang } from '@/lib/use-lang'
 import { useStrings } from '@/lib/use-strings'
+import { CATEGORICAL } from '@/lib/admin'
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback
@@ -50,6 +52,13 @@ function pruneChecked(list: ShoppingList, checked: Set<string>): Set<string> {
   const known = new Set(list.groups.flatMap((g) => g.items.map((it) => it.key)))
   const pruned = new Set([...checked].filter((k) => known.has(k)))
   return pruned.size === checked.size ? checked : pruned
+}
+
+/** Deterministic categorical color per ingredient group, independent of array order. */
+function groupAccentIndex(key: string): number {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  return hash % CATEGORICAL.length
 }
 
 // ─── Shopping row ────────────────────────────────────────────────────────────
@@ -136,15 +145,26 @@ function AisleSection({
   const total = group.items.length
   const done = group.items.filter((it) => checked.has(it.key)).length
   const allDone = done === total && total > 0
+  const accentSlot = CATEGORICAL[groupAccentIndex(group.aisle_key)]
+  const accent = dark ? accentSlot.dark : accentSlot.light
 
   return (
-    <div className="rounded-2xl overflow-hidden border mb-3" style={{ backgroundColor: 'var(--tm-surface)', borderColor: panelBorder }}>
+    <div
+      className="rounded-2xl overflow-hidden mb-3"
+      style={{
+        backgroundColor: 'var(--tm-surface)',
+        borderTop: `1px solid ${panelBorder}`,
+        borderRight: `1px solid ${panelBorder}`,
+        borderBottom: `1px solid ${panelBorder}`,
+        borderLeft: `4px solid ${accent}`,
+      }}
+    >
       <button type="button" onClick={onToggleCollapse} className="w-full flex items-center gap-2.5 px-3.5 py-3 text-left">
         <span
           className="rounded-lg flex items-center justify-center shrink-0"
-          style={{ width: 30, height: 30, backgroundColor: allDone ? '#0596691F' : 'var(--tm-subtle)' }}
+          style={{ width: 30, height: 30, backgroundColor: allDone ? '#0596691F' : `${accent}1F` }}
         >
-          {allDone ? <Check size={15} color="#059669" /> : <Store size={15} color="var(--tm-text-3)" />}
+          {allDone ? <Check size={15} color="#059669" /> : <Store size={15} color={accent} />}
         </span>
         <span
           className="text-sm font-bold flex-1 truncate"
@@ -180,9 +200,10 @@ function AisleSection({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ShoppingListPage() {
+export default function IngredientsDetailPage() {
   const router = useRouter()
   const t = useStrings()
+  const lang = useLang()
   const [date] = useState(() => localIsoDate())
 
   const [list, setList] = useState<ShoppingList | null>(null)
@@ -232,7 +253,7 @@ export default function ShoppingListPage() {
       }
     } catch (err) {
       setLoading(false)
-      setError(errorMessage(err, t.unableToLoadShoppingList))
+      setError(errorMessage(err, t.unableToLoadIngredientsDetail))
     }
   }
 
@@ -240,7 +261,7 @@ export default function ShoppingListPage() {
     load()
     return () => stopPoll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [lang])
 
   function toggleChecked(key: string) {
     const willCheck = !checked.has(key)
@@ -306,7 +327,7 @@ export default function ShoppingListPage() {
             <ArrowLeft size={17} color="white" />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-lg font-extrabold text-white tracking-tight truncate">{t.shoppingList}</p>
+            <p className="text-lg font-extrabold text-white tracking-tight truncate">{t.ingredientsDetail}</p>
             {!loading && totalItems > 0 && (
               <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 {checkedCount} / {totalItems} {t.purchasedItems.toLowerCase()}
@@ -344,18 +365,18 @@ export default function ShoppingListPage() {
         ) : pending && (list?.groups.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Loader2 size={28} className="animate-spin mb-3" color="#059669" />
-            <p className="text-sm" style={{ color: 'var(--tm-text-2)' }}>{t.organizingShoppingList}</p>
+            <p className="text-sm" style={{ color: 'var(--tm-text-2)' }}>{t.organizingIngredientsDetail}</p>
           </div>
         ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm" style={{ color: 'var(--tm-text-2)' }}>{t.emptyShoppingList}</p>
+            <p className="text-sm" style={{ color: 'var(--tm-text-2)' }}>{t.emptyIngredientsDetail}</p>
           </div>
         ) : (
           <>
             {pending && (
               <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-3" style={{ backgroundColor: '#0596691F' }}>
                 <Loader2 size={14} className="animate-spin" color="#059669" />
-                <p className="text-xs font-medium" style={{ color: '#059669' }}>{t.organizingShoppingList}</p>
+                <p className="text-xs font-medium" style={{ color: '#059669' }}>{t.organizingIngredientsDetail}</p>
               </div>
             )}
             {!pending && totalItems > 0 && checkedCount === totalItems && (
@@ -363,7 +384,7 @@ export default function ShoppingListPage() {
                 <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#059669' }}>
                   <Check size={13} color="white" />
                 </span>
-                <p className="text-xs font-semibold" style={{ color: '#059669' }}>{t.shoppingListAllDone}</p>
+                <p className="text-xs font-semibold" style={{ color: '#059669' }}>{t.ingredientsDetailAllDone}</p>
               </div>
             )}
             {(list?.groups ?? []).map((group) => (
