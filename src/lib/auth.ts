@@ -1,5 +1,5 @@
 import { ApiError, setAccessToken, getAccessToken } from "@/lib/api-client";
-import { apiLogin, apiSignup, apiForgotPassword, apiResetPassword, apiGoogleAccessTokenLogin, type ForgotPasswordResult } from "@/lib/api/auth";
+import { apiLogin, apiSignup, apiForgotPassword, apiResetPassword, apiGoogleAccessTokenLogin, apiResendSignupOtp, apiVerifySignupOtp, type ForgotPasswordResult } from "@/lib/api/auth";
 import { clearChatSession } from "@/lib/chat-session";
 import type { ApiUser } from "@/lib/api/types";
 
@@ -13,6 +13,7 @@ export interface SignupCredentials {
   name: string;
   email: string;
   password: string;
+  language?: string;
 }
 
 export interface CurrentUser {
@@ -106,13 +107,35 @@ export async function signup({
   name,
   email,
   password,
-}: SignupCredentials): Promise<CurrentUser> {
+  language,
+}: SignupCredentials): Promise<ForgotPasswordResult> {
   try {
-    const res = await apiSignup({
+    return await apiSignup({
       email,
       password,
       full_name: name,
+      language,
     });
+  } catch (err) {
+    mapAuthError(err);
+  }
+}
+
+export async function resendSignupOtp(email: string): Promise<ForgotPasswordResult> {
+  try {
+    return await apiResendSignupOtp(email);
+  } catch (err) {
+    if (err instanceof ApiError) throw new Error(err.message || "Unable to send verification code.");
+    throw err instanceof Error ? err : new Error("Unable to send verification code.");
+  }
+}
+
+export async function verifySignupOtp(input: {
+  email: string;
+  otp: string;
+}): Promise<CurrentUser> {
+  try {
+    const res = await apiVerifySignupOtp(input);
     return persistSession(res.access_token, res.user);
   } catch (err) {
     mapAuthError(err);

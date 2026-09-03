@@ -1,5 +1,5 @@
 import { ApiError } from "@/lib/api-client";
-import { apiLogin, apiSignup } from "@/lib/api/auth";
+import { apiLogin, apiSignup, apiVerifySignupOtp } from "@/lib/api/auth";
 
 export const DEMO_CHAT_LIMIT = 10;
 
@@ -116,7 +116,11 @@ export async function ensureDemoSession(): Promise<{
   }
 
   try {
-    const res = await apiSignup({ email, password, full_name });
+    const pending = await apiSignup({ email, password, full_name });
+    if (!pending.otp) {
+      throw new Error("Demo signup requires a verification code.");
+    }
+    const res = await apiVerifySignupOtp({ email, otp: pending.otp });
     localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
     localStorage.setItem(DEMO_FP_KEY, fingerprint);
     return { token: res.access_token, fingerprint, remaining };

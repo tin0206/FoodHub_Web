@@ -21,15 +21,44 @@ export async function apiSignup(input: {
   email: string;
   password: string;
   full_name?: string;
+  language?: string;
+}): Promise<ForgotPasswordResult> {
+  const res = await apiFetch<{ message: string; otp?: string | null }>(
+    "/auth/signup",
+    {
+      method: "POST",
+      auth: false,
+      body: {
+        email: input.email,
+        password: input.password,
+        full_name: input.full_name || undefined,
+        language: input.language,
+      },
+    },
+  );
+  return { message: res.message, otp: res.otp ?? null };
+}
+
+export async function apiResendSignupOtp(email: string): Promise<ForgotPasswordResult> {
+  const res = await apiFetch<{ message: string; otp?: string | null }>(
+    "/auth/signup/resend-otp",
+    {
+      method: "POST",
+      auth: false,
+      body: { email },
+    },
+  );
+  return { message: res.message, otp: res.otp ?? null };
+}
+
+export async function apiVerifySignupOtp(input: {
+  email: string;
+  otp: string;
 }): Promise<TokenResponse> {
-  return apiFetch<TokenResponse>("/auth/signup", {
+  return apiFetch<TokenResponse>("/auth/signup/verify-otp", {
     method: "POST",
     auth: false,
-    body: {
-      email: input.email,
-      password: input.password,
-      full_name: input.full_name || undefined,
-    },
+    body: input,
   });
 }
 
