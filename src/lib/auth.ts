@@ -68,11 +68,12 @@ function persistSession(token: string, user: ApiUser): CurrentUser {
   return current;
 }
 
-export class EmailNotVerifiedError extends Error {
+/** Login matched a pending_signups row; user must enter the email OTP. */
+export class PendingSignupError extends Error {
   email: string;
   constructor(email: string, message?: string) {
-    super(message || "Email not verified. Please verify your email before signing in.");
-    this.name = "EmailNotVerifiedError";
+    super(message || "Please verify your email before signing in.");
+    this.name = "PendingSignupError";
     this.email = email;
   }
 }
@@ -86,8 +87,8 @@ function mapAuthError(err: unknown, context?: { email?: string }): never {
     if (err.status === 400 && msg.includes("already registered")) {
       throw new FieldError("email", "An account with this email already exists.");
     }
-    if (err.status === 403 && msg.includes("not verified")) {
-      throw new EmailNotVerifiedError(context?.email || "", err.message);
+    if (err.status === 403 && (msg.includes("not verified") || msg.includes("verify your email"))) {
+      throw new PendingSignupError(context?.email || "", err.message);
     }
     if (err.status === 403) {
       throw new Error(err.message || "Account is inactive.");
