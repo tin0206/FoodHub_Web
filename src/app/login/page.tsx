@@ -70,15 +70,14 @@ export default function LoginPage() {
       router.replace(getPostLoginPath(user));
     } catch (err: unknown) {
       if (err instanceof EmailNotVerifiedError) {
-        // Resend OTP and redirect to signup page with OTP verification
         try {
           const result = await resendSignupOtp(err.email);
           const params = new URLSearchParams({ email: err.email });
           if (result.otp) params.set("otp", result.otp);
-          router.push(`/signup?verify=1&${params.toString()}`);
+          router.push(`/verify-email?${params.toString()}`);
           return;
         } catch {
-          setAuthError("Email not verified. Please sign up again to receive a verification code.");
+          setAuthError("Email not verified. Please try again later.");
         }
       } else if (err instanceof FieldError) {
         setErrors((prev) => ({ ...prev, [err.field]: err.message }));
