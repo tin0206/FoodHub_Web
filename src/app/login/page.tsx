@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { login, loginWithGoogle, FieldError, getCurrentUser, getPostLoginPath } from "@/lib/auth";
+import { login, loginWithGoogle, FieldError, EmailNotVerifiedError, getCurrentUser, getPostLoginPath, resendSignupOtp } from "@/lib/auth";
 import { requestGoogleAccessToken } from "@/lib/google-auth";
 import { ChefHat, Mail, Lock } from "lucide-react";
 import {
@@ -69,10 +69,19 @@ export default function LoginPage() {
       });
       router.replace(getPostLoginPath(user));
     } catch (err: unknown) {
-      if (err instanceof FieldError) {
+      if (err instanceof EmailNotVerifiedError) {
+        // Resend OTP and redirect to signup page with OTP verification
+        try {
+          const result = await resendSignupOtp(err.email);
+          const params = new URLSearchParams({ email: err.email });
+          if (result.otp) params.set("otp", result.otp);
+          router.push(`/signup?verify=1&${params.toString()}`);
+          return;
+        } catch {
+          setAuthError("Email not verified. Please sign up again to receive a verification code.");
+        }
+      } else if (err instanceof FieldError) {
         setErrors((prev) => ({ ...prev, [err.field]: err.message }));
-        // Wrong email/password is ambiguous about which field is at fault —
-        // highlight both instead of just the one the backend happened to name.
         if (err.field === "password") setCredentialsInvalid(true);
       } else {
         setAuthError(err instanceof Error ? err.message : "Login failed");

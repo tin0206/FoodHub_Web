@@ -68,7 +68,16 @@ function persistSession(token: string, user: ApiUser): CurrentUser {
   return current;
 }
 
-function mapAuthError(err: unknown): never {
+export class EmailNotVerifiedError extends Error {
+  email: string;
+  constructor(email: string, message?: string) {
+    super(message || "Email not verified. Please verify your email before signing in.");
+    this.name = "EmailNotVerifiedError";
+    this.email = email;
+  }
+}
+
+function mapAuthError(err: unknown, context?: { email?: string }): never {
   if (err instanceof ApiError) {
     const msg = err.message.toLowerCase();
     if (err.status === 401 || msg.includes("invalid email or password")) {
@@ -76,6 +85,9 @@ function mapAuthError(err: unknown): never {
     }
     if (err.status === 400 && msg.includes("already registered")) {
       throw new FieldError("email", "An account with this email already exists.");
+    }
+    if (err.status === 403 && msg.includes("not verified")) {
+      throw new EmailNotVerifiedError(context?.email || "", err.message);
     }
     if (err.status === 403) {
       throw new Error(err.message || "Account is inactive.");
@@ -99,7 +111,7 @@ export async function login({
     });
     return persistSession(res.access_token, res.user);
   } catch (err) {
-    mapAuthError(err);
+    mapAuthError(err, { email });
   }
 }
 
@@ -117,7 +129,7 @@ export async function signup({
       language,
     });
   } catch (err) {
-    mapAuthError(err);
+    mapAuthError(err, { email });
   }
 }
 

@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signup, resendSignupOtp, verifySignupOtp, loginWithGoogle, FieldError, getPostSignupPath } from '@/lib/auth'
 import { requestGoogleAccessToken } from '@/lib/google-auth'
 import { ChefHat, Mail, Lock, User, Check, X, KeyRound, ArrowLeft } from 'lucide-react'
@@ -49,7 +49,16 @@ function browserLanguage(): string {
 }
 
 export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupPageInner />
+    </Suspense>
+  )
+}
+
+function SignupPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -62,6 +71,16 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const [errors, setErrors] = useState<Errors>({ name: '', email: '', password: '', confirmPassword: '' })
+
+  // Handle redirect from login page when email is not verified
+  useEffect(() => {
+    if (searchParams.get('verify') === '1' && searchParams.get('email')) {
+      setEmail(searchParams.get('email')!)
+      setAwaitingOtp(true)
+      const prefillOtp = searchParams.get('otp')
+      if (prefillOtp) setOtp(prefillOtp)
+    }
+  }, [searchParams])
 
   function getNameError(val = name) {
     const trimmed = val.trim()
