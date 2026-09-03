@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChefHat, Mail, MailCheck } from 'lucide-react'
+import { ArrowLeft, ChefHat, Mail } from 'lucide-react'
 import { forgotPassword } from '@/lib/auth'
 import { AuthField, AuthPrimaryButton } from '@/components/auth/auth-widgets'
 import { authDisplay, authSans } from '../auth-fonts'
@@ -18,7 +18,6 @@ export default function ForgotPasswordPage() {
   const [emailError, setEmailError] = useState('')
   const [authError, setAuthError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
 
   function validateEmail() {
     if (!email.trim()) return 'Please enter your email.'
@@ -37,14 +36,11 @@ export default function ForgotPasswordPage() {
       setAuthError('')
       const trimmedEmail = email.trim()
       const result = await forgotPassword(trimmedEmail)
-      if (result.resetToken) {
-        // Dev backend hands the token straight back — skip the inbox step.
-        router.push(`/reset-password?email=${encodeURIComponent(trimmedEmail)}&token=${encodeURIComponent(result.resetToken)}`)
-        return
-      }
-      setEmailSent(true)
+      const params = new URLSearchParams({ email: trimmedEmail })
+      if (result.otp) params.set('otp', result.otp)
+      router.push(`/reset-password?${params.toString()}`)
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Unable to send reset link.')
+      setAuthError(err instanceof Error ? err.message : 'Unable to send reset code.')
     } finally {
       setLoading(false)
     }
@@ -58,52 +54,33 @@ export default function ForgotPasswordPage() {
       </Link>
 
       <div className="auth-card">
-        {emailSent ? (
-          <div className="auth-success">
-            <div className="auth-success-icon">
-              <MailCheck size={28} color="white" />
-            </div>
-            <h2>Check your inbox</h2>
-            <p>
-              We sent a reset link to
-              <br />
-              {email.trim()}
-            </p>
-            <Link href="/login" className="auth-btn-primary" style={{ textDecoration: 'none' }}>
-              Back to sign in
-            </Link>
-          </div>
-        ) : (
-          <>
-            <h1 className="auth-heading">Forgot password?</h1>
-            <p className="auth-sub">Enter your email and we&apos;ll send you a reset link.</p>
+        <h1 className="auth-heading">Forgot password?</h1>
+        <p className="auth-sub">Enter your email and we&apos;ll send a 6-digit code.</p>
 
-            <form onSubmit={handleSubmit} noValidate className="auth-form">
-              {authError && <p className="auth-error-banner">{authError}</p>}
+        <form onSubmit={handleSubmit} noValidate className="auth-form">
+          {authError && <p className="auth-error-banner">{authError}</p>}
 
-              <AuthField
-                label="Email address"
-                icon={Mail}
-                type="email"
-                value={email}
-                onChange={e => {
-                  setEmail(e.target.value)
-                  if (emailError) setEmailError('')
-                }}
-                onBlur={() => setEmailError(validateEmail())}
-                placeholder="you@example.com"
-                error={emailError}
-              />
+          <AuthField
+            label="Email address"
+            icon={Mail}
+            type="email"
+            value={email}
+            onChange={e => {
+              setEmail(e.target.value)
+              if (emailError) setEmailError('')
+            }}
+            onBlur={() => setEmailError(validateEmail())}
+            placeholder="you@example.com"
+            error={emailError}
+          />
 
-              <AuthPrimaryButton label="Send reset link" loading={loading} disabled={loading} />
-            </form>
+          <AuthPrimaryButton label="Send code" loading={loading} disabled={loading} />
+        </form>
 
-            <Link href="/login" className="auth-back-link">
-              <ArrowLeft size={15} />
-              Back to sign in
-            </Link>
-          </>
-        )}
+        <Link href="/login" className="auth-back-link">
+          <ArrowLeft size={15} />
+          Back to sign in
+        </Link>
       </div>
     </div>
   )

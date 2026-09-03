@@ -55,12 +55,12 @@ export async function apiUpdateMe(payload: UserProfileUpdate): Promise<ApiUser> 
 
 export interface ForgotPasswordResult {
   message: string;
-  /** Only populated in dev — prod expects the user to click a link in their email. */
-  resetToken: string | null;
+  /** Only populated in local/dev when email is not configured. */
+  otp: string | null;
 }
 
 export async function apiForgotPassword(email: string): Promise<ForgotPasswordResult> {
-  const res = await apiFetch<{ message: string; reset_token?: string | null }>(
+  const res = await apiFetch<{ message: string; otp?: string | null }>(
     "/auth/forgot-password",
     {
       method: "POST",
@@ -68,12 +68,12 @@ export async function apiForgotPassword(email: string): Promise<ForgotPasswordRe
       body: { email },
     },
   );
-  return { message: res.message, resetToken: res.reset_token ?? null };
+  return { message: res.message, otp: res.otp ?? null };
 }
 
 export async function apiResetPassword(input: {
   email: string;
-  token: string;
+  otp: string;
   new_password: string;
 }): Promise<void> {
   await apiFetch<void>("/auth/reset-password", {

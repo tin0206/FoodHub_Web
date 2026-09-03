@@ -379,12 +379,16 @@ export function getStrings(lang: Lang) {
       ? "Tài khoản đăng nhập bằng Google — đặt mật khẩu để có thể đăng nhập bằng email."
       : "Signed in with Google — set a password so you can also sign in with email.",
     setPasswordSentMessage: vi
-      ? "Đã gửi email đặt mật khẩu. Vui lòng kiểm tra hộp thư."
-      : "We sent you an email to set your password. Please check your inbox.",
+      ? "Đã gửi mã 6 số tới email của bạn. Nhập mã trên màn hình đặt mật khẩu."
+      : "We sent a 6-digit code to your email. Enter it on the next screen.",
     resetPasswordTitle: vi ? "Đặt lại mật khẩu" : "Reset password",
     resetPasswordSub: vi
-      ? "Nhập mật khẩu mới cho tài khoản của bạn."
-      : "Enter a new password for your account.",
+      ? "Nhập mã OTP trong email và mật khẩu mới."
+      : "Enter the code from your email and a new password.",
+    otpLabel: vi ? "Mã OTP" : "Reset code",
+    otpPlaceholder: vi ? "000000" : "000000",
+    otpRequired: vi ? "Nhập mã 6 số trong email." : "Enter the 6-digit code from your email.",
+    resendCodeLabel: vi ? "Gửi lại mã" : "Resend code",
     newPasswordLabel: vi ? "Mật khẩu mới" : "New password",
     confirmNewPasswordLabel: vi
       ? "Xác nhận mật khẩu mới"
@@ -394,9 +398,9 @@ export function getStrings(lang: Lang) {
       ? "Đặt lại mật khẩu thành công."
       : "Password reset successfully.",
     resetPasswordInvalidLink: vi
-      ? "Liên kết đặt lại mật khẩu không hợp lệ."
-      : "This reset link is invalid.",
-    requestNewLinkLabel: vi ? "Yêu cầu liên kết mới" : "Request a new link",
+      ? "Thiếu email để đặt lại mật khẩu. Hãy yêu cầu mã mới."
+      : "Missing email for password reset. Request a new code.",
+    requestNewLinkLabel: vi ? "Gửi mã mới" : "Request a new code",
     passwordsDoNotMatch: vi ? "Mật khẩu không khớp" : "Passwords do not match",
     updateLabel: vi ? "Cập nhật" : "Update",
     passwordUpdated: vi

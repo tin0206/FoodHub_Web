@@ -132,20 +132,20 @@ export async function forgotPassword(email: string): Promise<ForgotPasswordResul
   try {
     return await apiForgotPassword(email);
   } catch (err) {
-    if (err instanceof ApiError) throw new Error(err.message || "Unable to send reset link.");
-    throw err instanceof Error ? err : new Error("Unable to send reset link.");
+    if (err instanceof ApiError) throw new Error(err.message || "Unable to send reset code.");
+    throw err instanceof Error ? err : new Error("Unable to send reset code.");
   }
 }
 
 export async function resetPassword(input: {
   email: string;
-  token: string;
+  otp: string;
   newPassword: string;
 }): Promise<void> {
   try {
     await apiResetPassword({
       email: input.email,
-      token: input.token,
+      otp: input.otp,
       new_password: input.newPassword,
     });
   } catch (err) {

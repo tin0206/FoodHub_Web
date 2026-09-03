@@ -377,13 +377,11 @@ export function ProfileEditor() {
     setSetPasswordSent(false);
     try {
       const result = await forgotPassword(user.email);
-      if (result.resetToken) {
-        router.push(`/reset-password?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(result.resetToken)}&from=profile`);
-        return;
-      }
-      setSetPasswordSent(true);
+      const params = new URLSearchParams({ email: user.email, from: "profile" });
+      if (result.otp) params.set("otp", result.otp);
+      router.push(`/reset-password?${params.toString()}`);
     } catch (err) {
-      setSetPasswordError(errorMessage(err, "Unable to send reset link."));
+      setSetPasswordError(errorMessage(err, "Unable to send reset code."));
     } finally {
       setSettingPassword(false);
     }
