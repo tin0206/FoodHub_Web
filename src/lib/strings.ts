@@ -890,6 +890,7 @@ export function getStrings(lang: Lang) {
       ? "Chỉnh sửa sẽ tạo một bản sao mới trong Công thức của tôi — công thức gốc không bị thay đổi."
       : "Editing this will save a new copy to your Personal Recipes — the original stays unchanged.",
     saveAsNewRecipeLabel: vi ? "Lưu thành công thức mới" : "Save as new recipe",
+    recipeSavedToast: vi ? "Đã lưu công thức!" : "Recipe saved!",
   };
 }
 

@@ -189,7 +189,10 @@ export default function EditPersonalRecipePage() {
           setError('Changes saved, but the photo could not be uploaded.')
         }
       }
-      router.push(`/personal/${buildRecipeSlug(finalId, updated.title)}`)
+      // replace, not push — the edit form shouldn't remain in history, so the
+      // back button on the recipe page returns to wherever the user was before
+      // editing instead of bouncing back into the edit form.
+      router.replace(`/personal/${buildRecipeSlug(finalId, updated.title)}?saved=1`)
     } catch (err) {
       setError(errorMessage(err, 'Unable to save changes.'))
     } finally {
@@ -220,9 +223,7 @@ export default function EditPersonalRecipePage() {
 
   return (
     <div className="h-full p-3">
-      {/* Capped like Profile's form column — on a wide desktop viewport, an uncapped
-          width stretches the photo well past its native resolution and it looks soft/blown out. */}
-      <div className="flex flex-col h-full max-w-2xl mx-auto w-full">
+      <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
           <button
             onClick={() => router.push(backHref)}
@@ -249,51 +250,59 @@ export default function EditPersonalRecipePage() {
             </div>
           )}
 
-          <div className="space-y-2.5">
-            <PhotoPicker preview={imagePreview} onPick={handlePickImage} onClear={handleClearImage} theme={theme} size="lg" />
-            <SectionCard title="Name" accent={theme.start}>
-              <input
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Recipe name…"
-                className={`text-[17px] font-bold tracking-tight ${inlineInputClass}`}
-                style={{ color: 'var(--tm-text)' }}
-              />
-            </SectionCard>
-            <SectionCard accent={theme.start}>
-              <div className="flex items-center flex-wrap gap-2">
-                <Clock size={16} color={theme.start} />
+          {/* Same two-column split as the recipe view page — photo + basics capped
+              at 380px on the left, the longer-form editors filling the rest on the
+              right, instead of one narrow stacked column floating in the middle. */}
+          <div className="lg:grid lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-6 lg:items-start">
+            <div className="lg:sticky lg:top-0 space-y-2.5">
+              <PhotoPicker preview={imagePreview} onPick={handlePickImage} onClear={handleClearImage} theme={theme} size="lg" />
+              <SectionCard title="Name" accent={theme.start}>
                 <input
-                  type="number"
-                  value={minutes}
-                  onChange={e => setMinutes(e.target.value)}
-                  placeholder="0"
-                  className={inlineInputClass}
-                  style={{ width: 56, color: 'var(--tm-text)' }}
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Recipe name…"
+                  className={`text-[17px] font-bold tracking-tight ${inlineInputClass}`}
+                  style={{ color: 'var(--tm-text)' }}
                 />
-                <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>min</span>
-                <span className="w-3" />
-                <Users size={16} color={theme.start} />
-                <input
-                  type="number"
-                  value={servings}
-                  onChange={e => setServings(e.target.value)}
-                  placeholder="0"
-                  className={inlineInputClass}
-                  style={{ width: 56, color: 'var(--tm-text)' }}
-                />
-                <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>servings</span>
-              </div>
-            </SectionCard>
-            <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients" accent={theme.start}>
-              <LineListEditor values={ingredients} onChange={setIngredients} placeholder={i => `Ingredient ${i + 1}`} addLabel="Add ingredient" accent={theme.start} />
-            </SectionCard>
-            <SectionCard icon={<ListOrdered size={15} />} title="Instructions" accent={theme.start}>
-              <LineListEditor values={steps} onChange={setSteps} placeholder={i => `Step ${i + 1}…`} variant="number" addLabel="Add step" accent={theme.start} />
-            </SectionCard>
-            <SectionCard icon={<Tag size={15} />} title="Labels" accent={theme.start}>
-              <LabelChips selected={labels} onToggle={toggleLabel} accent={theme.start} />
-            </SectionCard>
+              </SectionCard>
+              <SectionCard accent={theme.start}>
+                <div className="flex items-center flex-wrap gap-2">
+                  <Clock size={16} color={theme.start} />
+                  <input
+                    type="number"
+                    value={minutes}
+                    onChange={e => setMinutes(e.target.value)}
+                    placeholder="0"
+                    className={inlineInputClass}
+                    style={{ width: 56, color: 'var(--tm-text)' }}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>min</span>
+                  <span className="w-3" />
+                  <Users size={16} color={theme.start} />
+                  <input
+                    type="number"
+                    value={servings}
+                    onChange={e => setServings(e.target.value)}
+                    placeholder="0"
+                    className={inlineInputClass}
+                    style={{ width: 56, color: 'var(--tm-text)' }}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--tm-text-3)' }}>servings</span>
+                </div>
+              </SectionCard>
+            </div>
+
+            <div className="space-y-2.5 mt-2.5 lg:mt-0">
+              <SectionCard icon={<ShoppingBasket size={15} />} title="Ingredients" accent={theme.start}>
+                <LineListEditor values={ingredients} onChange={setIngredients} placeholder={i => `Ingredient ${i + 1}`} addLabel="Add ingredient" accent={theme.start} />
+              </SectionCard>
+              <SectionCard icon={<ListOrdered size={15} />} title="Instructions" accent={theme.start}>
+                <LineListEditor values={steps} onChange={setSteps} placeholder={i => `Step ${i + 1}…`} variant="number" addLabel="Add step" accent={theme.start} />
+              </SectionCard>
+              <SectionCard icon={<Tag size={15} />} title="Labels" accent={theme.start}>
+                <LabelChips selected={labels} onToggle={toggleLabel} accent={theme.start} />
+              </SectionCard>
+            </div>
           </div>
         </div>
 

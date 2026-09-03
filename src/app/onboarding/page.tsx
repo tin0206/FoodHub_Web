@@ -7,9 +7,11 @@ import { getCurrentUser, updateCachedUser, isAdminRole } from "@/lib/auth";
 import { apiUpdateMe } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
 import type { UserProfileUpdate } from "@/lib/api/types";
-import { useStrings } from "@/lib/use-strings";
+import { getStrings } from "@/lib/strings";
+import { setLang, type Lang } from "@/lib/i18n";
 import { PRIMARY_GOALS, DIETARY_TAGS } from "@/components/profile-editor";
 import { AuthField } from "@/components/auth/auth-widgets";
+import { FlagIcon } from "@/components/flag-icon";
 import { authDisplay, authSans } from "../auth-fonts";
 import "../auth.css";
 
@@ -29,7 +31,11 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const t = useStrings();
+  // Independent of the app's global language setting — a brand-new user hasn't
+  // chosen one yet, so this always starts in English regardless of whatever a
+  // previous session left in localStorage, with its own toggle to switch it.
+  const [uiLang, setUiLang] = useState<Lang>("en");
+  const t = getStrings(uiLang);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [step, setStep] = useState(1);
@@ -57,6 +63,9 @@ export default function OnboardingPage() {
   }, [router]);
 
   function goHome() {
+    // Carry whichever language the user picked here into the rest of the app —
+    // even on Skip, so they don't land in a different language than they just read.
+    setLang(uiLang);
     router.replace("/home");
   }
 
@@ -96,6 +105,7 @@ export default function OnboardingPage() {
         weight: weight.trim() ? Number(weight) : null,
         primary_goal: primaryGoal || null,
         dietary_restrictions: dietaryRestrictions,
+        language: uiLang,
       };
       const updated = await apiUpdateMe(payload);
       updateCachedUser(updated);
@@ -116,9 +126,29 @@ export default function OnboardingPage() {
           <ChefHat size={22} color="#059669" />
           <span>FoodHub</span>
         </span>
-        <button type="button" onClick={goHome} className="auth-link text-sm">
-          {t.onboardingSkip}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-full p-0.5" style={{ border: "1px solid var(--a-line)" }}>
+            {([["en", "us"], ["vi", "vn"]] as const).map(([code, country]) => {
+              const active = uiLang === code;
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setUiLang(code)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors"
+                  style={active ? { backgroundColor: "#059669", color: "#fff" } : { color: "var(--a-muted)" }}
+                  aria-pressed={active}
+                >
+                  <FlagIcon country={country} size={14} />
+                  {code.toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" onClick={goHome} className="auth-link text-sm">
+            {t.onboardingSkip}
+          </button>
+        </div>
       </div>
 
       <div className="auth-card" style={{ maxWidth: "34rem" }}>

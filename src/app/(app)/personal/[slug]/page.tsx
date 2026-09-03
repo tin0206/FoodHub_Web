@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { ArrowLeft, Check, Trash2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
 import { getRecipe, deleteRecipe } from '@/lib/api/recipes'
 import { getCurrentUser } from '@/lib/auth'
@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import LoadingOverlay from '@/components/loading-overlay'
 import { useDarkMode } from '@/lib/use-dark-mode'
 import { useLang } from '@/lib/use-lang'
+import { useStrings } from '@/lib/use-strings'
 import { getLang } from '@/lib/i18n'
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -25,14 +26,31 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export default function PersonalRecipeDetailPage() {
   const params = useParams<{ slug: string }>()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const dark = useDarkMode()
   const lang = useLang()
+  const t = useStrings()
 
   const [recipe, setRecipe] = useState<ApiRecipe | null | undefined>(undefined)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showSavedToast, setShowSavedToast] = useState(false)
+  const toastTimerRef = useRef<number | null>(null)
+
+  // Landed here right after a successful save (see personal/edit/[slug]) — flash a
+  // confirmation, then strip the query param so a refresh doesn't re-trigger it.
+  useEffect(() => {
+    if (searchParams.get('saved') !== '1') return
+    setShowSavedToast(true)
+    router.replace(`/personal/${params.slug}`)
+    toastTimerRef.current = window.setTimeout(() => setShowSavedToast(false), 3000)
+    return () => {
+      if (toastTimerRef.current != null) window.clearTimeout(toastTimerRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const id = parseRecipeIdFromSlug(params.slug)
@@ -100,7 +118,16 @@ export default function PersonalRecipeDetailPage() {
   const panelBorder = dark ? '#3A3A3A' : 'var(--tm-border-i)'
 
   return (
-    <div className="h-full p-3">
+    <div className="h-full p-3 relative">
+      {showSavedToast && (
+        <div
+          className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white"
+          style={{ backgroundColor: '#059669', boxShadow: '0 8px 20px rgba(5,150,105,0.35)' }}
+        >
+          <Check size={15} />
+          {t.recipeSavedToast}
+        </div>
+      )}
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
           <button onClick={() => router.back()} className="p-1" style={{ color: 'var(--tm-text-2)' }}>
