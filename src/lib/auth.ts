@@ -1,5 +1,5 @@
 import { ApiError, setAccessToken, getAccessToken } from "@/lib/api-client";
-import { apiLogin, apiSignup, apiForgotPassword, apiResetPassword, apiGoogleAccessTokenLogin, apiResendSignupOtp, apiVerifySignupOtp, type ForgotPasswordResult } from "@/lib/api/auth";
+import { apiLogin, apiSignup, apiForgotPassword, apiResetPassword, apiGoogleAccessTokenLogin, apiResendSignupOtp, apiVerifySignupOtp, type OtpDispatchResult } from "@/lib/api/auth";
 import { clearChatSession } from "@/lib/chat-session";
 import type { ApiUser } from "@/lib/api/types";
 
@@ -99,6 +99,11 @@ function mapAuthError(err: unknown, context?: { email?: string }): never {
   throw new Error("Authentication failed");
 }
 
+function wrapAuthError(err: unknown, fallback: string, context?: { email?: string }): never {
+  if (err instanceof ApiError) mapAuthError(err, context);
+  throw err instanceof Error ? err : new Error(fallback);
+}
+
 export async function login({
   email,
   password,
@@ -112,7 +117,7 @@ export async function login({
     });
     return persistSession(res.access_token, res.user);
   } catch (err) {
-    mapAuthError(err, { email });
+    wrapAuthError(err, "Authentication failed", { email });
   }
 }
 
@@ -121,7 +126,7 @@ export async function signup({
   email,
   password,
   language,
-}: SignupCredentials): Promise<ForgotPasswordResult> {
+}: SignupCredentials): Promise<OtpDispatchResult> {
   try {
     return await apiSignup({
       email,
@@ -130,16 +135,15 @@ export async function signup({
       language,
     });
   } catch (err) {
-    mapAuthError(err, { email });
+    wrapAuthError(err, "Authentication failed", { email });
   }
 }
 
-export async function resendSignupOtp(email: string): Promise<ForgotPasswordResult> {
+export async function resendSignupOtp(email: string): Promise<OtpDispatchResult> {
   try {
     return await apiResendSignupOtp(email);
   } catch (err) {
-    if (err instanceof ApiError) throw new Error(err.message || "Unable to send verification code.");
-    throw err instanceof Error ? err : new Error("Unable to send verification code.");
+    wrapAuthError(err, "Unable to send verification code.");
   }
 }
 
@@ -151,7 +155,7 @@ export async function verifySignupOtp(input: {
     const res = await apiVerifySignupOtp(input);
     return persistSession(res.access_token, res.user);
   } catch (err) {
-    mapAuthError(err);
+    wrapAuthError(err, "Unable to verify code.");
   }
 }
 
@@ -160,16 +164,15 @@ export async function loginWithGoogle(accessToken: string): Promise<CurrentUser>
     const res = await apiGoogleAccessTokenLogin(accessToken);
     return persistSession(res.access_token, res.user);
   } catch (err) {
-    mapAuthError(err);
+    wrapAuthError(err, "Authentication failed");
   }
 }
 
-export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
+export async function forgotPassword(email: string): Promise<OtpDispatchResult> {
   try {
     return await apiForgotPassword(email);
   } catch (err) {
-    if (err instanceof ApiError) throw new Error(err.message || "Unable to send reset code.");
-    throw err instanceof Error ? err : new Error("Unable to send reset code.");
+    wrapAuthError(err, "Unable to send reset code.");
   }
 }
 
@@ -185,9 +188,29 @@ export async function resetPassword(input: {
       new_password: input.newPassword,
     });
   } catch (err) {
-    if (err instanceof ApiError) throw new Error(err.message || "Unable to reset password.");
-    throw err instanceof Error ? err : new Error("Unable to reset password.");
+    wrapAuthError(err, "Unable to reset password.");
   }
+}
+
+export function verifyEmailPath(
+  email: string,
+  otp?: string | null,
+  next: "login" | "signup" = "login",
+): string {
+  const params = new URLSearchParams({ email, next });
+  if (otp) params.set("otp", otp);
+  return `/verify-email?${params.toString()}`;
+}
+
+/** Resend if possible, then always return the verify-email URL. */
+export async function resumePendingSignup(email: string): Promise<string> {
+  let otp: string | null = null;
+  try {
+    otp = (await resendSignupOtp(email)).otp;
+  } catch {
+    // User can resend on the OTP screen.
+  }
+  return verifyEmailPath(email, otp, "login");
 }
 
 /** Google-only account that never set a local password (has_password backend field). */

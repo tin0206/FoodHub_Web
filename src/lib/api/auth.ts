@@ -1,6 +1,24 @@
 import { apiFetch } from "@/lib/api-client";
 import type { ApiUser, TokenResponse, UserProfileUpdate } from "@/lib/api/types";
 
+export type OtpDispatchResult = {
+  message: string;
+  /** Only populated in local/dev when email is not configured. */
+  otp: string | null;
+};
+
+async function postOtpDispatch(
+  path: string,
+  body: object,
+): Promise<OtpDispatchResult> {
+  const res = await apiFetch<{ message: string; otp?: string | null }>(path, {
+    method: "POST",
+    auth: false,
+    body,
+  });
+  return { message: res.message, otp: res.otp ?? null };
+}
+
 export async function apiLogin(input: {
   email: string;
   password: string;
@@ -22,33 +40,17 @@ export async function apiSignup(input: {
   password: string;
   full_name?: string;
   language?: string;
-}): Promise<ForgotPasswordResult> {
-  const res = await apiFetch<{ message: string; otp?: string | null }>(
-    "/auth/signup",
-    {
-      method: "POST",
-      auth: false,
-      body: {
-        email: input.email,
-        password: input.password,
-        full_name: input.full_name || undefined,
-        language: input.language,
-      },
-    },
-  );
-  return { message: res.message, otp: res.otp ?? null };
+}): Promise<OtpDispatchResult> {
+  return postOtpDispatch("/auth/signup", {
+    email: input.email,
+    password: input.password,
+    full_name: input.full_name || undefined,
+    language: input.language,
+  });
 }
 
-export async function apiResendSignupOtp(email: string): Promise<ForgotPasswordResult> {
-  const res = await apiFetch<{ message: string; otp?: string | null }>(
-    "/auth/signup/resend-otp",
-    {
-      method: "POST",
-      auth: false,
-      body: { email },
-    },
-  );
-  return { message: res.message, otp: res.otp ?? null };
+export async function apiResendSignupOtp(email: string): Promise<OtpDispatchResult> {
+  return postOtpDispatch("/auth/signup/resend-otp", { email });
 }
 
 export async function apiVerifySignupOtp(input: {
@@ -82,22 +84,8 @@ export async function apiUpdateMe(payload: UserProfileUpdate): Promise<ApiUser> 
   });
 }
 
-export interface ForgotPasswordResult {
-  message: string;
-  /** Only populated in local/dev when email is not configured. */
-  otp: string | null;
-}
-
-export async function apiForgotPassword(email: string): Promise<ForgotPasswordResult> {
-  const res = await apiFetch<{ message: string; otp?: string | null }>(
-    "/auth/forgot-password",
-    {
-      method: "POST",
-      auth: false,
-      body: { email },
-    },
-  );
-  return { message: res.message, otp: res.otp ?? null };
+export async function apiForgotPassword(email: string): Promise<OtpDispatchResult> {
+  return postOtpDispatch("/auth/forgot-password", { email });
 }
 
 export async function apiResetPassword(input: {

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { FormEvent } from 'react'
-import { verifySignupOtp, resendSignupOtp, getPostLoginPath } from '@/lib/auth'
+import { verifySignupOtp, resendSignupOtp, getPostLoginPath, getPostSignupPath } from '@/lib/auth'
 import { ChefHat, KeyRound, ArrowLeft } from 'lucide-react'
 import { AuthField, AuthPrimaryButton } from '@/components/auth/auth-widgets'
 import { authDisplay, authSans } from '../auth-fonts'
@@ -23,6 +23,7 @@ function VerifyEmailInner() {
   const searchParams = useSearchParams()
   const emailParam = searchParams.get('email') ?? ''
   const otpParam = searchParams.get('otp') ?? ''
+  const fromSignup = searchParams.get('next') === 'signup'
 
   const [otp, setOtp] = useState(otpParam)
   const [error, setError] = useState('')
@@ -40,7 +41,7 @@ function VerifyEmailInner() {
       setLoading(true)
       setError('')
       const user = await verifySignupOtp({ email: emailParam, otp: code })
-      router.replace(getPostLoginPath(user))
+      router.replace(fromSignup ? getPostSignupPath(user) : getPostLoginPath(user))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to verify code.')
     } finally {
@@ -105,9 +106,9 @@ function VerifyEmailInner() {
             {resending ? 'Sending…' : "Didn't get a code? Resend"}
           </button>
 
-          <Link href="/login" className="auth-back-link" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Link href={fromSignup ? '/signup' : '/login'} className="auth-back-link" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <ArrowLeft size={15} />
-            Back to sign in
+            {fromSignup ? 'Back to sign up' : 'Back to sign in'}
           </Link>
         </form>
       </div>

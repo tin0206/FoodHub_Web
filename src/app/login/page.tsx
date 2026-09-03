@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { login, loginWithGoogle, FieldError, PendingSignupError, getCurrentUser, getPostLoginPath, resendSignupOtp } from "@/lib/auth";
+import { login, loginWithGoogle, FieldError, PendingSignupError, getCurrentUser, getPostLoginPath, resumePendingSignup } from "@/lib/auth";
 import { requestGoogleAccessToken } from "@/lib/google-auth";
 import { ChefHat, Mail, Lock } from "lucide-react";
 import {
@@ -70,15 +70,7 @@ export default function LoginPage() {
       router.replace(getPostLoginPath(user));
     } catch (err: unknown) {
       if (err instanceof PendingSignupError) {
-        const email = err.email || emailValue;
-        const params = new URLSearchParams({ email });
-        try {
-          const result = await resendSignupOtp(email);
-          if (result.otp) params.set("otp", result.otp);
-        } catch {
-          // Still go to the OTP screen; the user can resend there.
-        }
-        router.push(`/verify-email?${params.toString()}`);
+        router.push(await resumePendingSignup(err.email || emailValue));
         return;
       } else if (err instanceof FieldError) {
         setErrors((prev) => ({ ...prev, [err.field]: err.message }));
