@@ -201,9 +201,7 @@ export function getStrings(lang: Lang) {
     startingSession: vi
       ? "Đang khởi động phiên trợ lý..."
       : "Starting companion session...",
-    waitingForAi: vi
-      ? "Đang chờ phản hồi từ AI..."
-      : "Queued — waiting for AI...",
+    aiThinking: vi ? "Đang suy nghĩ…" : "Thinking…",
     resetChatTitle: vi ? "Đặt lại cuộc trò chuyện?" : "Reset chat?",
     resetChatDesc: vi
       ? "Thao tác này sẽ xóa cuộc trò chuyện và các dữ liệu đã nhận diện. Tùy chọn hồ sơ vẫn được giữ nguyên."
@@ -387,7 +385,9 @@ export function getStrings(lang: Lang) {
       : "Enter the code from your email and a new password.",
     otpLabel: vi ? "Mã OTP" : "Reset code",
     otpPlaceholder: vi ? "000000" : "000000",
-    otpRequired: vi ? "Nhập mã 6 số trong email." : "Enter the 6-digit code from your email.",
+    otpRequired: vi
+      ? "Nhập mã 6 số trong email."
+      : "Enter the 6-digit code from your email.",
     resendCodeLabel: vi ? "Gửi lại mã" : "Resend code",
     newPasswordLabel: vi ? "Mật khẩu mới" : "New password",
     confirmNewPasswordLabel: vi
@@ -860,7 +860,9 @@ export function getStrings(lang: Lang) {
     adminAddUserCta: vi ? "Thêm người dùng" : "Add User",
 
     // ── Onboarding survey (post sign-up) ────────────────────────────────────
-    onboardingWelcomeTitle: vi ? "Chào mừng đến với FoodHub!" : "Welcome to FoodHub!",
+    onboardingWelcomeTitle: vi
+      ? "Chào mừng đến với FoodHub!"
+      : "Welcome to FoodHub!",
     onboardingWelcomeSubtitle: vi
       ? "Cho chúng tôi biết một chút về bạn để cá nhân hóa gợi ý món ăn."
       : "Tell us a bit about yourself so we can personalize your recommendations.",
