@@ -1,7 +1,6 @@
 import { apiFetch, apiUpload, ApiError } from "@/lib/api-client";
 import type {
   AiRequestDetail,
-  ChatHistoryMessage,
   ChatOption,
   ChatResponse,
   RagRecipe,
@@ -117,7 +116,6 @@ export async function aiWelcome(input?: {
 export async function aiChat(input: {
   message: string;
   sessionId: string;
-  conversationHistory?: ChatHistoryMessage[];
   dietaryRestrictions?: string[];
   primaryGoal?: string;
   ingredients?: string[];
@@ -131,7 +129,6 @@ export async function aiChat(input: {
       body: {
         message: input.message,
         session_id: input.sessionId,
-        conversation_history: input.conversationHistory ?? [],
         dietary_restrictions: input.dietaryRestrictions ?? [],
         ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
         ingredients: input.ingredients ?? [],
@@ -148,7 +145,6 @@ export async function aiChat(input: {
 export async function aiSelectOption(input: {
   sessionId: string;
   selectedOptionIndex: number;
-  conversationHistory?: ChatHistoryMessage[];
   dietaryRestrictions?: string[];
   primaryGoal?: string;
   token?: string;
@@ -162,7 +158,6 @@ export async function aiSelectOption(input: {
         session_id: input.sessionId,
         selected_option_index: input.selectedOptionIndex,
         message: ".",
-        conversation_history: input.conversationHistory ?? [],
         dietary_restrictions: input.dietaryRestrictions ?? [],
         ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
       },

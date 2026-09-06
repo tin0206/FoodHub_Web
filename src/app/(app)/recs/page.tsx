@@ -398,7 +398,6 @@ export default function RecsPage() {
       const response = await aiChat({
         message: merged,
         sessionId: sessionId!,
-        conversationHistory: baseHistory,
         dietaryRestrictions: profile.dietaryRestrictions,
         primaryGoal: profile.primaryGoal || undefined,
         ingredients,

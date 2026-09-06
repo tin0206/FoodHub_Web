@@ -247,7 +247,6 @@ export function DemoChatPanel({
       const response = await aiChat({
         message: text,
         sessionId,
-        conversationHistory: nextHistory,
         token,
       });
       if (response.session_id) setSessionId(response.session_id);
