@@ -1,15 +1,9 @@
 import { ApiError } from "@/lib/api-client";
 import { apiLogin, apiSignup, apiVerifySignupOtp } from "@/lib/api/auth";
 
-export const DEMO_CHAT_LIMIT = 10;
-
 const FP_SEED_KEY = "fh_demo_fp_seed";
 const DEMO_TOKEN_KEY = "fh_demo_access_token";
 const DEMO_FP_KEY = "fh_demo_fingerprint";
-
-function countKey(fingerprint: string) {
-  return `fh_demo_chat_count_${fingerprint}`;
-}
 
 function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
@@ -65,27 +59,6 @@ export function getDemoAccessToken(): string | null {
   }
 }
 
-export function getDemoChatCount(fingerprint: string): number {
-  if (typeof window === "undefined") return 0;
-  try {
-    const raw = localStorage.getItem(countKey(fingerprint));
-    const n = Number.parseInt(raw ?? "0", 10);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  } catch {
-    return 0;
-  }
-}
-
-export function getDemoChatsRemaining(fingerprint: string): number {
-  return Math.max(0, DEMO_CHAT_LIMIT - getDemoChatCount(fingerprint));
-}
-
-export function incrementDemoChatCount(fingerprint: string): number {
-  const next = getDemoChatCount(fingerprint) + 1;
-  localStorage.setItem(countKey(fingerprint), String(next));
-  return next;
-}
-
 /**
  * Auto sign-up / login a disposable demo user tied to this browser fingerprint.
  * Does not touch the main app session (`fh_access_token`).
@@ -93,15 +66,13 @@ export function incrementDemoChatCount(fingerprint: string): number {
 export async function ensureDemoSession(): Promise<{
   token: string;
   fingerprint: string;
-  remaining: number;
 }> {
   const fingerprint = await getBrowserFingerprint();
-  const remaining = getDemoChatsRemaining(fingerprint);
   const cached = getDemoAccessToken();
   const cachedFp = localStorage.getItem(DEMO_FP_KEY);
 
   if (cached && cachedFp === fingerprint) {
-    return { token: cached, fingerprint, remaining };
+    return { token: cached, fingerprint };
   }
 
   const { email, password, full_name } = demoCredentials(fingerprint);
@@ -110,7 +81,7 @@ export async function ensureDemoSession(): Promise<{
     const res = await apiLogin({ email, password, remember_me: true });
     localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
     localStorage.setItem(DEMO_FP_KEY, fingerprint);
-    return { token: res.access_token, fingerprint, remaining };
+    return { token: res.access_token, fingerprint };
   } catch {
     // New browser / first visit — create guest account
   }
@@ -123,7 +94,7 @@ export async function ensureDemoSession(): Promise<{
     const res = await apiVerifySignupOtp({ email, otp: pending.otp });
     localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
     localStorage.setItem(DEMO_FP_KEY, fingerprint);
-    return { token: res.access_token, fingerprint, remaining };
+    return { token: res.access_token, fingerprint };
   } catch (signupErr) {
     if (
       signupErr instanceof ApiError &&
@@ -133,7 +104,7 @@ export async function ensureDemoSession(): Promise<{
       const res = await apiLogin({ email, password, remember_me: true });
       localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
       localStorage.setItem(DEMO_FP_KEY, fingerprint);
-      return { token: res.access_token, fingerprint, remaining };
+      return { token: res.access_token, fingerprint };
     }
     throw signupErr;
   }

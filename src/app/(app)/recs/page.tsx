@@ -3,14 +3,11 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Camera,
-  ChevronRight,
   Loader2,
   Pencil,
   RefreshCw,
-  Send,
   ShoppingBasket,
   Sparkles,
-  Bot,
   UtensilsCrossed,
 } from "lucide-react";
 import { apiGetMe } from "@/lib/api/auth";
@@ -21,27 +18,20 @@ import {
   aiDetectIngredients,
 } from "@/lib/api/ai";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
-import type {
-  ChatHistoryMessage,
-  ChatOption,
-  RagRecipe,
-} from "@/lib/api/types";
+import type { ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
-import { MarkdownReply } from "@/components/chat/markdown-reply";
+import { ChatComposer } from "@/components/chat/chat-composer";
+import {
+  ChatMessageBubble,
+  lastAssistantIndex,
+  type ChatUiMessage,
+} from "@/components/chat/chat-message-bubble";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { NoteDialog } from "@/components/note-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useLang } from "@/lib/use-lang";
 import { useStrings } from "@/lib/use-strings";
-
-interface UiMessage {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  recipes?: RagRecipe[];
-  options?: ChatOption[];
-}
 
 interface UserProfileForChat {
   dietaryRestrictions: string[];
@@ -227,10 +217,9 @@ export default function RecsPage() {
     dietaryRestrictions: [],
     primaryGoal: "",
   });
-  const [messages, setMessages] = useState<UiMessage[]>([]);
+  const [messages, setMessages] = useState<ChatUiMessage[]>([]);
   const [history, setHistory] = useState<ChatHistoryMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [input, setInput] = useState("");
   const [composeDishText, setComposeDishText] = useState<string | null>(null);
   const [composeIngredientsText, setComposeIngredientsText] = useState<
     string | null
@@ -437,10 +426,9 @@ export default function RecsPage() {
     }
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(userQuery: string) {
     if (busy || isDetecting) return;
-    const userQuery = input.trim();
-    const merged = buildMergedPrompt(userQuery);
+    const merged = buildMergedPrompt(userQuery.trim());
     if (!merged) return;
 
     if (!sessionId) {
@@ -457,7 +445,6 @@ export default function RecsPage() {
     setIsSending(true);
     setComposeDishText(null);
     setComposeIngredientsText(null);
-    setInput("");
     setError("");
     scrollToBottom();
     await sendToAi(merged, ingredients, history);
@@ -572,12 +559,7 @@ export default function RecsPage() {
   const ingredientsText = composeIngredientsText?.trim();
   const hasDish = !!dishText;
   const hasIngredients = !!ingredientsText;
-
-  const lastAssistantIndex = (() => {
-    for (let i = messages.length - 1; i >= 0; i--)
-      if (messages[i].role === "assistant") return i;
-    return -1;
-  })();
+  const lastAi = lastAssistantIndex(messages);
 
   return (
     <div
@@ -625,123 +607,20 @@ export default function RecsPage() {
         ref={listRef}
         className="flex-1 overflow-y-auto py-3 space-y-3 min-h-0"
       >
-        {messages.map((m, index) => {
-          const isUser = m.role === "user";
-          const isLatestAiMessage =
-            !busy && !isUser && index === lastAssistantIndex;
-          const options = m.options ?? [];
-          const showOptions = isLatestAiMessage && options.length > 0;
-          const showRerun =
-            isLatestAiMessage && !!lastSentMessage && options.length === 0;
-          return (
-            <div
-              key={m.id}
-              className={`px-3 flex ${isUser ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`flex gap-2 max-w-[85%] ${isUser ? "flex-row-reverse" : ""}`}
-              >
-                {!isUser && (
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                    style={{ backgroundColor: "#059669" }}
-                  >
-                    <Bot size={14} color="white" />
-                  </div>
-                )}
-                <div>
-                  <div
-                    className={`rounded-2xl px-3.5 py-2.5 ${isUser ? "rounded-tr-md" : "rounded-tl-md"}`}
-                    style={
-                      isUser
-                        ? {
-                            background:
-                              "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                            color: "#fff",
-                          }
-                        : {
-                            backgroundColor: "var(--tm-surface)",
-                            border: "1px solid var(--tm-border-i)",
-                          }
-                    }
-                  >
-                    {isUser ? (
-                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
-                        {m.text}
-                      </p>
-                    ) : showOptions ? (
-                      <p
-                        className="text-[13px] leading-relaxed"
-                        style={{ color: "var(--tm-text)" }}
-                      >
-                        {t.aiHasOptionsIntro(options.length)}
-                      </p>
-                    ) : (
-                      <MarkdownReply text={m.text} recipes={m.recipes} />
-                    )}
-                  </div>
-                  {showOptions && (
-                    <div className="mt-1.5 space-y-1.5">
-                      {options.map((opt) => (
-                        <button
-                          key={opt.index}
-                          type="button"
-                          onClick={() => void handleSelectOption(opt)}
-                          className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:opacity-80"
-                          style={{
-                            backgroundColor: "var(--tm-surface)",
-                            border: "1px solid var(--tm-border-i)",
-                          }}
-                        >
-                          <span
-                            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-white"
-                            style={{ backgroundColor: "#059669" }}
-                          >
-                            {opt.index}
-                          </span>
-                          <span className="flex-1 min-w-0">
-                            <span
-                              className="block text-[13px] font-bold"
-                              style={{ color: "var(--tm-text)" }}
-                            >
-                              {opt.label}
-                            </span>
-                            {opt.rationale && (
-                              <span
-                                className="block text-[11.5px] mt-0.5"
-                                style={{ color: "var(--tm-text-3)" }}
-                              >
-                                {opt.rationale}
-                              </span>
-                            )}
-                          </span>
-                          <ChevronRight
-                            size={16}
-                            color="var(--tm-text-3)"
-                            className="shrink-0"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {showRerun && (
-                    <button
-                      type="button"
-                      onClick={() => void handleRerun()}
-                      className="mt-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg"
-                      style={{
-                        color: "#059669",
-                        backgroundColor: "rgba(5,150,105,0.12)",
-                      }}
-                    >
-                      {t.rerun}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {messages.map((message, index) => (
+          <ChatMessageBubble
+            key={message.id}
+            message={message}
+            isLatestAi={
+              !busy && message.role === "assistant" && index === lastAi
+            }
+            canRerun={!!lastSentMessage}
+            optionsIntro={t.aiHasOptionsIntro}
+            rerunLabel={t.rerun}
+            onSelectOption={(opt) => void handleSelectOption(opt)}
+            onRerun={() => void handleRerun()}
+          />
+        ))}
         {busy && (
           <TypingIndicator
             label={isBootstrapping ? t.startingSession : t.aiThinking}
@@ -824,41 +703,12 @@ export default function RecsPage() {
           </button>
         </div>
 
-        <div
-          className="flex items-center gap-2 h-11 rounded-full border px-3"
-          style={{
-            borderColor: "var(--tm-border-i)",
-            backgroundColor: "var(--tm-subtle)",
-          }}
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void handleSubmit();
-              }
-            }}
-            disabled={busy}
-            placeholder={isDetecting ? t.analyzingPhoto : t.askForRecipesHint}
-            className="flex-1 bg-transparent text-sm focus:outline-none"
-            style={{ color: "var(--tm-text)" }}
-          />
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={
-              busy ||
-              isDetecting ||
-              (!input.trim() && !hasDish && !hasIngredients)
-            }
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40"
-            style={{ backgroundColor: "#059669" }}
-          >
-            <Send size={14} color="white" />
-          </button>
-        </div>
+        <ChatComposer
+          disabled={busy || isDetecting}
+          extraCanSend={hasDish || hasIngredients}
+          placeholder={isDetecting ? t.analyzingPhoto : t.askForRecipesHint}
+          onSend={(text) => void handleSubmit(text)}
+        />
       </div>
 
       <input

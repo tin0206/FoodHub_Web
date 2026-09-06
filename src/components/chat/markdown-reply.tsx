@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
@@ -263,9 +263,11 @@ function RecipePreviewModal({
   );
 }
 
-export function MarkdownReply({
+const EMPTY_RECIPES: RagRecipe[] = [];
+
+export const MarkdownReply = memo(function MarkdownReply({
   text,
-  recipes = [],
+  recipes = EMPTY_RECIPES,
   authToken,
 }: {
   text: string;
@@ -305,7 +307,6 @@ export function MarkdownReply({
           a: ({ href, children }) => {
             const recipeId = href ? normalizeRecipeHref(href) : "";
             if (recipeId) {
-              // Should be rare after extract; still avoid broken relative /id links
               return (
                 <button
                   type="button"
@@ -399,4 +400,4 @@ export function MarkdownReply({
       )}
     </div>
   );
-}
+});
