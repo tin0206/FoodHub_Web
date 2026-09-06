@@ -8,7 +8,7 @@ import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme, readStoredTheme } from "@/lib/theme";
 import { setLang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
-import { ChefHat, Home, Search, Heart, User, LogOut, ShieldCheck } from "lucide-react";
+import { ChefHat, Home, Search, Bookmark, User, LogOut, ShieldCheck } from "lucide-react";
 import { authDisplay, authSans } from "../auth-fonts";
 
 function AutoAwesomeIcon({ size = 16 }: { size?: number }) {
@@ -31,7 +31,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: "/home",      label: t.navHome,      icon: (s = 16) => <Home size={s} /> },
     { href: "/search",    label: t.navSearch,    icon: (s = 16) => <Search size={s} /> },
     { href: "/recs",      label: t.navRecs,      icon: (s = 16) => <AutoAwesomeIcon size={s} /> },
-    { href: "/favorites", label: t.navFavorites, icon: (s = 16) => <Heart size={s} /> },
+    { href: "/collection", label: t.navCollection, icon: (s = 16) => <Bookmark size={s} /> },
     { href: "/profile",   label: t.navProfile,   icon: (s = 16) => <User size={s} /> },
   ];
 

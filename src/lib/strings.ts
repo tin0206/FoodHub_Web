@@ -12,7 +12,7 @@ export function getStrings(lang: Lang) {
     navHome: vi ? "Trang chủ" : "Home",
     navSearch: vi ? "Tìm kiếm" : "Search",
     navRecs: vi ? "Gợi ý" : "Recs",
-    navFavorites: vi ? "Yêu thích" : "Favorites",
+    navCollection: vi ? "Bộ sưu tập" : "Collection",
     navProfile: vi ? "Hồ sơ" : "Profile",
     navAdmin: vi ? "Quản trị" : "Admin",
 
@@ -21,6 +21,7 @@ export function getStrings(lang: Lang) {
     delete: vi ? "Xóa" : "Delete",
     retry: vi ? "Thử lại" : "Retry",
     save: vi ? "Lưu" : "Save",
+    totalLabel: vi ? "Tổng cộng" : "Total",
 
     // ── Greeting ───────────────────────────────────────────────────────────
     goodMorning: vi ? "Chào buổi sáng 🌅" : "Good morning 🌅",
@@ -28,9 +29,7 @@ export function getStrings(lang: Lang) {
     goodEvening: vi ? "Chào buổi tối 🌙" : "Good evening 🌙",
 
     // ── Home screen ────────────────────────────────────────────────────────
-    myRecipes: vi ? "Công thức của tôi" : "My Recipes",
-    recipeCount: (n: number) =>
-      vi ? `${n} công thức` : `${n} recipe${n === 1 ? "" : "s"}`,
+    homeTagline: vi ? "Hôm nay bạn muốn nấu gì?" : "What are we cooking today?",
     noRecipesYet: vi ? "Chưa có công thức nào" : "No recipes yet",
     noRecipesDesc: vi
       ? "Thêm công thức của bạn và chia sẻ sáng tạo ẩm thực"
@@ -170,6 +169,16 @@ export function getStrings(lang: Lang) {
       };
       return map[value] ?? value;
     },
+
+    // ── Collection screen (Personal Recipes + Favorites tabs) ───────────────
+    collectionTitle: vi ? "Bộ sưu tập" : "Collection",
+    personalRecipesTabSubtitle: vi
+      ? "Công thức bạn đã tạo"
+      : "Recipes you've created",
+    addRecipeCta: vi ? "Thêm công thức" : "Add recipe",
+    savedFromSearchHint: vi
+      ? "Lưu công thức từ Tìm kiếm để xem tại đây"
+      : "Save recipes from Search to see them here",
 
     // ── Favorites screen ───────────────────────────────────────────────────
     favoritesTitle: vi ? "Yêu thích" : "Favorites",

@@ -11,14 +11,14 @@ export default function FavoriteRecipeDetailPage() {
   const id = parseRecipeIdFromSlug(params.slug)
 
   useEffect(() => {
-    if (id == null) router.replace('/favorites')
+    if (id == null) router.replace('/collection?tab=favorites')
   }, [id, router])
 
   if (id == null) return null
 
   return (
     <div className="h-full p-3">
-      <SaveDetailView recipeId={id} onBack={() => router.push('/favorites')} />
+      <SaveDetailView recipeId={id} onBack={() => router.push('/collection?tab=favorites')} />
     </div>
   )
 }
