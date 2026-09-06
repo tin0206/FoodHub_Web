@@ -26,22 +26,6 @@ function errorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
-const UNMAPPED_INGREDIENTS_PREFIX = 'Could not map these ingredient lines to the catalog.'
-
-/** Pulls the offending lines out of the backend's catalog-mapping error, e.g.
- * "Could not map these ingredient lines to the catalog. Rephrase in English: 4 kaffir lime leaves; 4 white fish fillets" */
-function parseUnmappedIngredientLines(message: string): string[] | null {
-  if (!message.startsWith(UNMAPPED_INGREDIENTS_PREFIX)) return null
-  const marker = 'Rephrase in English:'
-  const idx = message.indexOf(marker)
-  if (idx === -1) return null
-  return message
-    .slice(idx + marker.length)
-    .split(';')
-    .map(s => s.trim())
-    .filter(Boolean)
-}
-
 export default function EditPersonalRecipePage() {
   const params = useParams<{ slug: string }>()
   const router = useRouter()
@@ -136,52 +120,25 @@ export default function EditPersonalRecipePage() {
     }
     setError('')
     setSaving(true)
-    const currentRecipe = recipe
-    // Editing a recipe you don't own (a public/catalog recipe opened from Search or
-    // Favorites) never patches the original — it creates a brand-new personal recipe
-    // seeded from it, exactly like starting from a blank recipe with these values.
-    async function saveWith(ingredientsToSave: string[]) {
-      return isOwner
-        ? updateRecipe(currentRecipe.id, {
-            title: title.trim(),
-            ingredients: ingredientsToSave,
-            directions: cleanSteps,
-            dietary_restrictions: [...labels],
-            estimated_servings: servingsNum,
+    try {
+      // A recipe you don't own is never patched — POST a new personal copy instead.
+      const payload = {
+        title: title.trim(),
+        ingredients: cleanIngredients,
+        directions: cleanSteps,
+        dietary_restrictions: [...labels],
+        estimated_servings: servingsNum,
+      }
+      const updated = isOwner
+        ? await updateRecipe(recipe.id, {
+            ...payload,
             ...(imageCleared && !imageFile ? { image_url: null } : {}),
           })
-        : createRecipe({
-            title: title.trim(),
-            ingredients: ingredientsToSave,
-            directions: cleanSteps,
-            dietary_restrictions: [...labels],
-            estimated_servings: servingsNum,
-            // Carry over the original photo unless the user cleared it or picked a
-            // replacement (a picked file is uploaded separately right after creation).
-            ...(imageCleared || imageFile ? {} : { image_url: currentRecipe.image_url ?? undefined }),
+        : await createRecipe({
+            ...payload,
+            ...(imageCleared || imageFile ? {} : { image_url: recipe.image_url ?? undefined }),
           })
-    }
-    try {
-      let updated: ApiRecipe
-      try {
-        updated = await saveWith(cleanIngredients)
-      } catch (err) {
-        // The backend maps free-text ingredient lines to its catalog and rejects lines
-        // it can't recognize — rather than blocking the save, drop those specific lines
-        // to a generic "Other" ingredient and retry once instead of losing the whole edit.
-        const failedLines = err instanceof ApiError ? parseUnmappedIngredientLines(err.message) : null
-        if (!failedLines) throw err
-        const failedSet = new Set(failedLines.map(l => l.toLowerCase()))
-        const finalIngredients = cleanIngredients.map(line => (failedSet.has(line.toLowerCase()) ? 'Other' : line))
-        updated = await saveWith(finalIngredients)
-        setIngredients(finalIngredients)
-      }
-      // Cooking time has no server equivalent — cache it locally. Calories are
-      // seeded from the same rough estimate used before nutrition existed;
-      // getOrEstimateMeta() prefers the real server-computed value once it's there.
       setRecipeMeta(updated.id, { cookingMinutes: mins, calories: estimateStats(updated).calories })
-
-      let finalId = updated.id
       if (imageFile) {
         try {
           await uploadRecipeImage(updated.id, imageFile)
@@ -189,10 +146,7 @@ export default function EditPersonalRecipePage() {
           setError('Changes saved, but the photo could not be uploaded.')
         }
       }
-      // replace, not push — the edit form shouldn't remain in history, so the
-      // back button on the recipe page returns to wherever the user was before
-      // editing instead of bouncing back into the edit form.
-      router.replace(`/personal/${buildRecipeSlug(finalId, updated.title)}?saved=1`)
+      router.replace(`/personal/${buildRecipeSlug(updated.id, updated.title)}?saved=1`)
     } catch (err) {
       setError(errorMessage(err, 'Unable to save changes.'))
     } finally {
