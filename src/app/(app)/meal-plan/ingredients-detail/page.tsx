@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, ChevronDown, ChevronUp, Store, Trash2, Loader2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
@@ -212,14 +212,6 @@ export default function IngredientsDetailPage() {
   const [checked, setChecked] = useState<Set<string>>(() => loadCheckedFromStorage(date))
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [collapsedAisles, setCollapsedAisles] = useState<Set<string>>(new Set())
-  const pollRef = useRef<number | null>(null)
-
-  function stopPoll() {
-    if (pollRef.current != null) {
-      window.clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }
 
   function applyList(data: ShoppingList) {
     setList(data)
@@ -230,27 +222,13 @@ export default function IngredientsDetailPage() {
     })
   }
 
-  async function pollOnce() {
-    try {
-      const next = await getShoppingList(date, getLang())
-      applyList(next)
-      if (next.status !== 'pending') stopPoll()
-    } catch {
-      stopPoll()
-    }
-  }
-
   async function load() {
-    stopPoll()
     setLoading(true)
     setError('')
     try {
       const data = await getShoppingList(date, getLang())
       applyList(data)
       setLoading(false)
-      if (data.status === 'pending') {
-        pollRef.current = window.setInterval(pollOnce, 3000)
-      }
     } catch (err) {
       setLoading(false)
       setError(errorMessage(err, t.unableToLoadIngredientsDetail))
@@ -259,7 +237,6 @@ export default function IngredientsDetailPage() {
 
   useEffect(() => {
     load()
-    return () => stopPoll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang])
 

@@ -33,6 +33,7 @@ export async function getTodaySuggestions(params?: {
       suggestion_date: params?.suggestionDate,
     },
     signal: params?.signal,
+    timeoutMs: 200_000,
   });
 }
 
@@ -50,6 +51,7 @@ export async function refreshTodaySuggestions(params?: {
     },
     body: { extra_exclude_ids: params?.extraExcludeIds ?? [] },
     signal: params?.signal,
+    timeoutMs: 200_000,
   });
 }
 
@@ -177,10 +179,14 @@ export interface ShoppingListGroup {
 
 export interface ShoppingList {
   plan_date: string;
-  status: "pending" | "ready";
+  status: "pending" | "ready" | "failed";
   groups: ShoppingListGroup[];
+  error_message?: string | null;
 }
 
 export async function getShoppingList(date: string, lang?: string): Promise<ShoppingList> {
-  return apiFetch<ShoppingList>(`/meal-plans/${date}/shopping-list`, { query: { lang } });
+  return apiFetch<ShoppingList>(`/meal-plans/${date}/shopping-list`, {
+    query: { lang },
+    timeoutMs: 200_000,
+  });
 }

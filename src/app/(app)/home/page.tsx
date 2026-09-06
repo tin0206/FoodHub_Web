@@ -438,7 +438,6 @@ export default function HomePage() {
   const [suggestions, setSuggestions] = useState<MealSuggestion | null>(null)
   const [suggestionsLoading, setSuggestionsLoading] = useState(true)
   const [suggestionsError, setSuggestionsError] = useState('')
-  const suggestionPollRef = useRef<number | null>(null)
   const suggestionDateRef = useRef(localIsoDate())
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
   const [addToPlanRecipe, setAddToPlanRecipe] = useState<ApiRecipe | null>(null)
@@ -487,32 +486,7 @@ export default function HomePage() {
     }
   }
 
-  function stopSuggestionPoll() {
-    if (suggestionPollRef.current != null) {
-      window.clearInterval(suggestionPollRef.current)
-      suggestionPollRef.current = null
-    }
-  }
-
-  // Polls every 3s while the AI is still generating today's picks, same cadence
-  // as mobile's Timer.periodic — cancels itself once status leaves "pending".
-  async function pollSuggestionsOnce() {
-    try {
-      const next = await getTodaySuggestions({ lang: getLang(), suggestionDate: suggestionDateRef.current })
-      setSuggestions(next)
-      if (next.status === 'pending') return
-      stopSuggestionPoll()
-      setSuggestionsLoading(false)
-      setSuggestionsError(next.status === 'failed' ? (next.error_message || t.suggestionsFailed) : '')
-    } catch (err) {
-      stopSuggestionPoll()
-      setSuggestionsLoading(false)
-      setSuggestionsError(errorMessage(err, t.suggestionsFailed))
-    }
-  }
-
   async function loadSuggestions(refresh = false) {
-    stopSuggestionPoll()
     if (!hasAccessToken()) {
       setSuggestions(null)
       setSuggestionsLoading(false)
@@ -525,10 +499,6 @@ export default function HomePage() {
         ? await refreshTodaySuggestions({ lang: getLang(), suggestionDate: suggestionDateRef.current })
         : await getTodaySuggestions({ lang: getLang(), suggestionDate: suggestionDateRef.current })
       setSuggestions(data)
-      if (data.status === 'pending') {
-        suggestionPollRef.current = window.setInterval(pollSuggestionsOnce, 3000)
-        return
-      }
       setSuggestionsLoading(false)
       setSuggestionsError(data.status === 'failed' ? (data.error_message || t.suggestionsFailed) : '')
     } catch (err) {
@@ -542,7 +512,6 @@ export default function HomePage() {
     loadTopRecipes()
     loadSuggestions()
     loadMealPlan()
-    return () => stopSuggestionPoll()
     // Re-runs whenever the active language changes (Profile toggle, or a fresh
     // login applying the account's saved language) so recipe content refetches
     // in the right locale instead of staying in whatever it first loaded as.
@@ -690,10 +659,8 @@ export default function HomePage() {
               <RefreshCw size={14} className={suggestionsLoading ? 'animate-spin' : ''} />
             </button>
           </div>
-          {suggestionsLoading && suggestions?.status !== 'pending' ? (
+          {suggestionsLoading ? (
             <EmptyRow icon={<Loader2 size={18} className="animate-spin" color="var(--tm-text-3)" />} text={t.loading} />
-          ) : suggestions?.status === 'pending' ? (
-            <EmptyRow icon={<Loader2 size={18} className="animate-spin" color="var(--tm-text-3)" />} text={t.suggestionsPending} />
           ) : suggestionsError ? (
             <div className="flex items-center gap-2.5 rounded-2xl px-4 py-5" style={{ backgroundColor: 'var(--tm-subtle)' }}>
               <p className="text-xs flex-1" style={{ color: 'var(--tm-text-3)' }}>{suggestionsError}</p>

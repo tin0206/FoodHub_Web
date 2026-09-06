@@ -1,6 +1,5 @@
 import { apiFetch, apiUpload, ApiError } from "@/lib/api-client";
 import type {
-  AiJobAccepted,
   AiRequestDetail,
   ChatHistoryMessage,
   ChatOption,
@@ -8,14 +7,8 @@ import type {
   RagRecipe,
 } from "@/lib/api/types";
 
-const POLL_INTERVAL_MS = 1000;
 const CHAT_TIMEOUT_MS = 200_000;
-
-type AuthOpts = { token?: string };
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const VISION_TIMEOUT_MS = 90_000;
 
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -58,14 +51,29 @@ function parseOptions(value: unknown): ChatOption[] {
     }));
 }
 
+function requireCompleted(detail: AiRequestDetail): AiRequestDetail {
+  if (detail.status === "failed") {
+    throw new ApiError(detail.error_message?.trim() || "AI job failed.", 502);
+  }
+  if (detail.status !== "completed" || !detail.output_payload) {
+    throw new ApiError("AI job completed without a result payload.", 500);
+  }
+  return detail;
+}
+
 function parseChatPayload(
   detail: AiRequestDetail,
   fallbackSessionId?: string | null,
 ): ChatResponse {
   const payload = { ...(detail.output_payload ?? {}) };
   if (!payload.task_id) payload.task_id = detail.task_id;
-  if (!payload.session_id && fallbackSessionId) {
-    payload.session_id = fallbackSessionId;
+  const sessionId =
+    (payload.session_id != null ? String(payload.session_id) : null) ??
+    detail.session_id ??
+    fallbackSessionId ??
+    null;
+  if (!payload.session_id && sessionId) {
+    payload.session_id = sessionId;
   }
   if (!payload.phase) payload.phase = "gather";
 
@@ -73,10 +81,7 @@ function parseChatPayload(
     task_id: String(payload.task_id ?? detail.task_id),
     reply: String(payload.reply ?? ""),
     phase: String(payload.phase ?? "gather"),
-    session_id:
-      payload.session_id != null
-        ? String(payload.session_id)
-        : fallbackSessionId ?? null,
+    session_id: sessionId,
     recipes: parseRecipes(payload.recipes),
     options: parseOptions(payload.options),
     known_info:
@@ -86,42 +91,6 @@ function parseChatPayload(
   };
 }
 
-async function getRequest(
-  taskId: string,
-  auth?: AuthOpts,
-): Promise<AiRequestDetail> {
-  return apiFetch<AiRequestDetail>(`/ai/requests/${taskId}`, {
-    token: auth?.token,
-  });
-}
-
-async function waitForResult(
-  taskId: string,
-  auth?: AuthOpts,
-): Promise<AiRequestDetail> {
-  const deadline = Date.now() + CHAT_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const detail = await getRequest(taskId, auth);
-    if (detail.status === "completed") {
-      if (!detail.output_payload) {
-        throw new ApiError("AI job completed without a result payload.", 500);
-      }
-      return detail;
-    }
-    if (detail.status === "failed") {
-      throw new ApiError(
-        detail.error_message?.trim() || "AI job failed.",
-        500,
-      );
-    }
-    await sleep(POLL_INTERVAL_MS);
-  }
-  throw new ApiError(
-    `AI job timed out after ${CHAT_TIMEOUT_MS / 1000}s. Please try again.`,
-    408,
-  );
-}
-
 export async function aiWelcome(input?: {
   sessionId?: string;
   dietaryRestrictions?: string[];
@@ -129,22 +98,20 @@ export async function aiWelcome(input?: {
   ingredients?: string[];
   token?: string;
 }): Promise<ChatResponse> {
-  const accepted = await apiFetch<AiJobAccepted>("/ai/chat/welcome", {
-    method: "POST",
-    token: input?.token,
-    body: {
-      ...(input?.sessionId ? { session_id: input.sessionId } : {}),
-      dietary_restrictions: input?.dietaryRestrictions ?? [],
-      ...(input?.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
-      ingredients: input?.ingredients ?? [],
-    },
-  });
-
-  const detail = await waitForResult(accepted.task_id, { token: input?.token });
-  return parseChatPayload(
-    detail,
-    accepted.session_id ?? input?.sessionId ?? null,
+  const detail = requireCompleted(
+    await apiFetch<AiRequestDetail>("/ai/chat/welcome", {
+      method: "POST",
+      token: input?.token,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      body: {
+        ...(input?.sessionId ? { session_id: input.sessionId } : {}),
+        dietary_restrictions: input?.dietaryRestrictions ?? [],
+        ...(input?.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
+        ingredients: input?.ingredients ?? [],
+      },
+    }),
   );
+  return parseChatPayload(detail, input?.sessionId ?? null);
 }
 
 export async function aiChat(input: {
@@ -156,27 +123,27 @@ export async function aiChat(input: {
   ingredients?: string[];
   token?: string;
 }): Promise<ChatResponse> {
-  const accepted = await apiFetch<AiJobAccepted>("/ai/chat", {
-    method: "POST",
-    token: input.token,
-    body: {
-      message: input.message,
-      session_id: input.sessionId,
-      conversation_history: input.conversationHistory ?? [],
-      dietary_restrictions: input.dietaryRestrictions ?? [],
-      ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
-      ingredients: input.ingredients ?? [],
-    },
-  });
-
-  const detail = await waitForResult(accepted.task_id, { token: input.token });
-  return parseChatPayload(detail, accepted.session_id ?? input.sessionId);
+  const detail = requireCompleted(
+    await apiFetch<AiRequestDetail>("/ai/chat", {
+      method: "POST",
+      token: input.token,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      body: {
+        message: input.message,
+        session_id: input.sessionId,
+        conversation_history: input.conversationHistory ?? [],
+        dietary_restrictions: input.dietaryRestrictions ?? [],
+        ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
+        ingredients: input.ingredients ?? [],
+      },
+    }),
+  );
+  return parseChatPayload(detail, input.sessionId);
 }
 
 /**
  * POST /ai/chat with `selected_option_index` (mirrors mobile's `AiService.selectOption()`).
- * NOT used by the recs UI — the backend errors on `message: null`, so the screen instead
- * resends the option's label through `aiChat()`, same as Rerun. Kept for API parity.
+ * Sends a placeholder message because the API requires a non-empty `message`.
  */
 export async function aiSelectOption(input: {
   sessionId: string;
@@ -186,21 +153,22 @@ export async function aiSelectOption(input: {
   primaryGoal?: string;
   token?: string;
 }): Promise<ChatResponse> {
-  const accepted = await apiFetch<AiJobAccepted>("/ai/chat", {
-    method: "POST",
-    token: input.token,
-    body: {
-      session_id: input.sessionId,
-      selected_option_index: input.selectedOptionIndex,
-      message: null,
-      conversation_history: input.conversationHistory ?? [],
-      dietary_restrictions: input.dietaryRestrictions ?? [],
-      ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
-    },
-  });
-
-  const detail = await waitForResult(accepted.task_id, { token: input.token });
-  return parseChatPayload(detail, accepted.session_id ?? input.sessionId);
+  const detail = requireCompleted(
+    await apiFetch<AiRequestDetail>("/ai/chat", {
+      method: "POST",
+      token: input.token,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      body: {
+        session_id: input.sessionId,
+        selected_option_index: input.selectedOptionIndex,
+        message: ".",
+        conversation_history: input.conversationHistory ?? [],
+        dietary_restrictions: input.dietaryRestrictions ?? [],
+        ...(input.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
+      },
+    }),
+  );
+  return parseChatPayload(detail, input.sessionId);
 }
 
 export interface DishMatch {
@@ -218,8 +186,11 @@ export interface DishRecognitionResult {
 }
 
 export async function aiDetectDish(file: File): Promise<DishRecognitionResult> {
-  const accepted = await apiUpload<AiJobAccepted>("/ai/dish-recognition", file);
-  const detail = await waitForResult(accepted.task_id);
+  const detail = requireCompleted(
+    await apiUpload<AiRequestDetail>("/ai/dish-recognition", file, {
+      timeoutMs: VISION_TIMEOUT_MS,
+    }),
+  );
   const payload = (detail.output_payload ?? {}) as Record<string, unknown>;
   const results = Array.isArray(payload.results)
     ? (payload.results as Record<string, unknown>[]).map((r) => ({
@@ -248,14 +219,19 @@ export async function aiDetectIngredients(
   file: File,
   language: "en" | "vi" = "en",
 ): Promise<IngredientsDetectionResult> {
-  const accepted = await apiUpload<AiJobAccepted>("/ai/ingredients/detect", file, {
-    fields: { language },
-  });
-  const detail = await waitForResult(accepted.task_id);
+  const detail = requireCompleted(
+    await apiUpload<AiRequestDetail>("/ai/ingredients/detect", file, {
+      fields: { language },
+      timeoutMs: VISION_TIMEOUT_MS,
+    }),
+  );
   const payload = (detail.output_payload ?? {}) as Record<string, unknown>;
   return {
     ingredients: asStringList(payload.ingredients),
     imageUrl: typeof payload.image_url === "string" ? payload.image_url : "",
-    annotatedImageUrl: typeof payload.annotated_image_url === "string" ? payload.annotated_image_url : "",
+    annotatedImageUrl:
+      typeof payload.annotated_image_url === "string"
+        ? payload.annotated_image_url
+        : "",
   };
 }

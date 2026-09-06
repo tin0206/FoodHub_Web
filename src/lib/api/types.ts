@@ -161,14 +161,6 @@ export interface ChatHistoryMessage {
   content: string;
 }
 
-export interface AiJobAccepted {
-  task_id: string;
-  status: string;
-  request_type: string;
-  image_url?: string | null;
-  session_id?: string | null;
-}
-
 export interface AiRequestDetail {
   task_id: string;
   request_type: string;
@@ -177,6 +169,7 @@ export interface AiRequestDetail {
   output_payload?: Record<string, unknown> | null;
   error_message?: string | null;
   duration_ms?: number | null;
+  session_id?: string | null;
 }
 
 export interface RagRecipe {

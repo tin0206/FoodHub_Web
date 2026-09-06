@@ -115,13 +115,15 @@ export type ApiFetchOptions = {
   query?: Record<string, string | number | boolean | null | undefined>;
   /** Aborts the request — pass an AbortController's signal to cancel stale in-flight requests. */
   signal?: AbortSignal;
+  /** Abort the request after this many milliseconds (AI calls can take minutes). */
+  timeoutMs?: number;
 };
 
 export async function apiFetch<T = unknown>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const { method = "GET", body, auth = true, token, query, signal } = options;
+  const { method = "GET", body, auth = true, token, query, signal, timeoutMs } = options;
   const base = getApiBaseUrl();
   const url = new URL(
     `${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`,
@@ -150,11 +152,18 @@ export async function apiFetch<T = unknown>(
     }
   }
 
+  const timeoutSignal =
+    timeoutMs != null && timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined;
+  const combinedSignal =
+    signal && timeoutSignal
+      ? AbortSignal.any([signal, timeoutSignal])
+      : signal ?? timeoutSignal;
+
   const res = await fetch(url.toString(), {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal,
+    signal: combinedSignal,
   });
 
   if (res.status === 204) {
@@ -182,7 +191,11 @@ export async function apiFetch<T = unknown>(
 export async function apiUpload<T = unknown>(
   path: string,
   file: File,
-  options?: { fieldName?: string; fields?: Record<string, string> },
+  options?: {
+    fieldName?: string;
+    fields?: Record<string, string>;
+    timeoutMs?: number;
+  },
 ): Promise<T> {
   const base = getApiBaseUrl();
   const url = `${base}/api/v1${path.startsWith("/") ? path : `/${path}`}`;
@@ -197,7 +210,15 @@ export async function apiUpload<T = unknown>(
   const token = getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(url, { method: "POST", headers, body: form });
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: form,
+    signal:
+      options?.timeoutMs != null && options.timeoutMs > 0
+        ? AbortSignal.timeout(options.timeoutMs)
+        : undefined,
+  });
 
   const text = await res.text();
   let data: unknown = null;
