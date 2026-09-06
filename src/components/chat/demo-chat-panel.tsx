@@ -549,7 +549,7 @@ export function DemoChatPanel({
                 label={
                   isBootstrapping
                     ? "Starting companion session…"
-                    : "Queued — waiting for AI…"
+                    : "Thinking…"
                 }
               />
             )}

@@ -21,7 +21,11 @@ import {
   aiDetectIngredients,
 } from "@/lib/api/ai";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
-import type { ChatHistoryMessage, ChatOption, RagRecipe } from "@/lib/api/types";
+import type {
+  ChatHistoryMessage,
+  ChatOption,
+  RagRecipe,
+} from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
@@ -328,7 +332,8 @@ export default function RecsPage() {
           primaryGoal: u.primary_goal ?? "",
         };
         setProfile(p);
-        if (!persisted) void bootstrapWelcome(p.dietaryRestrictions, p.primaryGoal);
+        if (!persisted)
+          void bootstrapWelcome(p.dietaryRestrictions, p.primaryGoal);
       })
       .catch(() => {
         if (cancelled) return;
@@ -622,7 +627,8 @@ export default function RecsPage() {
       >
         {messages.map((m, index) => {
           const isUser = m.role === "user";
-          const isLatestAiMessage = !busy && !isUser && index === lastAssistantIndex;
+          const isLatestAiMessage =
+            !busy && !isUser && index === lastAssistantIndex;
           const options = m.options ?? [];
           const showOptions = isLatestAiMessage && options.length > 0;
           const showRerun =
@@ -664,7 +670,10 @@ export default function RecsPage() {
                         {m.text}
                       </p>
                     ) : showOptions ? (
-                      <p className="text-[13px] leading-relaxed" style={{ color: 'var(--tm-text)' }}>
+                      <p
+                        className="text-[13px] leading-relaxed"
+                        style={{ color: "var(--tm-text)" }}
+                      >
                         {t.aiHasOptionsIntro(options.length)}
                       </p>
                     ) : (
@@ -735,7 +744,7 @@ export default function RecsPage() {
         })}
         {busy && (
           <TypingIndicator
-            label={isBootstrapping ? t.startingSession : t.waitingForAi}
+            label={isBootstrapping ? t.startingSession : t.aiThinking}
           />
         )}
       </div>
