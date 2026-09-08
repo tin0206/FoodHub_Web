@@ -115,7 +115,6 @@ export function DemoChatPanel({
           id: `a-${Date.now()}`,
           role: "assistant",
           text: reply,
-          recipes: response.recipes ?? [],
           options: response.options ?? [],
         },
       ]);
@@ -195,7 +194,6 @@ export function DemoChatPanel({
           id: `a-${Date.now()}`,
           role: "assistant",
           text: reply,
-          recipes: response.recipes ?? [],
           options: response.options ?? [],
         },
       ]);

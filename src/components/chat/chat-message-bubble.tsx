@@ -2,14 +2,13 @@
 
 import { memo } from "react";
 import { Bot, ChevronRight } from "lucide-react";
-import type { ChatOption, RagRecipe } from "@/lib/api/types";
+import type { ChatOption } from "@/lib/api/types";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 
 export interface ChatUiMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  recipes?: RagRecipe[];
   options?: ChatOption[];
 }
 
@@ -82,11 +81,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 {optionsIntro(options.length)}
               </p>
             ) : (
-              <MarkdownReply
-                text={message.text}
-                recipes={message.recipes}
-                authToken={authToken}
-              />
+              <MarkdownReply text={message.text} authToken={authToken} />
             )}
           </div>
           {showOptions && (

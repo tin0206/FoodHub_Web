@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
 import { useStrings } from "@/lib/use-strings";
-import type { ApiRecipe, RagRecipe } from "@/lib/api/types";
+import type { ApiRecipe } from "@/lib/api/types";
 import { NutritionBlock } from "@/components/recipe/recipe-view-content";
 
 export type RecipeLinkRef = {
@@ -46,39 +46,6 @@ export function extractRecipeMarkdownLinks(markdown: string): {
     },
   );
   return { markdown: cleaned, links };
-}
-
-export function mergeRecipeCtas(input: {
-  fromMarkdown: RecipeLinkRef[];
-  recipes?: RagRecipe[];
-}): RecipeLinkRef[] {
-  const out: RecipeLinkRef[] = [];
-  const seenIds = new Set<string>();
-  const seenTitles = new Set<string>();
-
-  function add(title: string, id?: string | null) {
-    const t = title.trim();
-    if (!t) return;
-    const keyId = (id ?? "").trim();
-    if (keyId) {
-      if (seenIds.has(keyId)) return;
-      seenIds.add(keyId);
-      out.push({ title: t, recipeId: keyId });
-      seenTitles.add(t.toLowerCase());
-      return;
-    }
-    if (seenTitles.has(t.toLowerCase())) return;
-    seenTitles.add(t.toLowerCase());
-    out.push({ title: t, recipeId: "" });
-  }
-
-  for (const link of input.fromMarkdown) {
-    add(link.title, link.recipeId);
-  }
-  for (const r of input.recipes ?? []) {
-    add(r.title, r.recipe_id);
-  }
-  return out;
 }
 
 function RecipePreviewModal({
@@ -267,29 +234,24 @@ function RecipePreviewModal({
   );
 }
 
-const EMPTY_RECIPES: RagRecipe[] = [];
-
 export const MarkdownReply = memo(function MarkdownReply({
   text,
-  recipes = EMPTY_RECIPES,
   authToken,
 }: {
   text: string;
-  recipes?: RagRecipe[];
   /** Optional Bearer for opening recipe detail in demo guest session */
   authToken?: string;
 }) {
   const t = useStrings();
+  // Only show the CTA list when this specific reply actually contains recipe
+  // links (a recommendation list). A single-recipe detail reply (e.g. after
+  // "let's go with 2") has no links in its text even though `recipes` may
+  // still carry the same top-k context from the prior turn — don't fall back
+  // to it, or the detail reply would wrongly show the list again underneath.
   const { cleaned, ctas } = useMemo(() => {
     const extracted = extractRecipeMarkdownLinks(text);
-    return {
-      cleaned: extracted.markdown,
-      ctas: mergeRecipeCtas({
-        fromMarkdown: extracted.links,
-        recipes,
-      }),
-    };
-  }, [text, recipes]);
+    return { cleaned: extracted.markdown, ctas: extracted.links };
+  }, [text]);
 
   // The chat API doesn't send an image for these recipe refs — fetch each one's
   // just to show a real photo instead of the generic book icon in the list.

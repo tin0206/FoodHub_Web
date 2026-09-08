@@ -346,7 +346,6 @@ export default function RecsPage() {
           id: `a-${Date.now()}`,
           role: "assistant",
           text: reply,
-          recipes: response.recipes,
           options: response.options,
         },
       ]);
@@ -464,7 +463,6 @@ export default function RecsPage() {
           id: `a-${Date.now()}`,
           role: "assistant",
           text: reply,
-          recipes: response.recipes,
           options: response.options,
         },
       ]);
