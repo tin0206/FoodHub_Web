@@ -508,7 +508,7 @@ export default function RecsPage() {
     setError("");
     try {
       if (kind === "dish") {
-        const result = await aiDetectDish(file);
+        const result = await aiDetectDish(file, lang);
         const names = result.results.length
           ? result.results
               .slice(0, 5)

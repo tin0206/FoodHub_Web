@@ -180,9 +180,13 @@ export interface DishRecognitionResult {
   imageUrl: string;
 }
 
-export async function aiDetectDish(file: File): Promise<DishRecognitionResult> {
+export async function aiDetectDish(
+  file: File,
+  language: "en" | "vi" = "en",
+): Promise<DishRecognitionResult> {
   const detail = requireCompleted(
     await apiUpload<AiRequestDetail>("/ai/dish-recognition", file, {
+      fields: { language },
       timeoutMs: VISION_TIMEOUT_MS,
     }),
   );
