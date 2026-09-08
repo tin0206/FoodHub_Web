@@ -1,6 +1,7 @@
 import { apiFetch, apiUpload, ApiError } from "@/lib/api-client";
 import type {
   AiRequestDetail,
+  ApiRecipe,
   ChatOption,
   ChatResponse,
   RagRecipe,
@@ -170,6 +171,8 @@ export interface DishMatch {
   rank: number;
   dishName: string;
   confidence: number;
+  /** Full recipe for this match (title/image/ingredients/nutrition/…), when the backend resolved one. */
+  recipe: ApiRecipe | null;
 }
 
 export interface DishRecognitionResult {
@@ -196,6 +199,7 @@ export async function aiDetectDish(
         rank: Number(r.rank ?? 0),
         dishName: String(r.dish_name ?? ""),
         confidence: Number(r.confidence ?? 0),
+        recipe: r.recipe && typeof r.recipe === "object" ? (r.recipe as ApiRecipe) : null,
       }))
     : [];
   return {

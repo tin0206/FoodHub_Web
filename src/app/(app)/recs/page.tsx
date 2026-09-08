@@ -16,10 +16,12 @@ import {
   aiChat,
   aiDetectDish,
   aiDetectIngredients,
+  type DishMatch,
 } from "@/lib/api/ai";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
 import type { ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
+import { RecipeImageHeader } from "@/components/recipe/recipe-image-header";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import {
   ChatMessageBubble,
@@ -205,6 +207,71 @@ function DetectionConfirmDialog({
   );
 }
 
+function DishCardPicker({
+  results,
+  onPick,
+  onCancel,
+}: {
+  results: DishMatch[];
+  onPick: (match: DishMatch) => void;
+  onCancel: () => void;
+}) {
+  const t = useStrings();
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl p-4 max-h-[85vh] overflow-y-auto"
+        style={{ backgroundColor: "var(--tm-surface)" }}
+      >
+        <p className="text-sm font-bold mb-3" style={{ color: "var(--tm-text)" }}>
+          {t.dishRecognizedTitle}
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+          {results.map((match) => (
+            <button
+              key={match.rank}
+              type="button"
+              onClick={() => onPick(match)}
+              className="rounded-xl overflow-hidden border text-left transition-opacity hover:opacity-90"
+              style={{ borderColor: "var(--tm-border-i)", backgroundColor: "var(--tm-subtle)" }}
+            >
+              <RecipeImageHeader
+                imageUrl={match.recipe?.image_url}
+                cardId={match.rank}
+                labels={match.recipe?.dietary_restrictions ?? []}
+                height={90}
+              />
+              <p
+                className="text-[11.5px] font-semibold px-2 py-1.5 line-clamp-2"
+                style={{ color: "var(--tm-text)" }}
+              >
+                {match.recipe?.title || match.dishName}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full py-2 rounded-lg text-xs font-semibold"
+          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
+        >
+          {t.cancel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function RecsPage() {
   const t = useStrings();
   const lang = useLang();
@@ -227,6 +294,7 @@ export default function RecsPage() {
   const [editingField, setEditingField] = useState<
     "dish" | "ingredients" | null
   >(null);
+  const [dishPicker, setDishPicker] = useState<DishMatch[] | null>(null);
   const [pendingDetection, setPendingDetection] = useState<{
     kind: "dish" | "ingredients";
     text: string;
@@ -509,20 +577,11 @@ export default function RecsPage() {
     try {
       if (kind === "dish") {
         const result = await aiDetectDish(file, lang);
-        const names = result.results.length
-          ? result.results
-              .slice(0, 5)
-              .map((r) => r.dishName)
-              .filter(Boolean)
-          : result.dishName
-            ? [result.dishName]
-            : result.suggestedRecipes.slice(0, 5);
-        if (names.length) {
-          setPendingDetection({
-            kind: "dish",
-            text: `${t.dishesDetectedPrefix} ${names[0]}`,
-            inputImageUrl: result.imageUrl || undefined,
-          });
+        const candidates = result.results.slice(0, 5);
+        if (candidates.length) {
+          setDishPicker(candidates);
+        } else if (result.dishName) {
+          setComposeDishText(`${t.dishesDetectedPrefix} ${result.dishName}`);
         } else {
           setError(t.couldNotRecognizeDish);
         }
@@ -553,6 +612,11 @@ export default function RecsPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (file) void handleDetect(file, kind);
+  }
+
+  function pickDish(match: DishMatch) {
+    setComposeDishText(`${t.dishesDetectedPrefix} ${match.recipe?.title || match.dishName}`);
+    setDishPicker(null);
   }
 
   const dishText = composeDishText?.trim();
@@ -744,6 +808,14 @@ export default function RecsPage() {
             setPendingDetection(null);
           }}
           onCancel={() => setPendingDetection(null)}
+        />
+      )}
+
+      {dishPicker && (
+        <DishCardPicker
+          results={dishPicker}
+          onPick={pickDish}
+          onCancel={() => setDishPicker(null)}
         />
       )}
 
