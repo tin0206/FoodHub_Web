@@ -5,23 +5,83 @@ const FP_SEED_KEY = "fh_demo_fp_seed";
 const DEMO_TOKEN_KEY = "fh_demo_access_token";
 const DEMO_FP_KEY = "fh_demo_fingerprint";
 
+/** In-memory fallback when Safari blocks localStorage (ITP / private mode). */
+const memoryStore = new Map<string, string>();
+
+function storageGet(key: string): string | null {
+  try {
+    const value = localStorage.getItem(key);
+    if (value != null) return value;
+  } catch {
+    // Safari iOS private browsing / ITP can throw on localStorage
+  }
+  return memoryStore.get(key) ?? null;
+}
+
+function storageSet(key: string, value: string): void {
+  memoryStore.set(key, value);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Keep the in-memory copy so this page session still has credentials
+  }
+}
+
 function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
+/** Deterministic hex when Web Crypto is missing (HTTP / older iOS Safari). */
+function fallbackHash(raw: string): string {
+  let h1 = 2166136261;
+  let h2 = 16777619;
+  let h3 = 0x811c9dc5;
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw.charCodeAt(i);
+    h1 ^= c;
+    h1 = Math.imul(h1, 16777619);
+    h2 = Math.imul(h2 ^ c, 2246822519);
+  }
+  for (let i = raw.length - 1; i >= 0; i--) {
+    h3 ^= raw.charCodeAt(i);
+    h3 = Math.imul(h3, 16777619);
+  }
+  return (
+    (h1 >>> 0).toString(16).padStart(8, "0") +
+    (h2 >>> 0).toString(16).padStart(8, "0") +
+    (h3 >>> 0).toString(16).padStart(8, "0")
+  ).slice(0, 24);
+}
+
+async function hashFingerprint(raw: string): Promise<string> {
+  try {
+    const subtle = globalThis.crypto?.subtle;
+    if (subtle?.digest) {
+      const digest = await subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(raw),
+      );
+      return toHex(digest).slice(0, 24);
+    }
+  } catch {
+    // Insecure context (http://LAN-IP on iPhone) has no crypto.subtle
+  }
+  return fallbackHash(raw);
+}
+
 /** Stable-enough browser fingerprint (seed + UA/locale/screen/timezone). */
 export async function getBrowserFingerprint(): Promise<string> {
   if (typeof window === "undefined") return "server";
 
-  let seed = localStorage.getItem(FP_SEED_KEY);
+  let seed = storageGet(FP_SEED_KEY);
   if (!seed) {
     seed =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `s-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem(FP_SEED_KEY, seed);
+    storageSet(FP_SEED_KEY, seed);
   }
 
   const raw = [
@@ -34,11 +94,7 @@ export async function getBrowserFingerprint(): Promise<string> {
     Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
   ].join("|");
 
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(raw),
-  );
-  return toHex(digest).slice(0, 24);
+  return hashFingerprint(raw);
 }
 
 function demoCredentials(fingerprint: string) {
@@ -52,11 +108,13 @@ function demoCredentials(fingerprint: string) {
 
 export function getDemoAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(DEMO_TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  const token = storageGet(DEMO_TOKEN_KEY);
+  return token && token.length > 0 ? token : null;
+}
+
+function persistDemoSession(token: string, fingerprint: string) {
+  storageSet(DEMO_TOKEN_KEY, token);
+  storageSet(DEMO_FP_KEY, fingerprint);
 }
 
 /**
@@ -69,7 +127,7 @@ export async function ensureDemoSession(): Promise<{
 }> {
   const fingerprint = await getBrowserFingerprint();
   const cached = getDemoAccessToken();
-  const cachedFp = localStorage.getItem(DEMO_FP_KEY);
+  const cachedFp = storageGet(DEMO_FP_KEY);
 
   if (cached && cachedFp === fingerprint) {
     return { token: cached, fingerprint };
@@ -79,8 +137,7 @@ export async function ensureDemoSession(): Promise<{
 
   try {
     const res = await apiLogin({ email, password, remember_me: true });
-    localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
-    localStorage.setItem(DEMO_FP_KEY, fingerprint);
+    persistDemoSession(res.access_token, fingerprint);
     return { token: res.access_token, fingerprint };
   } catch {
     // New browser / first visit — create guest account
@@ -92,8 +149,7 @@ export async function ensureDemoSession(): Promise<{
       throw new Error("Demo signup requires a verification code.");
     }
     const res = await apiVerifySignupOtp({ email, otp: pending.otp });
-    localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
-    localStorage.setItem(DEMO_FP_KEY, fingerprint);
+    persistDemoSession(res.access_token, fingerprint);
     return { token: res.access_token, fingerprint };
   } catch (signupErr) {
     if (
@@ -102,8 +158,7 @@ export async function ensureDemoSession(): Promise<{
         signupErr.message.toLowerCase().includes("already"))
     ) {
       const res = await apiLogin({ email, password, remember_me: true });
-      localStorage.setItem(DEMO_TOKEN_KEY, res.access_token);
-      localStorage.setItem(DEMO_FP_KEY, fingerprint);
+      persistDemoSession(res.access_token, fingerprint);
       return { token: res.access_token, fingerprint };
     }
     throw signupErr;

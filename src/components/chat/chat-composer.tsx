@@ -19,8 +19,7 @@ export function ChatComposer({
   const [value, setValue] = useState("");
   const canSend = !disabled && (value.trim().length > 0 || extraCanSend);
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  function handleSend() {
     if (disabled) return;
     const text = value.trim();
     if (!text && !extraCanSend) return;
@@ -28,9 +27,15 @@ export function ChatComposer({
     onSend(text);
   }
 
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    handleSend();
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
+      autoComplete="off"
       className="flex items-center gap-2 h-11 rounded-full border px-3"
       style={{
         borderColor: "var(--tm-border-i, #D1D5DB)",
@@ -39,15 +44,23 @@ export function ChatComposer({
     >
       <input
         ref={inputRef}
+        name="fh-chat-message"
+        type="text"
+        inputMode="text"
+        enterKeyHint="send"
+        autoComplete="off"
+        autoCorrect="on"
+        autoCapitalize="sentences"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={disabled}
         placeholder={placeholder}
-        className="flex-1 min-w-0 bg-transparent text-sm outline-none"
-        style={{ color: "var(--tm-text, #0F172A)" }}
+        className="flex-1 min-w-0 bg-transparent outline-none"
+        style={{ color: "var(--tm-text, #0F172A)", fontSize: 16 }}
       />
       <button
-        type="submit"
+        type="button"
+        onClick={handleSend}
         disabled={!canSend}
         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40"
         style={{ backgroundColor: "#059669" }}
