@@ -59,7 +59,6 @@ export function DemoChatPanel({
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
-  const [lastSent, setLastSent] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [shouldStart, setShouldStart] = useState(!embedded);
 
@@ -102,7 +101,6 @@ export function DemoChatPanel({
     setError("");
     setMessages([]);
     setHistory([]);
-    setLastSent(null);
     setSessionId(sid);
 
     try {
@@ -170,38 +168,17 @@ export function DemoChatPanel({
     };
   }, [shouldStart, bootstrapWelcome]);
 
-  async function sendMessage(raw: string, opts?: { rerun?: boolean }) {
+  async function sendMessage(raw: string) {
     const text = raw.trim();
     const token = tokenRef.current;
     if (!text || busy || !sessionId || !token) return;
 
     setError("");
     setIsSending(true);
-
-    let nextHistory = history;
-    if (!opts?.rerun) {
-      setMessages((prev) => [
-        ...prev,
-        { id: `u-${Date.now()}`, role: "user", text },
-      ]);
-      setLastSent(text);
-    } else {
-      setMessages((prev) => {
-        const copy = [...prev];
-        if (copy.length && copy[copy.length - 1].role === "assistant") {
-          copy.pop();
-        }
-        return copy;
-      });
-      nextHistory = [...history];
-      if (
-        nextHistory.length &&
-        nextHistory[nextHistory.length - 1].role === "assistant"
-      ) {
-        nextHistory = nextHistory.slice(0, -1);
-      }
-      setHistory(nextHistory);
-    }
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: "user", text },
+    ]);
 
     try {
       const response = await aiChat({
@@ -222,12 +199,11 @@ export function DemoChatPanel({
           options: response.options ?? [],
         },
       ]);
-      setHistory([
-        ...nextHistory,
+      setHistory((prev) => [
+        ...prev,
         { role: "user", content: text },
         { role: "assistant", content: reply },
       ]);
-      setLastSent(text);
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -376,12 +352,9 @@ export function DemoChatPanel({
                   message.role === "assistant" &&
                   index === lastAi
                 }
-                canRerun={!!lastSent}
                 optionsIntro={demoOptionsIntro}
-                rerunLabel="Rerun"
                 authToken={tokenRef.current ?? undefined}
                 onSelectOption={(opt) => void handleSelectOption(opt)}
-                onRerun={() => void sendMessage(lastSent!, { rerun: true })}
               />
             ))}
             {busy && (

@@ -171,16 +171,13 @@ export default function EditPersonalRecipePage() {
   }
 
   const theme = recipeCardTheme(recipe.id, recipe.dietary_restrictions)
-  const backHref = isOwner
-    ? `/personal/${buildRecipeSlug(recipe.id, recipe.title)}`
-    : `/search/${buildRecipeSlug(recipe.id, recipe.title)}`
 
   return (
     <div className="h-full p-3">
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-2 px-1 pb-3 shrink-0">
           <button
-            onClick={() => router.push(backHref)}
+            onClick={() => router.back()}
             className="p-1"
             style={{ color: 'var(--tm-text-2)' }}
           >
@@ -263,7 +260,7 @@ export default function EditPersonalRecipePage() {
         <div className="border-t px-1 pt-3 shrink-0" style={{ borderColor: 'var(--tm-border)' }}>
           <div className="flex gap-2.5">
             <button
-              onClick={() => router.push(backHref)}
+              onClick={() => router.back()}
               className="flex-1 py-2.5 border rounded-full text-sm font-semibold"
               style={{ borderColor: dark ? '#3A3A3A' : 'var(--tm-border-i)', color: 'var(--tm-text-2)', backgroundColor: dark ? '#1E1E1E' : '#F3F4F6' }}
             >

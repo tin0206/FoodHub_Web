@@ -25,26 +25,19 @@ export function lastAssistantIndex(messages: ChatUiMessage[]) {
 export const ChatMessageBubble = memo(function ChatMessageBubble({
   message,
   isLatestAi,
-  canRerun,
   optionsIntro,
-  rerunLabel,
   authToken,
   onSelectOption,
-  onRerun,
 }: {
   message: ChatUiMessage;
   isLatestAi: boolean;
-  canRerun: boolean;
   optionsIntro: (count: number) => string;
-  rerunLabel: string;
   authToken?: string;
   onSelectOption: (option: ChatOption) => void;
-  onRerun: () => void;
 }) {
   const isUser = message.role === "user";
   const options = message.options ?? EMPTY_OPTIONS;
   const showOptions = isLatestAi && options.length > 0;
-  const showRerun = isLatestAi && canRerun && options.length === 0;
 
   return (
     <div className={`px-3 flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -139,19 +132,6 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 </button>
               ))}
             </div>
-          )}
-          {showRerun && (
-            <button
-              type="button"
-              onClick={onRerun}
-              className="mt-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg"
-              style={{
-                color: "#059669",
-                backgroundColor: "rgba(5,150,105,0.12)",
-              }}
-            >
-              {rerunLabel}
-            </button>
           )}
         </div>
       </div>

@@ -16,8 +16,6 @@ export interface PersistedChatSession {
   history: ChatHistoryMessage[];
   composeDishText: string | null;
   composeIngredientsText: string | null;
-  lastSentMessage: string | null;
-  lastSentIngredients: string[];
 }
 
 /** Survives a page reload but clears when the tab/browser closes — matches how far a chat should follow the user. */

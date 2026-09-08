@@ -6,6 +6,7 @@ import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
 import { useStrings } from "@/lib/use-strings";
 import type { ApiRecipe, RagRecipe } from "@/lib/api/types";
+import { NutritionBlock } from "@/components/recipe/recipe-view-content";
 
 export type RecipeLinkRef = {
   title: string;
@@ -208,6 +209,9 @@ function RecipePreviewModal({
                 ))}
               </div>
             )}
+            {recipe.nutrition && (
+              <NutritionBlock nutrition={recipe.nutrition} accent="#059669" t={t} />
+            )}
             <div>
               <p
                 className="text-xs font-bold mb-1.5"
@@ -287,6 +291,40 @@ export const MarkdownReply = memo(function MarkdownReply({
     };
   }, [text, recipes]);
 
+  // The chat API doesn't send an image for these recipe refs — fetch each one's
+  // just to show a real photo instead of the generic book icon in the list.
+  const [recipeImages, setRecipeImages] = useState<Record<string, string | null>>({});
+  useEffect(() => {
+    const idsToFetch = ctas
+      .map((c) => c.recipeId)
+      .filter((id) => id && !(id in recipeImages));
+    if (idsToFetch.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      idsToFetch.map(async (id) => {
+        const numericId = Number(id);
+        if (!Number.isFinite(numericId)) return [id, null] as const;
+        try {
+          const data = await apiFetch<ApiRecipe>(`/recipes/${numericId}`, { token: authToken });
+          return [id, data.image_url ?? null] as const;
+        } catch {
+          return [id, null] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setRecipeImages((prev) => {
+        const next = { ...prev };
+        for (const [id, url] of entries) next[id] = url;
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctas, authToken]);
+
   const [openLink, setOpenLink] = useState<RecipeLinkRef | null>(null);
 
   return (
@@ -357,7 +395,10 @@ export const MarkdownReply = memo(function MarkdownReply({
             {t.openRecipeDetailsLabel}
           </p>
           <div className="flex flex-col gap-2.5">
-            {ctas.map((link) => (
+            {ctas.map((link) => {
+              const imageUrl = link.recipeId ? recipeImages[link.recipeId] : null;
+              const resolvedImage = imageUrl ? resolveMediaUrl(imageUrl) : "";
+              return (
               <button
                 key={`${link.recipeId}-${link.title}`}
                 type="button"
@@ -370,10 +411,15 @@ export const MarkdownReply = memo(function MarkdownReply({
                 }}
               >
                 <span
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
                   style={{ backgroundColor: "rgba(5,150,105,0.16)" }}
                 >
-                  <BookOpen size={18} color="#059669" />
+                  {resolvedImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={resolvedImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <BookOpen size={18} color="#059669" />
+                  )}
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-bold leading-snug" style={{ color: "#047857" }}>
@@ -385,7 +431,8 @@ export const MarkdownReply = memo(function MarkdownReply({
                 </span>
                 <ChevronRight size={18} color="#059669" className="shrink-0" />
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -234,23 +234,25 @@ function DishCardPicker({
           {t.dishRecognizedTitle}
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+        <div className="flex flex-col gap-2 mb-3">
           {results.map((match) => (
             <button
               key={match.rank}
               type="button"
               onClick={() => onPick(match)}
-              className="rounded-xl overflow-hidden border text-left transition-opacity hover:opacity-90"
+              className="flex items-center gap-3 rounded-xl overflow-hidden border text-left transition-opacity hover:opacity-90"
               style={{ borderColor: "var(--tm-border-i)", backgroundColor: "var(--tm-subtle)" }}
             >
-              <RecipeImageHeader
-                imageUrl={match.recipe?.image_url}
-                cardId={match.rank}
-                labels={match.recipe?.dietary_restrictions ?? []}
-                height={90}
-              />
+              <div className="w-16 h-16 shrink-0">
+                <RecipeImageHeader
+                  imageUrl={match.recipe?.image_url}
+                  cardId={match.rank}
+                  labels={match.recipe?.dietary_restrictions ?? []}
+                  height={64}
+                />
+              </div>
               <p
-                className="text-[11.5px] font-semibold px-2 py-1.5 line-clamp-2"
+                className="text-sm font-semibold pr-3 py-2 line-clamp-2"
                 style={{ color: "var(--tm-text)" }}
               >
                 {match.recipe?.title || match.dishName}
@@ -308,8 +310,6 @@ export default function RecsPage() {
   >(null);
   const isDetecting = detectingKind !== null;
   const [error, setError] = useState("");
-  const [lastSentMessage, setLastSentMessage] = useState<string | null>(null);
-  const [lastSentIngredients, setLastSentIngredients] = useState<string[]>([]);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const busy = isBootstrapping || isSending;
@@ -329,8 +329,6 @@ export default function RecsPage() {
     setError("");
     setMessages([]);
     setHistory([]);
-    setLastSentMessage(null);
-    setLastSentIngredients([]);
     setComposeDishText(null);
     setComposeIngredientsText(null);
     const sid = newSessionId();
@@ -375,8 +373,6 @@ export default function RecsPage() {
       setHistory(persisted.history);
       setComposeDishText(persisted.composeDishText);
       setComposeIngredientsText(persisted.composeIngredientsText);
-      setLastSentMessage(persisted.lastSentMessage);
-      setLastSentIngredients(persisted.lastSentIngredients);
       setIsBootstrapping(false);
     }
 
@@ -411,8 +407,6 @@ export default function RecsPage() {
       history,
       composeDishText,
       composeIngredientsText,
-      lastSentMessage,
-      lastSentIngredients,
     });
   }, [
     sessionId,
@@ -420,8 +414,6 @@ export default function RecsPage() {
     history,
     composeDishText,
     composeIngredientsText,
-    lastSentMessage,
-    lastSentIngredients,
   ]);
 
   useEffect(() => {
@@ -508,8 +500,6 @@ export default function RecsPage() {
       ...prev,
       { id: `u-${Date.now()}`, role: "user", text: merged },
     ]);
-    setLastSentMessage(merged);
-    setLastSentIngredients(ingredients);
     setIsSending(true);
     setComposeDishText(null);
     setComposeIngredientsText(null);
@@ -518,36 +508,7 @@ export default function RecsPage() {
     await sendToAi(merged, ingredients, history);
   }
 
-  async function handleRerun() {
-    if (busy || !lastSentMessage) return;
-    let baseHistory = history;
-    setMessages((prev) => {
-      const copy = [...prev];
-      if (copy.length && copy[copy.length - 1].role === "assistant") copy.pop();
-      return copy;
-    });
-    if (
-      baseHistory.length &&
-      baseHistory[baseHistory.length - 1].role === "assistant"
-    ) {
-      baseHistory = baseHistory.slice(0, -1);
-    }
-    if (
-      baseHistory.length &&
-      baseHistory[baseHistory.length - 1].role === "user" &&
-      baseHistory[baseHistory.length - 1].content === lastSentMessage
-    ) {
-      baseHistory = baseHistory.slice(0, -1);
-    }
-    setHistory(baseHistory);
-    setIsSending(true);
-    setError("");
-    scrollToBottom();
-    await sendToAi(lastSentMessage, lastSentIngredients, baseHistory);
-  }
-
-  // Sends the tapped option's label as a plain chat message (same as Rerun) instead of the
-  // dedicated selected_option_index request — the backend errors on `message: null`.
+  // Sends the tapped option's label as a plain chat message — the backend errors on `message: null`.
   async function handleSelectOption(option: ChatOption) {
     if (busy || !sessionId) return;
     setMessages((prev) => {
@@ -558,8 +519,6 @@ export default function RecsPage() {
       next.push({ id: `u-${Date.now()}`, role: "user", text: option.label });
       return next;
     });
-    setLastSentMessage(option.label);
-    setLastSentIngredients([]);
     setIsSending(true);
     setError("");
     scrollToBottom();
@@ -678,11 +637,8 @@ export default function RecsPage() {
             isLatestAi={
               !busy && message.role === "assistant" && index === lastAi
             }
-            canRerun={!!lastSentMessage}
             optionsIntro={t.aiHasOptionsIntro}
-            rerunLabel={t.rerun}
             onSelectOption={(opt) => void handleSelectOption(opt)}
-            onRerun={() => void handleRerun()}
           />
         ))}
         {busy && (

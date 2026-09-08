@@ -51,7 +51,7 @@ function macroChip(value: number | undefined, unitLabel: string, accent: string,
 /** Mirrors the mobile app's nutrition block: a "Per serving" caption, a row of
  * four macro chips (calories/protein/carbs/fat), and any other nutrients the
  * server sends tucked behind a "More nutrition" toggle. */
-function NutritionBlock({ nutrition, accent, t }: { nutrition: RecipeNutrition; accent: string; t: Strings }) {
+export function NutritionBlock({ nutrition, accent, t }: { nutrition: RecipeNutrition; accent: string; t: Strings }) {
   const dark = useDarkMode()
   const [showMore, setShowMore] = useState(false)
   const perServing = nutrition.per_serving
