@@ -6,9 +6,11 @@ import type {
   ChatResponse,
   RagRecipe,
 } from "@/lib/api/types";
+import { prepareVisionUpload } from "@/lib/vision-upload";
 
 const CHAT_TIMEOUT_MS = 200_000;
-const VISION_TIMEOUT_MS = 90_000;
+/** Upload + dish AI (~60s server) + enrich — mobile Safari needs more headroom. */
+const VISION_TIMEOUT_MS = 180_000;
 
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -187,8 +189,9 @@ export async function aiDetectDish(
   file: File,
   language: "en" | "vi" = "en",
 ): Promise<DishRecognitionResult> {
+  const upload = await prepareVisionUpload(file);
   const detail = requireCompleted(
-    await apiUpload<AiRequestDetail>("/ai/dish-recognition", file, {
+    await apiUpload<AiRequestDetail>("/ai/dish-recognition", upload, {
       fields: { language },
       timeoutMs: VISION_TIMEOUT_MS,
     }),
@@ -222,8 +225,9 @@ export async function aiDetectIngredients(
   file: File,
   language: "en" | "vi" = "en",
 ): Promise<IngredientsDetectionResult> {
+  const upload = await prepareVisionUpload(file);
   const detail = requireCompleted(
-    await apiUpload<AiRequestDetail>("/ai/ingredients/detect", file, {
+    await apiUpload<AiRequestDetail>("/ai/ingredients/detect", upload, {
       fields: { language },
       timeoutMs: VISION_TIMEOUT_MS,
     }),

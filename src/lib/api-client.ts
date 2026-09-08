@@ -106,6 +106,37 @@ export function extractDetail(data: unknown): string {
   return "Request failed";
 }
 
+/** Safari < 16 has no AbortSignal.timeout; iOS < 17.4 has no AbortSignal.any. */
+function abortTimeout(ms: number): AbortSignal {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(ms);
+  }
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
+function abortAny(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.any === "function") {
+    return AbortSignal.any(signals);
+  }
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort();
+      return controller.signal;
+    }
+    signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  return controller.signal;
+}
+
+function isAbortLike(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const name = (err as { name?: string }).name;
+  return name === "AbortError" || name === "TimeoutError";
+}
+
 export type ApiFetchOptions = {
   method?: string;
   body?: unknown;
@@ -153,18 +184,26 @@ export async function apiFetch<T = unknown>(
   }
 
   const timeoutSignal =
-    timeoutMs != null && timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined;
+    timeoutMs != null && timeoutMs > 0 ? abortTimeout(timeoutMs) : undefined;
   const combinedSignal =
     signal && timeoutSignal
-      ? AbortSignal.any([signal, timeoutSignal])
+      ? abortAny([signal, timeoutSignal])
       : signal ?? timeoutSignal;
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal: combinedSignal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: combinedSignal,
+    });
+  } catch (err) {
+    if (isAbortLike(err)) {
+      throw new ApiError("Request timed out. Please try again.", 408);
+    }
+    throw err;
+  }
 
   if (res.status === 204) {
     return undefined as T;
@@ -210,15 +249,23 @@ export async function apiUpload<T = unknown>(
   const token = getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: form,
-    signal:
-      options?.timeoutMs != null && options.timeoutMs > 0
-        ? AbortSignal.timeout(options.timeoutMs)
-        : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: form,
+      signal:
+        options?.timeoutMs != null && options.timeoutMs > 0
+          ? abortTimeout(options.timeoutMs)
+          : undefined,
+    });
+  } catch (err) {
+    if (isAbortLike(err)) {
+      throw new ApiError("Photo analysis timed out. Please try again.", 408);
+    }
+    throw err;
+  }
 
   const text = await res.text();
   let data: unknown = null;
