@@ -106,31 +106,6 @@ export function extractDetail(data: unknown): string {
   return "Request failed";
 }
 
-/** Safari < 16 has no AbortSignal.timeout; iOS < 17.4 has no AbortSignal.any. */
-function abortTimeout(ms: number): AbortSignal {
-  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
-    return AbortSignal.timeout(ms);
-  }
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), ms);
-  return controller.signal;
-}
-
-function abortAny(signals: AbortSignal[]): AbortSignal {
-  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.any === "function") {
-    return AbortSignal.any(signals);
-  }
-  const controller = new AbortController();
-  for (const signal of signals) {
-    if (signal.aborted) {
-      controller.abort();
-      return controller.signal;
-    }
-    signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-  return controller.signal;
-}
-
 export type ApiFetchOptions = {
   method?: string;
   body?: unknown;
@@ -178,10 +153,10 @@ export async function apiFetch<T = unknown>(
   }
 
   const timeoutSignal =
-    timeoutMs != null && timeoutMs > 0 ? abortTimeout(timeoutMs) : undefined;
+    timeoutMs != null && timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined;
   const combinedSignal =
     signal && timeoutSignal
-      ? abortAny([signal, timeoutSignal])
+      ? AbortSignal.any([signal, timeoutSignal])
       : signal ?? timeoutSignal;
 
   const res = await fetch(url.toString(), {
@@ -241,7 +216,7 @@ export async function apiUpload<T = unknown>(
     body: form,
     signal:
       options?.timeoutMs != null && options.timeoutMs > 0
-        ? abortTimeout(options.timeoutMs)
+        ? AbortSignal.timeout(options.timeoutMs)
         : undefined,
   });
 

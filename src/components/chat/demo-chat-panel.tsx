@@ -49,6 +49,7 @@ export function DemoChatPanel({
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const startedRef = useRef(false);
   const tokenRef = useRef<string | null>(null);
 
   const [ready, setReady] = useState(false);
@@ -61,7 +62,6 @@ export function DemoChatPanel({
   const [lastSent, setLastSent] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [shouldStart, setShouldStart] = useState(!embedded);
-  const [sessionRetry, setSessionRetry] = useState(0);
 
   const busy = isBootstrapping || isSending;
 
@@ -143,7 +143,8 @@ export function DemoChatPanel({
   }, []);
 
   useEffect(() => {
-    if (!shouldStart) return;
+    if (!shouldStart || startedRef.current) return;
+    startedRef.current = true;
 
     let cancelled = false;
     (async () => {
@@ -155,7 +156,6 @@ export function DemoChatPanel({
         await bootstrapWelcome();
       } catch (err) {
         if (cancelled) return;
-        tokenRef.current = null;
         setReady(true);
         setError(
           err instanceof Error
@@ -168,7 +168,7 @@ export function DemoChatPanel({
     return () => {
       cancelled = true;
     };
-  }, [shouldStart, bootstrapWelcome, sessionRetry]);
+  }, [shouldStart, bootstrapWelcome]);
 
   async function sendMessage(raw: string, opts?: { rerun?: boolean }) {
     const text = raw.trim();
@@ -397,24 +397,10 @@ export function DemoChatPanel({
 
           {error && (
             <div
-              className="mx-3 mb-2 rounded-xl px-3 py-2 text-[12px] flex items-center justify-between gap-2"
+              className="mx-3 mb-2 rounded-xl px-3 py-2 text-[12px]"
               style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
             >
-              <span>{error}</span>
-              {!sessionId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReady(false);
-                    setError("");
-                    setSessionRetry((n) => n + 1);
-                  }}
-                  className="text-[11px] font-semibold px-2 py-1 rounded-lg shrink-0"
-                  style={{ backgroundColor: "#fff", color: "#F43F5E" }}
-                >
-                  Retry
-                </button>
-              )}
+              {error}
             </div>
           )}
 
