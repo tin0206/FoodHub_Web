@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Bot, ChevronRight } from "lucide-react";
-import type { ChatOption } from "@/lib/api/types";
+import type { ApiRecipe, ChatOption } from "@/lib/api/types";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 
 export interface ChatUiMessage {
@@ -26,12 +26,18 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   isLatestAi,
   optionsIntro,
   authToken,
+  referencedRecipe,
+  onRecipeOpened,
+  canSaveRecipes,
   onSelectOption,
 }: {
   message: ChatUiMessage;
   isLatestAi: boolean;
   optionsIntro: (count: number) => string;
   authToken?: string;
+  referencedRecipe?: ApiRecipe | null;
+  onRecipeOpened?: (recipe: ApiRecipe) => void;
+  canSaveRecipes?: boolean;
   onSelectOption: (option: ChatOption) => void;
 }) {
   const isUser = message.role === "user";
@@ -81,7 +87,13 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 {optionsIntro(options.length)}
               </p>
             ) : (
-              <MarkdownReply text={message.text} authToken={authToken} />
+              <MarkdownReply
+                text={message.text}
+                authToken={authToken}
+                referencedRecipe={referencedRecipe}
+                onRecipeOpened={onRecipeOpened}
+                canSaveRecipes={canSaveRecipes}
+              />
             )}
           </div>
           {showOptions && (

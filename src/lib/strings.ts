@@ -114,6 +114,7 @@ export function getStrings(lang: Lang) {
     // Add recipe panel
     newRecipeTitle: vi ? "Công thức mới" : "New Recipe",
     recipeNameHint: vi ? "Tên công thức…" : "Recipe name…",
+    detectingDishTitleHint: vi ? "Đang nhận diện món ăn…" : "Recognizing dish…",
     minSuffix: vi ? "phút" : "min",
     calSuffix: vi ? "calo" : "cal",
     servingsSuffix: vi ? "khẩu phần" : "servings",
@@ -260,6 +261,9 @@ export function getStrings(lang: Lang) {
       ? "Chỉnh sửa trước khi thêm vào tin nhắn…"
       : "Edit before adding to your message…",
     useThisLabel: vi ? "Dùng cái này" : "Use this",
+    wantRecipeSuggestionsHint: vi
+      ? "💡 Bạn có muốn mình gợi ý món ăn dựa trên nguyên liệu/món này không? Nhấn gửi để xem gợi ý!"
+      : "💡 Want recipe suggestions based on this? Hit send to see some ideas!",
 
     // ── Recipe preview (chat link) ────────────────────────────────────────
     close: vi ? "Đóng" : "Close",
@@ -275,6 +279,15 @@ export function getStrings(lang: Lang) {
     recipeNotOpenableDemo: vi
       ? "Không thể mở công thức này trong bản demo."
       : "This recipe id is not openable in the demo.",
+    ingredientsInThisVersionLabel: vi
+      ? "Nguyên liệu trong phiên bản này (phần thay đổi được tô sáng)"
+      : "Ingredients in this version (changes highlighted)",
+    saveRecipeFromChatButton: vi ? "Lưu công thức này" : "Save this recipe",
+    savingRecipeButton: vi ? "Đang lưu…" : "Saving…",
+    viewSavedRecipeLabel: vi ? "Xem công thức đã lưu" : "View saved recipe",
+    unableToSaveRecipeFromChat: vi
+      ? "Không thể lưu công thức. Vui lòng thử lại."
+      : "Unable to save this recipe. Please try again.",
 
     // ── Recipe detail / cooking mode ───────────────────────────────────────
     addPhoto: vi ? "Thêm ảnh" : "Add Photo",

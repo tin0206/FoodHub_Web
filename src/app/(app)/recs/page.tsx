@@ -19,7 +19,7 @@ import {
   type DishMatch,
 } from "@/lib/api/ai";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
-import type { ChatHistoryMessage, ChatOption } from "@/lib/api/types";
+import type { ApiRecipe, ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
 import { RecipeImageHeader } from "@/components/recipe/recipe-image-header";
 import { ChatComposer } from "@/components/chat/chat-composer";
@@ -311,6 +311,9 @@ export default function RecsPage() {
   const isDetecting = detectingKind !== null;
   const [error, setError] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
+  // The recipe the user last opened from a chat reply — provides the title/image
+  // when they save an AI-edited version ("make it vegetarian") back to their library.
+  const [referencedRecipe, setReferencedRecipe] = useState<ApiRecipe | null>(null);
 
   const busy = isBootstrapping || isSending;
 
@@ -331,6 +334,7 @@ export default function RecsPage() {
     setHistory([]);
     setComposeDishText(null);
     setComposeIngredientsText(null);
+    setReferencedRecipe(null);
     const sid = newSessionId();
     setSessionId(sid);
     try {
@@ -636,6 +640,9 @@ export default function RecsPage() {
               !busy && message.role === "assistant" && index === lastAi
             }
             optionsIntro={t.aiHasOptionsIntro}
+            referencedRecipe={referencedRecipe}
+            onRecipeOpened={setReferencedRecipe}
+            canSaveRecipes
             onSelectOption={(opt) => void handleSelectOption(opt)}
           />
         ))}
@@ -678,6 +685,12 @@ export default function RecsPage() {
             disabled={busy}
             onEdit={() => setEditingField("ingredients")}
           />
+        )}
+
+        {(hasDish || hasIngredients) && (
+          <p className="text-[11.5px] mb-2 px-0.5" style={{ color: "var(--tm-text-3)" }}>
+            {t.wantRecipeSuggestionsHint}
+          </p>
         )}
 
         {detectingKind && <DetectingBanner kind={detectingKind} />}
