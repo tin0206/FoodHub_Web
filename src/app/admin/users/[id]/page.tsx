@@ -15,6 +15,7 @@ import {
   Tag,
   Cake,
   Weight,
+  UserRound,
   Flame,
   Flag,
   Hash,
@@ -392,6 +393,7 @@ export default function AdminUserDetailPage() {
           <InfoCard title={t.adminNutritionGoalsCardTitle} icon={Flame} accent={accent}>
             <InfoRow icon={Cake} label={t.ageLabel} value={user.age ? t.adminAgeYears(user.age) : "—"} accent={accent} />
             <InfoRow icon={Weight} label={t.weightLabel} value={user.weight ? t.adminWeightKg(user.weight) : "—"} accent={accent} />
+            <InfoRow icon={UserRound} label={t.genderLabel} value={user.gender ? t.genderDisplay(user.gender) : "—"} accent={accent} />
             <InfoRow
               icon={Flame}
               label={t.dailyCalorieTarget}

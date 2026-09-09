@@ -15,6 +15,7 @@ export interface AdminUserUpdate {
   is_active?: boolean;
   age?: number | null;
   weight?: number | null;
+  gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
   dietary_restrictions?: string[];
@@ -30,6 +31,7 @@ export interface AdminUserCreate {
   is_active: boolean;
   age?: number | null;
   weight?: number | null;
+  gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
   dietary_restrictions: string[];

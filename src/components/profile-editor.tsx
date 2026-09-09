@@ -18,6 +18,7 @@ interface ProfileForm {
   fullName: string;
   age: string;
   weight: string;
+  gender: string;
   primaryGoal: string;
   calorieTarget: string;
   proteinTarget: string;
@@ -41,6 +42,7 @@ interface FieldErrors {
 }
 
 export const PRIMARY_GOALS = ["Balanced Nutrition", "Weight Loss", "Muscle Gain", "High Protein"];
+export const GENDER_OPTIONS = ["Male", "Female", "Other"];
 export const DIETARY_TAGS = ["Dairy Free", "Non-Alcoholic", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
 const NO_ERRORS: FieldErrors = { age: "", weight: "", calorieTarget: "", proteinTarget: "", carbTarget: "", fatTarget: "" };
 
@@ -55,6 +57,7 @@ function toForm(user: ApiUser): ProfileForm {
     fullName: user.full_name ?? "",
     age: user.age != null ? String(user.age) : "",
     weight: user.weight != null ? String(user.weight) : "",
+    gender: user.gender ?? "",
     primaryGoal: user.primary_goal ?? "",
     calorieTarget: user.calorie_target != null ? String(user.calorie_target) : "",
     proteinTarget: user.protein_target != null ? String(user.protein_target) : "",
@@ -328,6 +331,7 @@ export function ProfileEditor() {
         full_name: formData.fullName.trim() || null,
         age: formData.age.trim() ? Number(formData.age) : null,
         weight: formData.weight.trim() ? Number(formData.weight) : null,
+        gender: formData.gender || null,
         calorie_target: formData.calorieTarget.trim() ? Number(formData.calorieTarget) : null,
         protein_target: formData.proteinTarget.trim() ? Number(formData.proteinTarget) : null,
         carb_target: formData.carbTarget.trim() ? Number(formData.carbTarget) : null,
@@ -511,6 +515,31 @@ export function ProfileEditor() {
                   placeholder="75"
                 />
                 {fieldErrors.weight && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.weight}</p>}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium mb-1.5" style={labelStyle}>{t.genderLabel}</p>
+              <div className="flex gap-2">
+                {GENDER_OPTIONS.map((option) => {
+                  const active = formData.gender === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => set("gender", active ? "" : option)}
+                      className="flex-1 py-2 rounded-lg border text-sm transition-colors"
+                      style={{
+                        backgroundColor: active ? "#ECFDF5" : "var(--tm-surface)",
+                        borderColor: active ? "#059669" : "var(--tm-border)",
+                        color: active ? "#059669" : "var(--tm-text-2)",
+                        fontWeight: active ? 600 : 400,
+                      }}
+                    >
+                      {t.genderDisplay(option)}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </SectionCard>

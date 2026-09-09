@@ -12,6 +12,7 @@ export interface ApiUser {
   google_id?: string | null;
   age?: number | null;
   weight?: number | null;
+  gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
   carb_target?: number | null;
@@ -37,6 +38,7 @@ export interface UserProfileUpdate {
   full_name?: string | null;
   age?: number | null;
   weight?: number | null;
+  gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
   carb_target?: number | null;

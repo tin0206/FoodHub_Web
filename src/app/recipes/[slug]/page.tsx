@@ -12,6 +12,8 @@ import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { recipeCardTheme } from "@/components/recipe/recipe-card-theme";
 import { RecipeViewContent } from "@/components/recipe/recipe-view-content";
 import type { ApiRecipe } from "@/lib/api/types";
+import { useLang } from "@/lib/use-lang";
+import { getLang } from "@/lib/i18n";
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback;
@@ -23,6 +25,7 @@ export default function PublicRecipeDetailPage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
   const recipeId = parseRecipeIdFromSlug(params.slug);
+  const lang = useLang();
 
   const [recipe, setRecipe] = useState<ApiRecipe | null | undefined>(undefined);
   const [error, setError] = useState("");
@@ -41,7 +44,7 @@ export default function PublicRecipeDetailPage() {
       try {
         const session = await ensureDemoSession();
         if (cancelled) return;
-        const found = await getRecipe(recipeId, undefined, session.token);
+        const found = await getRecipe(recipeId, getLang(), session.token);
         if (!cancelled) setRecipe(found);
       } catch (err) {
         if (cancelled) return;
@@ -52,7 +55,7 @@ export default function PublicRecipeDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [recipeId, router, retryToken]);
+  }, [recipeId, router, retryToken, lang]);
 
   if (recipeId == null) return null;
 

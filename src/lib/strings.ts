@@ -326,6 +326,7 @@ export function getStrings(lang: Lang) {
     emailLabel: "Email",
     ageLabel: vi ? "Tuổi" : "Age",
     weightLabel: vi ? "Cân nặng (kg)" : "Weight (kg)",
+    genderLabel: vi ? "Giới tính" : "Gender",
     nutritionGoals: vi ? "Mục tiêu dinh dưỡng" : "Nutrition Goals",
     setDietaryObjectives: vi
       ? "Đặt mục tiêu dinh dưỡng"
@@ -429,6 +430,17 @@ export function getStrings(lang: Lang) {
         "High Protein": "Nhiều protein",
       };
       return map[goal] ?? goal;
+    },
+
+    // Gender display
+    genderDisplay(gender: string): string {
+      if (!vi) return gender;
+      const map: Record<string, string> = {
+        Male: "Nam",
+        Female: "Nữ",
+        Other: "Khác",
+      };
+      return map[gender] ?? gender;
     },
 
     // Label/tag display — covers recipe labels + dietary restriction tags
@@ -797,6 +809,8 @@ export function getStrings(lang: Lang) {
     adminStatusFieldLabel: vi ? "Trạng thái" : "Status",
     adminAgeFieldLabel: vi ? "Tuổi" : "Age",
     adminWeightFieldLabel: vi ? "Cân nặng (kg)" : "Weight (kg)",
+    adminGenderFieldLabel: vi ? "Giới tính" : "Gender",
+    adminGenderUnspecified: vi ? "Không xác định" : "Unspecified",
     adminCalorieTargetFieldLabel: vi
       ? "Mục tiêu calo (calo/ngày)"
       : "Calorie target (cal/day)",

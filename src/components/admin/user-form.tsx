@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AVAILABLE_LABELS, ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
+import { GENDER_OPTIONS } from "@/components/profile-editor";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useStrings } from "@/lib/use-strings";
 import type { Strings } from "@/lib/strings";
@@ -51,6 +52,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [age, setAge] = useState(initial?.age ? String(initial.age) : "");
   const [weight, setWeight] = useState(initial?.weight ? String(initial.weight) : "");
+  const [gender, setGender] = useState(initial?.gender ?? "");
   const [calorieTarget, setCalorieTarget] = useState(
     initial?.calorie_target ? String(initial.calorie_target) : "",
   );
@@ -108,6 +110,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           is_active: isActive,
           age: toNumberOrNull(age),
           weight: toNumberOrNull(weight),
+          gender: gender || null,
           calorie_target: toNumberOrNull(calorieTarget),
           protein_target: toNumberOrNull(proteinTarget),
           primary_goal: primaryGoal.trim() || null,
@@ -125,6 +128,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           is_active: isActive,
           age: toNumberOrNull(age),
           weight: toNumberOrNull(weight),
+          gender: gender || null,
           calorie_target: toNumberOrNull(calorieTarget),
           protein_target: toNumberOrNull(proteinTarget),
           dietary_restrictions: [...restrictions],
@@ -146,6 +150,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         setIsActive(true);
         setAge("");
         setWeight("");
+        setGender("");
         setCalorieTarget("");
         setProteinTarget("");
         setPrimaryGoal("");
@@ -254,7 +259,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           </FieldCard>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-3 gap-2.5">
           <FieldCard label={t.adminAgeFieldLabel}>
             <input
               value={age}
@@ -272,6 +277,21 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               className={inputClass}
               style={inputStyle}
             />
+          </FieldCard>
+          <FieldCard label={t.adminGenderFieldLabel}>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className={inputClass}
+              style={inputStyle}
+            >
+              <option value="">{t.adminGenderUnspecified}</option>
+              {GENDER_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t.genderDisplay(option)}
+                </option>
+              ))}
+            </select>
           </FieldCard>
         </div>
 

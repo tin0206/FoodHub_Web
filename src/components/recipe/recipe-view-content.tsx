@@ -21,18 +21,23 @@ export function formatAmount(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '')
 }
 
-/** Prefers the server's pre-formatted nutrition display strings, then falls
- * back to composing from mapped_ingredients, then to the legacy text list. */
+/** `recipe.ingredients` is the only ingredient list the server localizes for
+ * `?lang=`; `nutrition.ingredients[].display_string` always comes back in
+ * English regardless, so it can't be the preferred source. Falls back to
+ * composing from mapped_ingredients only if the legacy list is ever empty. */
 export function ingredientLines(recipe: ApiRecipe): string[] {
-  if (recipe.nutrition?.ingredients?.length) {
-    return recipe.nutrition.ingredients.map((i) => i.display_string)
+  if (recipe.ingredients?.length) {
+    return recipe.ingredients
   }
   if (recipe.mapped_ingredients?.length) {
     return recipe.mapped_ingredients.map(
       (m) => `${formatAmount(m.amount)} ${m.unit} ${m.natural_name || m.mapped_name}`,
     )
   }
-  return recipe.ingredients
+  if (recipe.nutrition?.ingredients?.length) {
+    return recipe.nutrition.ingredients.map((i) => i.display_string)
+  }
+  return []
 }
 
 function macroChip(value: number | undefined, unitLabel: string, accent: string, dark: boolean) {

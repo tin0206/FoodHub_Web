@@ -9,7 +9,7 @@ import { ApiError } from "@/lib/api-client";
 import type { UserProfileUpdate } from "@/lib/api/types";
 import { getStrings } from "@/lib/strings";
 import { setLang, type Lang } from "@/lib/i18n";
-import { PRIMARY_GOALS, DIETARY_TAGS } from "@/components/profile-editor";
+import { PRIMARY_GOALS, DIETARY_TAGS, GENDER_OPTIONS } from "@/components/profile-editor";
 import { AuthField } from "@/components/auth/auth-widgets";
 import { FlagIcon } from "@/components/flag-icon";
 import { authDisplay, authSans } from "../auth-fonts";
@@ -44,6 +44,7 @@ export default function OnboardingPage() {
   const [weight, setWeight] = useState("");
   const [ageError, setAgeError] = useState("");
   const [weightError, setWeightError] = useState("");
+  const [gender, setGender] = useState("");
   const [primaryGoal, setPrimaryGoal] = useState("");
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -103,6 +104,7 @@ export default function OnboardingPage() {
       const payload: UserProfileUpdate = {
         age: age.trim() ? Number(age) : null,
         weight: weight.trim() ? Number(weight) : null,
+        gender: gender || null,
         primary_goal: primaryGoal || null,
         dietary_restrictions: dietaryRestrictions,
         language: uiLang,
@@ -199,6 +201,30 @@ export default function OnboardingPage() {
                 placeholder="60"
                 error={weightError}
               />
+            </div>
+            <div className="mt-3">
+              <p className="text-xs font-medium mb-1.5" style={{ color: "var(--a-muted)" }}>{t.genderLabel}</p>
+              <div className="flex gap-2">
+                {GENDER_OPTIONS.map((option) => {
+                  const active = gender === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setGender(active ? "" : option)}
+                      className="flex-1 py-2 rounded-lg border text-sm transition-colors"
+                      style={{
+                        backgroundColor: active ? "#ECFDF5" : "#fff",
+                        borderColor: active ? "#059669" : "var(--a-line)",
+                        color: active ? "#059669" : "var(--a-ink)",
+                        fontWeight: active ? 600 : 400,
+                      }}
+                    >
+                      {t.genderDisplay(option)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

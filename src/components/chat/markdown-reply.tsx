@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
 import { useStrings } from "@/lib/use-strings";
+import { useLang } from "@/lib/use-lang";
+import { getLang } from "@/lib/i18n";
 import type { ApiRecipe } from "@/lib/api/types";
 import { NutritionBlock } from "@/components/recipe/recipe-view-content";
 
@@ -60,6 +62,7 @@ function RecipePreviewModal({
   onClose: () => void;
 }) {
   const t = useStrings();
+  const lang = useLang();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
@@ -75,6 +78,7 @@ function RecipePreviewModal({
           throw new ApiError(t.recipeNotOpenableDemo, 400);
         }
         const data = await apiFetch<ApiRecipe>(`/recipes/${numericId}`, {
+          query: { lang: getLang() },
           token,
         });
         if (!cancelled) setRecipe(data);
@@ -96,7 +100,7 @@ function RecipePreviewModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipeId, token]);
+  }, [recipeId, token, lang]);
 
   const imageSrc = recipe?.image_url
     ? resolveMediaUrl(recipe.image_url)
