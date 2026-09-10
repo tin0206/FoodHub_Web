@@ -4,7 +4,6 @@ import type {
   ApiRecipe,
   ChatOption,
   ChatResponse,
-  RagRecipe,
 } from "@/lib/api/types";
 import { prepareVisionUpload } from "@/lib/vision-upload";
 
@@ -17,29 +16,45 @@ function asStringList(value: unknown): string[] {
   return value.map((item) => String(item));
 }
 
-function parseRecipes(value: unknown): RagRecipe[] {
+/** The chat AI's `recipes[]` is the same full shape as `GET /recipes/{id}`
+ * (image_url, nutrition, mapped_ingredients included) — parsed defensively
+ * since it comes from an AI-assembled payload rather than the strict recipe
+ * endpoint, but nothing here is dropped/summarized anymore. */
+function parseChatRecipe(json: Record<string, unknown>): ApiRecipe | null {
+  const rawId = json.id ?? json.recipe_id;
+  const id = typeof rawId === "number" ? rawId : Number(rawId);
+  if (!Number.isFinite(id)) return null;
+  return {
+    id,
+    title: (json.title as string) || (json.RecipeName as string) || "Untitled recipe",
+    ingredients: asStringList(json.ingredients),
+    mapped_ingredients: Array.isArray(json.mapped_ingredients)
+      ? (json.mapped_ingredients as ApiRecipe["mapped_ingredients"])
+      : undefined,
+    nutrition:
+      json.nutrition && typeof json.nutrition === "object"
+        ? (json.nutrition as ApiRecipe["nutrition"])
+        : null,
+    directions: asStringList(json.directions),
+    ner: asStringList(json.ner),
+    estimated_servings:
+      typeof json.estimated_servings === "number" ? json.estimated_servings : null,
+    dietary_restrictions: asStringList(json.dietary_restrictions),
+    image_url: typeof json.image_url === "string" ? json.image_url : null,
+    visibility: json.visibility === "private" ? "private" : "public",
+    created_by: typeof json.created_by === "number" ? json.created_by : null,
+    created_at: (json.created_at as string) || "",
+    updated_at: (json.updated_at as string) || "",
+    locale: (json.locale as string) || "en",
+  };
+}
+
+function parseRecipes(value: unknown): ApiRecipe[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-    .map((json) => ({
-      recipe_id:
-        json.recipe_id != null
-          ? String(json.recipe_id)
-          : json.id != null
-            ? String(json.id)
-            : null,
-      title:
-        (json.title as string) ||
-        (json.RecipeName as string) ||
-        "Untitled recipe",
-      ingredients: asStringList(json.ingredients),
-      directions: asStringList(json.directions),
-      dietary_restrictions: asStringList(json.dietary_restrictions),
-      estimated_servings:
-        typeof json.estimated_servings === "number"
-          ? json.estimated_servings
-          : null,
-    }));
+    .map(parseChatRecipe)
+    .filter((r): r is ApiRecipe => r !== null);
 }
 
 function parseOptions(value: unknown): ChatOption[] {

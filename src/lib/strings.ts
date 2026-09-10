@@ -264,6 +264,7 @@ export function getStrings(lang: Lang) {
     wantRecipeSuggestionsHint: vi
       ? "💡 Bạn có muốn mình gợi ý món ăn dựa trên nguyên liệu/món này không? Nhấn gửi để xem gợi ý!"
       : "💡 Want recipe suggestions based on this? Hit send to see some ideas!",
+    sendLabel: vi ? "Gửi" : "Send",
 
     // ── Recipe preview (chat link) ────────────────────────────────────────
     close: vi ? "Đóng" : "Close",
@@ -282,7 +283,7 @@ export function getStrings(lang: Lang) {
     ingredientsInThisVersionLabel: vi
       ? "Nguyên liệu trong phiên bản này (phần thay đổi được tô sáng)"
       : "Ingredients in this version (changes highlighted)",
-    saveRecipeFromChatButton: vi ? "Lưu công thức này" : "Save this recipe",
+    addToPersonalRecipeButton: vi ? "Thêm vào công thức cá nhân" : "Add to personal recipe",
     savingRecipeButton: vi ? "Đang lưu…" : "Saving…",
     viewSavedRecipeLabel: vi ? "Xem công thức đã lưu" : "View saved recipe",
     unableToSaveRecipeFromChat: vi

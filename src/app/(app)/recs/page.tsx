@@ -6,6 +6,7 @@ import {
   Loader2,
   Pencil,
   RefreshCw,
+  Send,
   ShoppingBasket,
   Sparkles,
   UtensilsCrossed,
@@ -18,6 +19,7 @@ import {
   aiDetectIngredients,
   type DishMatch,
 } from "@/lib/api/ai";
+import { getRecipe } from "@/lib/api/recipes";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
 import type { ApiRecipe, ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
@@ -28,6 +30,7 @@ import {
   lastAssistantIndex,
   type ChatUiMessage,
 } from "@/components/chat/chat-message-bubble";
+import { extractRecipeMarkdownLinks, type RecipeLinkRef } from "@/components/chat/markdown-reply";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { NoteDialog } from "@/components/note-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -55,11 +58,13 @@ function ComposeDetectionRow({
   icon,
   disabled,
   onEdit,
+  onSend,
 }: {
   text: string;
   icon: ReactNode;
   disabled: boolean;
   onEdit: () => void;
+  onSend: () => void;
 }) {
   const dark = useDarkMode();
   const t = useStrings();
@@ -87,6 +92,17 @@ function ComposeDetectionRow({
         aria-label={t.edit}
       >
         <Pencil size={15} />
+      </button>
+      <button
+        type="button"
+        onClick={onSend}
+        disabled={disabled}
+        className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40"
+        style={{ backgroundColor: "#059669" }}
+        aria-label={t.sendLabel}
+        title={t.sendLabel}
+      >
+        <Send size={12} color="white" />
       </button>
     </div>
   );
@@ -314,6 +330,23 @@ export default function RecsPage() {
   // The recipe the user last opened from a chat reply — provides the title/image
   // when they save an AI-edited version ("make it vegetarian") back to their library.
   const [referencedRecipe, setReferencedRecipe] = useState<ApiRecipe | null>(null);
+  // Recipe links from the most recent recommendation-list reply — lets a plain-text
+  // pick ("choose option 2") resolve to a real recipe without the user tapping a card.
+  const [lastCtas, setLastCtas] = useState<RecipeLinkRef[]>([]);
+  // Every full recipe the AI has embedded in a `recipes[]` list so far this
+  // session, keyed by id — the chat API already sends the same shape as
+  // `GET /recipes/{id}` (image_url/nutrition included), so once a recipe has
+  // appeared in a list once, opening/referencing it again never needs a fetch.
+  const [recipeCache, setRecipeCache] = useState<Record<number, ApiRecipe>>({});
+
+  function cacheRecipes(recipes: ApiRecipe[]) {
+    if (recipes.length === 0) return;
+    setRecipeCache((prev) => {
+      const next = { ...prev };
+      for (const r of recipes) next[r.id] = r;
+      return next;
+    });
+  }
 
   const busy = isBootstrapping || isSending;
 
@@ -335,6 +368,8 @@ export default function RecsPage() {
     setComposeDishText(null);
     setComposeIngredientsText(null);
     setReferencedRecipe(null);
+    setLastCtas([]);
+    setRecipeCache({});
     const sid = newSessionId();
     setSessionId(sid);
     try {
@@ -345,6 +380,7 @@ export default function RecsPage() {
       });
       setSessionId(response.session_id || sid);
       const reply = response.reply.trim() || t.aiWelcomeFallback;
+      cacheRecipes(response.recipes);
       setMessages([
         {
           id: `a-${Date.now()}`,
@@ -353,6 +389,7 @@ export default function RecsPage() {
           options: response.options,
         },
       ]);
+      setLastCtas(extractRecipeMarkdownLinks(reply).links);
       if (response.reply.trim())
         setHistory([{ role: "assistant", content: response.reply }]);
     } catch (err) {
@@ -376,7 +413,13 @@ export default function RecsPage() {
       setHistory(persisted.history);
       setComposeDishText(persisted.composeDishText);
       setComposeIngredientsText(persisted.composeIngredientsText);
+      setReferencedRecipe(persisted.referencedRecipe ?? null);
+      setRecipeCache(persisted.recipeCache ?? {});
       setIsBootstrapping(false);
+      // A restored session's most recent recommendation list still needs to be
+      // resolvable by a plain-text pick ("choose option 2") after the reload.
+      const lastAssistant = [...persisted.messages].reverse().find((m) => m.role === "assistant");
+      if (lastAssistant) setLastCtas(extractRecipeMarkdownLinks(lastAssistant.text).links);
     }
 
     let cancelled = false;
@@ -410,13 +453,17 @@ export default function RecsPage() {
       history,
       composeDishText,
       composeIngredientsText,
+      referencedRecipe,
+      recipeCache,
     });
   }, [
     sessionId,
     messages,
     history,
     composeDishText,
+    referencedRecipe,
     composeIngredientsText,
+    recipeCache,
   ]);
 
   useEffect(() => {
@@ -450,6 +497,8 @@ export default function RecsPage() {
     merged: string,
     ingredients: string[],
     baseHistory: ChatHistoryMessage[],
+    isFreshReferenceView = false,
+    referenceSnapshot: ApiRecipe | null = null,
   ) {
     try {
       const response = await aiChat({
@@ -461,6 +510,31 @@ export default function RecsPage() {
       });
       if (response.session_id) setSessionId(response.session_id);
       const reply = response.reply.trim() || t.emptyReply;
+      cacheRecipes(response.recipes);
+
+      // The backend sometimes states the selected recipe's id directly in the
+      // reply text (e.g. "... (ID: 7445) ...") when narrowing to one recipe
+      // out of a prior list — prefer that (cache lookup, fetch as last
+      // resort) over the pre-send guess from the user's own wording, since
+      // it's authoritative.
+      let finalSnapshot = referenceSnapshot;
+      const statedIdMatch = /\(id[:\s]*(\d{1,10})\)/i.exec(reply);
+      if (statedIdMatch) {
+        const statedId = Number(statedIdMatch[1]);
+        const cached = recipeCache[statedId];
+        if (cached) {
+          finalSnapshot = cached;
+        } else {
+          try {
+            const fetched = await getRecipe(statedId, lang);
+            finalSnapshot = fetched;
+            cacheRecipes([fetched]);
+          } catch {
+            // keep whatever snapshot was already resolved pre-send
+          }
+        }
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -468,8 +542,20 @@ export default function RecsPage() {
           role: "assistant",
           text: reply,
           options: response.options,
+          isFreshReferenceView,
+          // Frozen at the moment this reply was requested — never the live,
+          // shared `referencedRecipe`, which can move on to a different
+          // recipe by the time this specific message is later interacted
+          // with (e.g. after picking a second recipe from the same list).
+          referencedRecipeSnapshot: finalSnapshot,
         },
       ]);
+      // Sticky until a genuinely new recommendation list arrives — a detail
+      // reply has no links of its own, and clearing this on every such reply
+      // broke resolving a second plain-text pick ("choose option 2") against
+      // the same original list.
+      const newLinks = extractRecipeMarkdownLinks(reply).links;
+      if (newLinks.length > 0) setLastCtas(newLinks);
       setHistory([
         ...baseHistory,
         { role: "user", content: merged },
@@ -486,6 +572,52 @@ export default function RecsPage() {
       setIsSending(false);
       scrollToBottom();
     }
+  }
+
+  // A plain-text pick ("choose option 2", "let's go with 2", or the recipe's
+  // own title) from the last recommendation list doesn't tap a CTA card, so
+  // there's no fetch to hang a "referenced recipe" off — resolve it ourselves
+  // so the save/highlight UI has a title+image to work with on the very first
+  // recipe detail reply, not just once the user later opens a card.
+  async function tryResolveReferencedRecipe(userText: string): Promise<ApiRecipe | null> {
+    if (lastCtas.length === 0) return null;
+    const trimmed = userText.trim();
+    let matched: RecipeLinkRef | undefined;
+    if (trimmed.length <= 40) {
+      const numberMatch = trimmed.match(/\d{1,2}/);
+      if (numberMatch) {
+        const idx = Number(numberMatch[0]) - 1;
+        matched = lastCtas[idx];
+      }
+    }
+    if (!matched) {
+      const lower = trimmed.toLowerCase();
+      matched = lastCtas.find((c) => c.title && lower.includes(c.title.toLowerCase()));
+    }
+    if (!matched?.recipeId) return null;
+    const numericId = Number(matched.recipeId);
+    if (!Number.isFinite(numericId)) return null;
+    // Already embedded in an earlier recommendation-list reply — no fetch needed.
+    const cached = recipeCache[numericId];
+    if (cached) {
+      setReferencedRecipe(cached);
+      return cached;
+    }
+    try {
+      const fetched = await getRecipe(numericId, lang);
+      cacheRecipes([fetched]);
+      setReferencedRecipe(fetched);
+      return fetched;
+    } catch {
+      // best-effort only — the save/highlight UI just won't show for this turn
+      return null;
+    }
+  }
+
+  function markMessageSaved(messageId: string, recipeId: number) {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, savedRecipeId: recipeId } : m)),
+    );
   }
 
   async function handleSubmit(userQuery: string) {
@@ -507,7 +639,41 @@ export default function RecsPage() {
     setComposeIngredientsText(null);
     setError("");
     scrollToBottom();
-    await sendToAi(merged, ingredients, history);
+
+    // Resolved before sending so the upcoming reply can be tagged as a fresh
+    // pick (no diff/"changes" framing) vs a genuine follow-up edit, and so the
+    // reply's snapshot is exactly what was just resolved rather than whatever
+    // `referencedRecipe` happens to hold by the time this async call settles.
+    const resolved = await tryResolveReferencedRecipe(userQuery);
+    const snapshot = resolved ?? referencedRecipe;
+    await sendToAi(merged, ingredients, history, resolved != null, snapshot);
+  }
+
+  // Sends just the dish or just the ingredients detection on its own, leaving
+  // the other one (if also pending) untouched for the user to send separately.
+  async function sendDetectionOnly(kind: "dish" | "ingredients") {
+    if (busy || isDetecting) return;
+    const merged = (kind === "dish" ? composeDishText : composeIngredientsText)?.trim();
+    if (!merged) return;
+
+    if (!sessionId) {
+      await bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal);
+    }
+
+    const ingredients = kind === "ingredients" ? ingredientsForApi() : [];
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: "user", text: merged },
+    ]);
+    setIsSending(true);
+    if (kind === "dish") setComposeDishText(null);
+    else setComposeIngredientsText(null);
+    setError("");
+    scrollToBottom();
+
+    const resolved = await tryResolveReferencedRecipe(merged);
+    const snapshot = resolved ?? referencedRecipe;
+    await sendToAi(merged, ingredients, history, resolved != null, snapshot);
   }
 
   // Sends the tapped option's label as a plain chat message — the backend errors on `message: null`.
@@ -524,7 +690,7 @@ export default function RecsPage() {
     setIsSending(true);
     setError("");
     scrollToBottom();
-    await sendToAi(option.label, [], history);
+    await sendToAi(option.label, [], history, false, referencedRecipe);
   }
 
   async function handleReset() {
@@ -640,9 +806,14 @@ export default function RecsPage() {
               !busy && message.role === "assistant" && index === lastAi
             }
             optionsIntro={t.aiHasOptionsIntro}
-            referencedRecipe={referencedRecipe}
-            onRecipeOpened={setReferencedRecipe}
+            referencedRecipe={message.referencedRecipeSnapshot ?? null}
+            recipeCache={recipeCache}
+            onRecipeOpened={(r) => {
+              setReferencedRecipe(r);
+              cacheRecipes([r]);
+            }}
             canSaveRecipes
+            onRecipeSaved={(recipeId) => markMessageSaved(message.id, recipeId)}
             onSelectOption={(opt) => void handleSelectOption(opt)}
           />
         ))}
@@ -676,6 +847,7 @@ export default function RecsPage() {
             icon={<UtensilsCrossed size={16} color="#059669" />}
             disabled={busy}
             onEdit={() => setEditingField("dish")}
+            onSend={() => void sendDetectionOnly("dish")}
           />
         )}
         {hasIngredients && (
@@ -684,6 +856,7 @@ export default function RecsPage() {
             icon={<ShoppingBasket size={16} color="#059669" />}
             disabled={busy}
             onEdit={() => setEditingField("ingredients")}
+            onSend={() => void sendDetectionOnly("ingredients")}
           />
         )}
 
@@ -736,7 +909,6 @@ export default function RecsPage() {
 
         <ChatComposer
           disabled={busy || isDetecting}
-          extraCanSend={hasDish || hasIngredients}
           placeholder={isDetecting ? t.analyzingPhoto : t.askForRecipesHint}
           onSend={(text) => void handleSubmit(text)}
         />

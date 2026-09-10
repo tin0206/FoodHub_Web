@@ -10,6 +10,17 @@ export interface ChatUiMessage {
   role: "user" | "assistant";
   text: string;
   options?: ChatOption[];
+  /** Set once this message's "Add to personal recipe" action has succeeded —
+   * survives a page reload so the button doesn't reset to unsaved. */
+  savedRecipeId?: number;
+  /** True when this reply is just the first full view of a freshly-picked
+   * recipe (nothing was asked to change yet) — see MarkdownReply. */
+  isFreshReferenceView?: boolean;
+  /** The recipe this specific reply is about, frozen at the moment the reply
+   * was requested — never a live/shared value, since the "current" recipe
+   * context can move on to a different pick before the user acts on an
+   * earlier message still visible in the transcript. */
+  referencedRecipeSnapshot?: ApiRecipe | null;
 }
 
 const EMPTY_OPTIONS: ChatOption[] = [];
@@ -27,8 +38,10 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   optionsIntro,
   authToken,
   referencedRecipe,
+  recipeCache,
   onRecipeOpened,
   canSaveRecipes,
+  onRecipeSaved,
   onSelectOption,
 }: {
   message: ChatUiMessage;
@@ -36,8 +49,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   optionsIntro: (count: number) => string;
   authToken?: string;
   referencedRecipe?: ApiRecipe | null;
+  /** Every full recipe the AI has embedded in a `recipes[]` list so far this
+   * session, keyed by id — lets CTA images and "view recipe" taps skip a fetch. */
+  recipeCache?: Record<number, ApiRecipe>;
   onRecipeOpened?: (recipe: ApiRecipe) => void;
   canSaveRecipes?: boolean;
+  onRecipeSaved?: (recipeId: number) => void;
   onSelectOption: (option: ChatOption) => void;
 }) {
   const isUser = message.role === "user";
@@ -91,8 +108,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 text={message.text}
                 authToken={authToken}
                 referencedRecipe={referencedRecipe}
+                recipeCache={recipeCache}
                 onRecipeOpened={onRecipeOpened}
                 canSaveRecipes={canSaveRecipes}
+                savedRecipeId={message.savedRecipeId}
+                onRecipeSaved={onRecipeSaved}
+                isFreshReferenceView={message.isFreshReferenceView}
               />
             )}
           </div>

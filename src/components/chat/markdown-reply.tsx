@@ -9,9 +9,51 @@ import { useStrings } from "@/lib/use-strings";
 import { useLang } from "@/lib/use-lang";
 import { getLang } from "@/lib/i18n";
 import type { ApiRecipe } from "@/lib/api/types";
-import { createRecipe } from "@/lib/api/recipes";
+import { createRecipe, type RecipeWritePayload } from "@/lib/api/recipes";
 import { buildRecipeSlug } from "@/lib/recipe-slug";
 import { NutritionBlock } from "@/components/recipe/recipe-view-content";
+
+/** Appends the HTTP status to the message when available, so the status is
+ * visible right in the UI without needing to open DevTools. */
+function formatSaveError(err: unknown): string {
+  if (err instanceof ApiError) return `${err.message} (HTTP ${err.status})`;
+  if (err instanceof Error) return err.message;
+  return "";
+}
+
+function logCreateRecipeAttempt(label: string, payload: RecipeWritePayload, err: unknown) {
+  console.error(
+    `[chat save-recipe] ${label} failed`,
+    "\nPayload sent:",
+    JSON.stringify(payload, null, 2),
+    "\nStatus:",
+    err instanceof ApiError ? err.status : "n/a",
+    "\nResponse detail:",
+    err instanceof ApiError ? JSON.stringify(err.detail, null, 2) : "n/a",
+    "\nError object:",
+    err,
+  );
+}
+
+/** The backend's ingredient-to-nutrition-catalog matching step is occasionally
+ * flaky — the exact same ingredient lines can fail once and then succeed on
+ * an immediate retry, so absorb one retry here before surfacing an error.
+ * Logs the exact payload + response detail for both attempts so a failure can
+ * be diagnosed from the browser console without guessing. */
+async function createRecipeWithRetry(payload: RecipeWritePayload): Promise<ApiRecipe> {
+  try {
+    return await createRecipe(payload);
+  } catch (firstErr) {
+    logCreateRecipeAttempt("first attempt", payload, firstErr);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      return await createRecipe(payload);
+    } catch (secondErr) {
+      logCreateRecipeAttempt("retry", payload, secondErr);
+      throw secondErr;
+    }
+  }
+}
 
 export type RecipeLinkRef = {
   title: string;
@@ -58,35 +100,89 @@ export interface ParsedRecipeDetail {
   directions: string[];
 }
 
-/** Detects the AI's "single recipe detail" reply shape (a numbered title, then
- * Nutrition, Ingredients and Cooking Steps sections) — used both for the first
- * pick out of a recommendation list and for a follow-up edit like "make it
- * vegetarian". Link-based recommendation lists never look like this. */
-export function parseRecipeDetailReply(markdown: string): ParsedRecipeDetail | null {
-  const ingredientsHeading = /\*\*Ingredients[^*\n]*\*\*:?/i.exec(markdown);
-  const stepsHeading = /\*\*(?:Cooking Steps|Instructions|Directions)\*\*:?/i.exec(markdown);
-  if (!ingredientsHeading || !stepsHeading) return null;
+const INGREDIENTS_HEADING_KEYWORDS = ["ingredient", "nguyên liệu"];
+const DIRECTIONS_HEADING_KEYWORDS = [
+  "direction",
+  "instruction",
+  "cooking step",
+  "step",
+  "cách làm",
+  "cách nấu",
+  "các bước",
+  "hướng dẫn",
+];
 
-  function sectionAfter(start: number): string {
-    const headingPattern = /\*\*[^*\n]+\*\*:?/g;
-    headingPattern.lastIndex = start;
-    const next = headingPattern.exec(markdown);
-    const end = next ? next.index : markdown.length;
-    return markdown.slice(start, end);
+/** A heading line in these replies is either colon-terminated ("Ingredients
+ * (Servings: 3):", bolded or emoji-prefixed) or a short ALL-CAPS standalone
+ * line ("INGREDIENTS (SERVINGS: 3)", "COOKING STEPS") — everything else
+ * (nutrition figures, ingredient/step lines) is mixed-case and has neither
+ * shape. Language/decoration-agnostic on purpose: the backend's exact
+ * phrasing varies by locale and by turn. */
+function isHeadingLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.length > 70) return false;
+  if (/:[\s*_]*$/.test(trimmed)) return true;
+  const letters = trimmed.replace(/[^A-Za-zÀ-ỹ]/g, "");
+  return letters.length >= 3 && letters === letters.toUpperCase() && letters !== letters.toLowerCase();
+}
+
+function lineMatchesAny(line: string, keywords: string[]): boolean {
+  // Normalize first — Vietnamese text from the API can arrive NFD-decomposed
+  // (e.g. "ệ" as "e" + combining marks) even though these keyword literals are
+  // stored NFC-composed, which would otherwise make `.includes()` silently miss.
+  const lower = line.normalize("NFC").toLowerCase();
+  return keywords.some((k) => lower.includes(k));
+}
+
+/** Strips a leading "- ", "* ", "• " or "1. "/"2) " marker when present — the
+ * backend doesn't always bullet/number these lines, so plain lines pass through as-is. */
+function stripLinePrefix(line: string): string {
+  return line.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "").trim();
+}
+
+/** A markdown horizontal rule ("---", "***", "___", optionally spaced) that
+ * the AI sometimes drops between sections — never a real ingredient/step. */
+function isThematicBreak(line: string): boolean {
+  const compact = line.replace(/\s+/g, "");
+  return compact.length >= 3 && /^[-*_]+$/.test(compact);
+}
+
+/** Detects the AI's "single recipe detail" reply shape — a heading line naming
+ * the ingredients section (one item per line, bulleted or not), then a heading
+ * line naming the steps/directions section — used both for the first pick out
+ * of a recommendation list and for a follow-up edit like "make it vegetarian".
+ * Works regardless of language (English/Vietnamese) or decoration (markdown
+ * bold, emoji prefixes, plain text), since the backend's phrasing varies. */
+export function parseRecipeDetailReply(markdown: string): ParsedRecipeDetail | null {
+  const lines = markdown.split(/\r?\n/);
+  const ingredientsIdx = lines.findIndex(
+    (l) => isHeadingLine(l) && lineMatchesAny(l, INGREDIENTS_HEADING_KEYWORDS),
+  );
+  const directionsIdx = lines.findIndex(
+    (l) => isHeadingLine(l) && lineMatchesAny(l, DIRECTIONS_HEADING_KEYWORDS),
+  );
+  if (ingredientsIdx === -1 || directionsIdx === -1) return null;
+
+  function sectionAfter(headingIdx: number): string[] {
+    const items: string[] = [];
+    for (let i = headingIdx + 1; i < lines.length; i++) {
+      if (isHeadingLine(lines[i])) break;
+      if (isThematicBreak(lines[i])) continue;
+      const item = stripLinePrefix(lines[i]);
+      if (item) items.push(item);
+    }
+    return items;
   }
 
-  const ingredientsSection = sectionAfter(ingredientsHeading.index + ingredientsHeading[0].length);
-  const stepsSection = sectionAfter(stepsHeading.index + stepsHeading[0].length);
-
-  const ingredients = [...ingredientsSection.matchAll(/^[-*]\s+(.+)$/gm)].map((m) => m[1].trim());
-  const directions = [...stepsSection.matchAll(/^\d+\.\s+(.+)$/gm)].map((m) => m[1].trim());
+  const ingredients = sectionAfter(ingredientsIdx);
+  const directions = sectionAfter(directionsIdx);
 
   if (ingredients.length === 0) return null;
   return { ingredients, directions };
 }
 
 function normalizeIngredientLine(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
+  return s.normalize("NFC").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 export interface IngredientDiffLine {
@@ -102,26 +198,112 @@ export function diffIngredientLines(current: string[], previous: string[]): Ingr
   return current.map((line) => ({ text: line, changed: !prevSet.has(normalizeIngredientLine(line)) }));
 }
 
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+/** The "Add to personal recipe" button, shared by the recipe-preview modal and
+ * the inline diff card — always creates a real owned copy under /personal
+ * (never a plain favorite/bookmark), swapping to a "View saved recipe" link
+ * once done. */
+function SaveToPersonalControls({
+  saveState,
+  savedRecipeId,
+  recipeTitle,
+  errorMessage,
+  onSave,
+}: {
+  saveState: SaveState;
+  savedRecipeId: number | null;
+  recipeTitle: string;
+  errorMessage: string;
+  onSave: () => void;
+}) {
+  const t = useStrings();
+  if (saveState === "saved" && savedRecipeId != null) {
+    return (
+      <Link
+        href={`/personal/${buildRecipeSlug(savedRecipeId, recipeTitle)}`}
+        className="block text-center text-xs font-bold py-2.5 rounded-lg text-white"
+        style={{ backgroundColor: "#059669" }}
+      >
+        {t.viewSavedRecipeLabel}
+      </Link>
+    );
+  }
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saveState === "saving"}
+        className="w-full text-xs font-bold py-2.5 rounded-lg text-white disabled:opacity-60"
+        style={{ backgroundColor: "#059669" }}
+      >
+        {saveState === "saving" ? t.savingRecipeButton : t.addToPersonalRecipeButton}
+      </button>
+      {saveState === "error" && (
+        <p className="text-[11px] mt-1.5 text-center" style={{ color: "#F43F5E" }}>
+          {errorMessage || t.unableToSaveRecipeFromChat}
+        </p>
+      )}
+    </>
+  );
+}
+
 function RecipePreviewModal({
   recipeId,
   titleHint,
   token,
   onClose,
   onLoaded,
+  canSaveRecipes = false,
+  cachedRecipe = null,
 }: {
   recipeId: string;
   titleHint: string;
   token?: string;
   onClose: () => void;
   onLoaded?: (recipe: ApiRecipe) => void;
+  canSaveRecipes?: boolean;
+  /** Already embedded in an earlier chat `recipes[]` list — skip the fetch entirely. */
+  cachedRecipe?: ApiRecipe | null;
 }) {
   const t = useStrings();
   const lang = useLang();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedRecipe);
   const [error, setError] = useState("");
-  const [recipe, setRecipe] = useState<ApiRecipe | null>(null);
+  const [recipe, setRecipe] = useState<ApiRecipe | null>(cachedRecipe);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [savedRecipeId, setSavedRecipeId] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState("");
+
+  async function handleAddToMyRecipes() {
+    if (!recipe || saveState === "saving") return;
+    setSaveState("saving");
+    setSaveError("");
+    try {
+      const created = await createRecipeWithRetry({
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        directions: recipe.directions,
+        dietary_restrictions: recipe.dietary_restrictions,
+        estimated_servings: recipe.estimated_servings,
+        image_url: recipe.image_url,
+      });
+      setSavedRecipeId(created.id);
+      setSaveState("saved");
+    } catch (err) {
+      setSaveError(formatSaveError(err));
+      setSaveState("error");
+    }
+  }
 
   useEffect(() => {
+    if (cachedRecipe) {
+      setRecipe(cachedRecipe);
+      setLoading(false);
+      onLoaded?.(cachedRecipe);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -157,7 +339,7 @@ function RecipePreviewModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipeId, token, lang]);
+  }, [recipeId, token, lang, cachedRecipe]);
 
   const imageSrc = recipe?.image_url
     ? resolveMediaUrl(recipe.image_url)
@@ -288,6 +470,18 @@ function RecipePreviewModal({
                 ))}
               </ol>
             </div>
+
+            {canSaveRecipes && (
+              <div className="pt-1">
+                <SaveToPersonalControls
+                  saveState={saveState}
+                  savedRecipeId={savedRecipeId}
+                  recipeTitle={recipe.title}
+                  errorMessage={saveError}
+                  onSave={() => void handleAddToMyRecipes()}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -299,8 +493,12 @@ export const MarkdownReply = memo(function MarkdownReply({
   text,
   authToken,
   referencedRecipe = null,
+  recipeCache,
   onRecipeOpened,
   canSaveRecipes = false,
+  savedRecipeId: persistedSavedRecipeId,
+  onRecipeSaved,
+  isFreshReferenceView = false,
 }: {
   text: string;
   /** Optional Bearer for opening recipe detail in demo guest session */
@@ -308,9 +506,23 @@ export const MarkdownReply = memo(function MarkdownReply({
   /** The recipe the user most recently opened in this chat — the source of
    * truth for the title/image when saving an edited version from a reply. */
   referencedRecipe?: ApiRecipe | null;
+  /** Every full recipe the AI has embedded in a `recipes[]` list so far this
+   * session, keyed by id — the chat API sends the same shape as `GET
+   * /recipes/{id}` (image_url included), so CTA images and the preview modal
+   * never need a separate fetch once a recipe has appeared in a list. */
+  recipeCache?: Record<number, ApiRecipe>;
   onRecipeOpened?: (recipe: ApiRecipe) => void;
   /** Only the authenticated /recs chat has a personal library to save into. */
   canSaveRecipes?: boolean;
+  /** Restores the "saved" state after a page reload/navigation — this message
+   * already produced this recipe id, so re-show "View saved recipe" instead of
+   * a blank "Add to personal recipe" button. */
+  savedRecipeId?: number;
+  onRecipeSaved?: (recipeId: number) => void;
+  /** True when this reply is just the first full view of a freshly-picked
+   * recipe (nothing was asked to change yet) — skip the ingredient diff/
+   * "changes highlighted" framing and show a plain save button instead. */
+  isFreshReferenceView?: boolean;
 }) {
   const t = useStrings();
   // Only show the CTA list when this specific reply actually contains recipe
@@ -332,19 +544,16 @@ export const MarkdownReply = memo(function MarkdownReply({
     return parseRecipeDetailReply(cleaned);
   }, [cleaned, ctas.length]);
 
-  const ingredientDiff = useMemo(() => {
-    if (!parsedDetail || !referencedRecipe) return null;
-    return diffIngredientLines(parsedDetail.ingredients, referencedRecipe.ingredients ?? []);
-  }, [parsedDetail, referencedRecipe]);
-
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [savedRecipeId, setSavedRecipeId] = useState<number | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>(persistedSavedRecipeId != null ? "saved" : "idle");
+  const [savedRecipeId, setSavedRecipeId] = useState<number | null>(persistedSavedRecipeId ?? null);
+  const [saveError, setSaveError] = useState("");
 
   async function handleSaveEdited() {
     if (!parsedDetail || !referencedRecipe || saveState === "saving") return;
     setSaveState("saving");
+    setSaveError("");
     try {
-      const created = await createRecipe({
+      const created = await createRecipeWithRetry({
         title: referencedRecipe.title,
         ingredients: parsedDetail.ingredients,
         directions: parsedDetail.directions.length ? parsedDetail.directions : referencedRecipe.directions,
@@ -354,44 +563,12 @@ export const MarkdownReply = memo(function MarkdownReply({
       });
       setSavedRecipeId(created.id);
       setSaveState("saved");
-    } catch {
+      onRecipeSaved?.(created.id);
+    } catch (err) {
+      setSaveError(formatSaveError(err));
       setSaveState("error");
     }
   }
-
-  // The chat API doesn't send an image for these recipe refs — fetch each one's
-  // just to show a real photo instead of the generic book icon in the list.
-  const [recipeImages, setRecipeImages] = useState<Record<string, string | null>>({});
-  useEffect(() => {
-    const idsToFetch = ctas
-      .map((c) => c.recipeId)
-      .filter((id) => id && !(id in recipeImages));
-    if (idsToFetch.length === 0) return;
-    let cancelled = false;
-    Promise.all(
-      idsToFetch.map(async (id) => {
-        const numericId = Number(id);
-        if (!Number.isFinite(numericId)) return [id, null] as const;
-        try {
-          const data = await apiFetch<ApiRecipe>(`/recipes/${numericId}`, { token: authToken });
-          return [id, data.image_url ?? null] as const;
-        } catch {
-          return [id, null] as const;
-        }
-      }),
-    ).then((entries) => {
-      if (cancelled) return;
-      setRecipeImages((prev) => {
-        const next = { ...prev };
-        for (const [id, url] of entries) next[id] = url;
-        return next;
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctas, authToken]);
 
   const [openLink, setOpenLink] = useState<RecipeLinkRef | null>(null);
 
@@ -455,55 +632,16 @@ export const MarkdownReply = memo(function MarkdownReply({
       </ReactMarkdown>
 
       {parsedDetail && referencedRecipe && canSaveRecipes && (
+        // Diff/"changes highlighted" framing is temporarily disabled — always
+        // show the plain save action regardless of fresh-view vs edit.
         <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--tm-border-i, #E5E7EB)" }}>
-          <p
-            className="text-[11px] font-bold mb-2 tracking-wide"
-            style={{ color: "var(--tm-text-3, #6B7280)" }}
-          >
-            {t.ingredientsInThisVersionLabel}
-          </p>
-          <ul className="space-y-1 mb-3">
-            {(ingredientDiff ?? parsedDetail.ingredients.map((line) => ({ text: line, changed: false }))).map(
-              (line, i) => (
-                <li
-                  key={i}
-                  className="text-[12.5px] px-2.5 py-1.5 rounded-lg"
-                  style={
-                    line.changed
-                      ? { backgroundColor: "rgba(5,150,105,0.16)", color: "var(--tm-text)", fontWeight: 600 }
-                      : { color: "var(--tm-text-2)" }
-                  }
-                >
-                  {line.text}
-                </li>
-              ),
-            )}
-          </ul>
-
-          {saveState === "saved" && savedRecipeId != null ? (
-            <Link
-              href={`/personal/${buildRecipeSlug(savedRecipeId, referencedRecipe.title)}`}
-              className="block text-center text-xs font-bold py-2 rounded-lg text-white"
-              style={{ backgroundColor: "#059669" }}
-            >
-              {t.viewSavedRecipeLabel}
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void handleSaveEdited()}
-              disabled={saveState === "saving"}
-              className="w-full text-xs font-bold py-2 rounded-lg text-white disabled:opacity-60"
-              style={{ backgroundColor: "#059669" }}
-            >
-              {saveState === "saving" ? t.savingRecipeButton : t.saveRecipeFromChatButton}
-            </button>
-          )}
-          {saveState === "error" && (
-            <p className="text-[11px] mt-1.5" style={{ color: "#F43F5E" }}>
-              {t.unableToSaveRecipeFromChat}
-            </p>
-          )}
+          <SaveToPersonalControls
+            saveState={saveState}
+            savedRecipeId={savedRecipeId}
+            recipeTitle={referencedRecipe.title}
+            errorMessage={saveError}
+            onSave={() => void handleSaveEdited()}
+          />
         </div>
       )}
 
@@ -517,7 +655,8 @@ export const MarkdownReply = memo(function MarkdownReply({
           </p>
           <div className="flex flex-col gap-2.5">
             {ctas.map((link) => {
-              const imageUrl = link.recipeId ? recipeImages[link.recipeId] : null;
+              const numericLinkId = link.recipeId ? Number(link.recipeId) : NaN;
+              const imageUrl = Number.isFinite(numericLinkId) ? recipeCache?.[numericLinkId]?.image_url : null;
               const resolvedImage = imageUrl ? resolveMediaUrl(imageUrl) : "";
               return (
               <button
@@ -565,6 +704,8 @@ export const MarkdownReply = memo(function MarkdownReply({
           token={authToken}
           onClose={() => setOpenLink(null)}
           onLoaded={onRecipeOpened}
+          canSaveRecipes={canSaveRecipes}
+          cachedRecipe={recipeCache?.[Number(openLink.recipeId)] ?? null}
         />
       )}
     </div>

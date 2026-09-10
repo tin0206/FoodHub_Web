@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChefHat, RotateCcw } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { aiChat, aiWelcome } from "@/lib/api/ai";
-import type { ChatHistoryMessage, ChatOption } from "@/lib/api/types";
+import type { ApiRecipe, ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 import { ensureDemoSession } from "@/lib/demo-session";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import {
@@ -61,6 +61,19 @@ export function DemoChatPanel({
   const [error, setError] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const [shouldStart, setShouldStart] = useState(!embedded);
+  // Every full recipe the AI has embedded in a `recipes[]` list so far this
+  // session, keyed by id — the chat API already sends the same shape as
+  // `GET /recipes/{id}` (image_url included), so CTA images never need a fetch.
+  const [recipeCache, setRecipeCache] = useState<Record<number, ApiRecipe>>({});
+
+  function cacheRecipes(recipes: ApiRecipe[]) {
+    if (recipes.length === 0) return;
+    setRecipeCache((prev) => {
+      const next = { ...prev };
+      for (const r of recipes) next[r.id] = r;
+      return next;
+    });
+  }
 
   const busy = isBootstrapping || isSending;
 
@@ -102,11 +115,13 @@ export function DemoChatPanel({
     setMessages([]);
     setHistory([]);
     setSessionId(sid);
+    setRecipeCache({});
 
     try {
       const response = await aiWelcome({ sessionId: sid, token });
       const finalSession = response.session_id || sid;
       setSessionId(finalSession);
+      cacheRecipes(response.recipes);
       const reply =
         response.reply.trim() ||
         "Hello! I'm your AI companion. Tell me what you'd like to cook.";
@@ -186,6 +201,7 @@ export function DemoChatPanel({
         token,
       });
       if (response.session_id) setSessionId(response.session_id);
+      cacheRecipes(response.recipes);
 
       const reply = response.reply.trim() || "(Empty reply from AI)";
       setMessages((prev) => [
@@ -352,6 +368,7 @@ export function DemoChatPanel({
                 }
                 optionsIntro={demoOptionsIntro}
                 authToken={tokenRef.current ?? undefined}
+                recipeCache={recipeCache}
                 onSelectOption={(opt) => void handleSelectOption(opt)}
               />
             ))}

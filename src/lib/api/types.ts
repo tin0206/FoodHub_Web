@@ -174,14 +174,10 @@ export interface AiRequestDetail {
   session_id?: string | null;
 }
 
-export interface RagRecipe {
-  recipe_id?: string | null;
-  title: string;
-  ingredients: string[];
-  directions: string[];
-  dietary_restrictions?: string[];
-  estimated_servings?: number | null;
-}
+/** The chat AI now embeds the full recipe record (same shape as `GET
+ * /recipes/{id}`, image_url/nutrition included) for every recipe it mentions
+ * in a recommendation list — no separate fetch needed to show it. */
+export type RagRecipe = ApiRecipe;
 
 /** One AI-suggested reply choice — rendered as a tappable card instead of free text. */
 export interface ChatOption {
@@ -195,7 +191,7 @@ export interface ChatResponse {
   reply: string;
   phase: string;
   session_id?: string | null;
-  recipes: RagRecipe[];
+  recipes: ApiRecipe[];
   options: ChatOption[];
   known_info?: Record<string, unknown>;
 }
