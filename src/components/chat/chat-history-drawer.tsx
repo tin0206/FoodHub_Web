@@ -22,11 +22,16 @@ function errorMessage(err: unknown, fallback: string): string {
  * /ai/sessions), with New chat / open / delete actions. */
 export function ChatHistoryDrawer({
   activeSessionId,
+  activeSessionLiveInfo,
   onClose,
   onSelectSession,
   onNewChat,
 }: {
   activeSessionId: string | null;
+  /** The currently open conversation's latest message/count, known instantly
+   * from client state — overlaid onto the fetched list so the active session's
+   * row is never a beat behind whatever the backend has actually persisted yet. */
+  activeSessionLiveInfo?: { lastMessage: string | null; messageCount: number } | null;
   onClose: () => void;
   onSelectSession: (sessionId: string) => void;
   onNewChat: () => void;
@@ -43,6 +48,31 @@ export function ChatHistoryDrawer({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
+  function applyActiveOverride(list: ChatSessionSummary[]): ChatSessionSummary[] {
+    if (!activeSessionId || !activeSessionLiveInfo) return list;
+    const idx = list.findIndex((s) => s.session_id === activeSessionId);
+    if (idx === -1) {
+      // A brand-new session the backend hasn't indexed into the list yet.
+      const now = new Date().toISOString();
+      const synthetic: ChatSessionSummary = {
+        session_id: activeSessionId,
+        title: null,
+        last_message: activeSessionLiveInfo.lastMessage,
+        message_count: activeSessionLiveInfo.messageCount,
+        created_at: now,
+        updated_at: now,
+      };
+      return [synthetic, ...list];
+    }
+    const next = [...list];
+    next[idx] = {
+      ...next[idx],
+      last_message: activeSessionLiveInfo.lastMessage ?? next[idx].last_message,
+      message_count: Math.max(activeSessionLiveInfo.messageCount, next[idx].message_count),
+    };
+    return next;
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -51,8 +81,9 @@ export function ChatHistoryDrawer({
       try {
         const res = await listChatSessions({ skip: 0, limit: PAGE_SIZE });
         if (cancelled) return;
-        setSessions(res.sessions);
-        setTotalCount(res.total_count);
+        const hasActive = res.sessions.some((s) => s.session_id === activeSessionId);
+        setSessions(applyActiveOverride(res.sessions));
+        setTotalCount(res.total_count + (activeSessionId && !hasActive ? 1 : 0));
       } catch (err) {
         if (!cancelled) setError(errorMessage(err, t.unableToLoadChatHistory));
       } finally {

@@ -1047,6 +1047,14 @@ export default function RecsPage() {
       {showHistory && (
         <ChatHistoryDrawer
           activeSessionId={sessionId}
+          activeSessionLiveInfo={
+            sessionId
+              ? {
+                  lastMessage: messages.length > 0 ? messages[messages.length - 1].text : null,
+                  messageCount: messages.length,
+                }
+              : null
+          }
           onClose={() => setShowHistory(false)}
           onSelectSession={(id) => void loadExistingSession(id)}
           onNewChat={() => void bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal)}
