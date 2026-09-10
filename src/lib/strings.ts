@@ -593,6 +593,58 @@ export function getStrings(lang: Lang) {
     adminNewUsersHeading: vi
       ? "Người dùng mới — 7 ngày qua"
       : "New Users — Last 7 Days",
+    adminMealPlanAdoptionHeading: vi
+      ? "Mức độ dùng kế hoạch bữa ăn"
+      : "Meal Plan Adoption",
+    adminAdoptionRateLabel: vi ? "Tỷ lệ dùng" : "Adoption rate",
+    adminTotalUsersLabel: vi ? "Tổng người dùng" : "Total users",
+    adminUsersWithMealPlansLabel: vi
+      ? "Người dùng có kế hoạch"
+      : "Users with a plan",
+    adminTotalMealPlansLabel: vi ? "Tổng kế hoạch bữa ăn" : "Total meal plans",
+    adminUsersWithSuggestionsLabel: vi
+      ? "Người dùng có gợi ý"
+      : "Users with suggestions",
+    adminTotalSuggestionsLabel: vi ? "Tổng gợi ý đã tạo" : "Total suggestions",
+    adminActiveUsersHeading: vi ? "Người dùng hoạt động" : "Active Users",
+    adminDailyActiveLabel: vi ? "Theo ngày — 14 ngày qua" : "Daily — last 14 days",
+    adminWeeklyActiveLabel: vi ? "Theo tuần — 8 tuần qua" : "Weekly — last 8 weeks",
+    adminAiUsageHeading: vi ? "Mức sử dụng tính năng AI" : "AI Feature Usage",
+    adminAiUsageSubtitle: vi ? "30 ngày qua" : "Last 30 days",
+    adminNoAiUsage: vi
+      ? "Chưa có yêu cầu AI nào trong 30 ngày qua."
+      : "No AI requests in the last 30 days yet.",
+    adminFailRateLabel: (pct: string) =>
+      vi ? `${pct} lỗi` : `${pct} fail`,
+    adminTopUsersHeading: vi
+      ? "Người dùng hoạt động tích cực nhất"
+      : "Most Active Users",
+    adminNoTopUsers: vi ? "Chưa có dữ liệu." : "No activity yet.",
+    adminDietaryDistributionHeading: vi
+      ? "Phân bố nhãn ăn kiêng (toàn bộ công thức)"
+      : "Dietary Labels Across the Catalog",
+    adminNoDietaryDistribution: vi
+      ? "Chưa có công thức nào có nhãn ăn kiêng."
+      : "No recipes with dietary labels yet.",
+    adminFavoritesCountLabel: (n: number) =>
+      vi ? `${n} lượt thích` : `${n} favorite${n === 1 ? "" : "s"}`,
+    adminViewsCountLabel: (n: number) =>
+      vi ? `${n} lượt xem` : `${n} view${n === 1 ? "" : "s"}`,
+    adminRecipesCreatedShort: (n: number) =>
+      vi ? `${n} công thức` : `${n} recipe${n === 1 ? "" : "s"}`,
+    adminChatSessionsShort: (n: number) =>
+      vi ? `${n} phiên chat` : `${n} chat${n === 1 ? "" : "s"}`,
+    aiRequestTypeDisplay(value: string): string {
+      if (!vi) return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const map: Record<string, string> = {
+        chat: "Trò chuyện AI",
+        dish_recognition: "Nhận diện món ăn",
+        ingredients_detect: "Nhận diện nguyên liệu",
+        meal_suggest: "Gợi ý bữa ăn",
+        shopping_list: "Danh sách mua sắm",
+      };
+      return map[value] ?? value.replace(/_/g, " ");
+    },
 
     // ── Admin: recipes list ────────────────────────────────────────────────
     adminNoTokenRecipes: vi
