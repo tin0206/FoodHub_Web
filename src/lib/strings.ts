@@ -391,7 +391,6 @@ export function getStrings(lang: Lang) {
     dietaryRestrictionsLabel: vi
       ? "Chế độ ăn đặc biệt"
       : "Dietary Restrictions",
-    securityLabel: vi ? "Bảo mật" : "Security",
     changePasswordLabel: vi ? "Đổi mật khẩu" : "Change password",
     saveChanges: vi ? "Lưu thay đổi" : "Save changes",
     logOut: vi ? "Đăng xuất" : "Log out",

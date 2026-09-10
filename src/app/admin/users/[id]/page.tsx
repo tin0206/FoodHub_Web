@@ -388,12 +388,12 @@ export default function AdminUserDetailPage() {
               value={user.created_at ? new Date(user.created_at).toLocaleDateString(lang === "vi" ? "vi-VN" : "en-US") : "—"}
               accent={accent}
             />
-          </InfoCard>
-
-          <InfoCard title={t.adminNutritionGoalsCardTitle} icon={Flame} accent={accent}>
             <InfoRow icon={Cake} label={t.ageLabel} value={user.age ? t.adminAgeYears(user.age) : "—"} accent={accent} />
             <InfoRow icon={Weight} label={t.weightLabel} value={user.weight ? t.adminWeightKg(user.weight) : "—"} accent={accent} />
             <InfoRow icon={UserRound} label={t.genderLabel} value={user.gender ? t.genderDisplay(user.gender) : "—"} accent={accent} />
+          </InfoCard>
+
+          <InfoCard title={t.adminNutritionGoalsCardTitle} icon={Flame} accent={accent}>
             <InfoRow
               icon={Flame}
               label={t.dailyCalorieTarget}

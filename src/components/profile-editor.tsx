@@ -645,36 +645,33 @@ export function ProfileEditor() {
             </div>
           </SectionCard>
 
-          {/* Security */}
-          <SectionCard
-            icon={<KeyRound size={18} color="#EA580C" />}
-            iconBg="#FFEDD5"
-            title={t.securityLabel}
-            subtitle={isGoogleOnly ? t.setPasswordLabel : t.changePasswordLabel}
-          >
+          {/* Change password — only one action here, so no separate "Security" section header */}
+          <div className="border rounded-xl p-4 mb-4" style={{ backgroundColor: "var(--tm-surface)", borderColor: "var(--tm-border)" }}>
             <button
               type="button"
               onClick={() => (isGoogleOnly ? handleSetFirstPassword() : setShowChangePassword(true))}
               disabled={isGoogleOnly && settingPassword}
-              className="flex items-center justify-between w-full text-sm py-1 disabled:opacity-60"
+              className="flex items-center justify-between w-full text-sm disabled:opacity-60"
               style={{ color: "var(--tm-text)" }}
             >
-              <span className="flex items-center gap-2">
-                <KeyRound size={15} color="var(--tm-text-3)" />
-                {isGoogleOnly ? t.setPasswordLabel : t.changePasswordLabel}
+              <span className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#FFEDD5" }}>
+                  <KeyRound size={16} color="#EA580C" />
+                </div>
+                <span className="font-semibold">{isGoogleOnly ? t.setPasswordLabel : t.changePasswordLabel}</span>
               </span>
               <ChevronRight size={16} color="var(--tm-text-3)" />
             </button>
             {isGoogleOnly && (
-              <p className="text-xs mt-1.5" style={{ color: "var(--tm-text-3)" }}>{t.setPasswordSubtitle}</p>
+              <p className="text-xs mt-1.5 ml-11" style={{ color: "var(--tm-text-3)" }}>{t.setPasswordSubtitle}</p>
             )}
             {isGoogleOnly && setPasswordSent && (
-              <p className="text-xs mt-2 font-medium" style={{ color: "#059669" }}>{t.setPasswordSentMessage}</p>
+              <p className="text-xs mt-2 ml-11 font-medium" style={{ color: "#059669" }}>{t.setPasswordSentMessage}</p>
             )}
             {isGoogleOnly && setPasswordError && (
-              <p className="text-xs mt-2" style={{ color: "#f87171" }}>{setPasswordError}</p>
+              <p className="text-xs mt-2 ml-11" style={{ color: "#f87171" }}>{setPasswordError}</p>
             )}
-          </SectionCard>
+          </div>
 
           {/* Cancel + Save changes */}
           <div ref={bottomActionsRef} className="flex gap-2 mt-3 mb-2">
