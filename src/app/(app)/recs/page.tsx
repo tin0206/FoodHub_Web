@@ -675,6 +675,8 @@ export default function RecsPage() {
           <ChatMessageBubble
             key={message.id}
             message={message}
+            messages={messages}
+            messageIndex={index}
             isLatestAi={
               !busy && message.role === "assistant" && index === lastAi
             }

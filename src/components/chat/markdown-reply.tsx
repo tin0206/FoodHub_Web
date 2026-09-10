@@ -6,6 +6,12 @@ import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
 import { useStrings } from "@/lib/use-strings";
 import type { ApiRecipe, RagRecipe } from "@/lib/api/types";
+import { RecipeDiffBody } from "@/components/chat/recipe-diff-body";
+import {
+  diffRecipeLines,
+  isModifiedRecipeMarkdown,
+  recipeDiffHasVisibleChanges,
+} from "@/lib/recipe-version-diff";
 
 export type RecipeLinkRef = {
   title: string;
@@ -269,30 +275,43 @@ export const MarkdownReply = memo(function MarkdownReply({
   text,
   recipes = EMPTY_RECIPES,
   authToken,
+  previousMarkdown,
 }: {
   text: string;
   recipes?: RagRecipe[];
   /** Optional Bearer for opening recipe detail in demo guest session */
   authToken?: string;
+  previousMarkdown?: string | null;
 }) {
   const t = useStrings();
-  const { cleaned, ctas } = useMemo(() => {
+  const { cleaned, ctas, diffHunks } = useMemo(() => {
     const extracted = extractRecipeMarkdownLinks(text);
+    const previousClean = previousMarkdown
+      ? extractRecipeMarkdownLinks(previousMarkdown).markdown
+      : "";
+    const hunks =
+      previousMarkdown && isModifiedRecipeMarkdown(text)
+        ? diffRecipeLines(previousClean, extracted.markdown)
+        : [];
     return {
       cleaned: extracted.markdown,
       ctas: mergeRecipeCtas({
         fromMarkdown: extracted.links,
         recipes,
       }),
+      diffHunks: recipeDiffHasVisibleChanges(hunks) ? hunks : null,
     };
-  }, [text, recipes]);
+  }, [text, recipes, previousMarkdown]);
 
   const [openLink, setOpenLink] = useState<RecipeLinkRef | null>(null);
 
   return (
     <div className="text-[13px] leading-relaxed" style={{ color: "var(--tm-text)" }}>
-      <ReactMarkdown
-        components={{
+      {diffHunks ? (
+        <RecipeDiffBody hunks={diffHunks} />
+      ) : (
+        <ReactMarkdown
+          components={{
           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
           ul: ({ children }) => (
             <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>
@@ -347,6 +366,7 @@ export const MarkdownReply = memo(function MarkdownReply({
       >
         {cleaned.trim() || " "}
       </ReactMarkdown>
+      )}
 
       {ctas.length > 0 && (
         <div className="mt-3 pt-2" style={{ borderTop: "1px solid var(--tm-border-i, #E5E7EB)" }}>

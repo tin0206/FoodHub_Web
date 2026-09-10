@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Bot, ChevronRight } from "lucide-react";
 import type { ChatOption, RagRecipe } from "@/lib/api/types";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
+import { findPreviousRecipeMarkdown } from "@/lib/recipe-version-diff";
 
 export interface ChatUiMessage {
   id: string;
@@ -29,6 +30,8 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   optionsIntro,
   rerunLabel,
   authToken,
+  messages,
+  messageIndex,
   onSelectOption,
   onRerun,
 }: {
@@ -38,6 +41,8 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   optionsIntro: (count: number) => string;
   rerunLabel: string;
   authToken?: string;
+  messages?: ChatUiMessage[];
+  messageIndex?: number;
   onSelectOption: (option: ChatOption) => void;
   onRerun: () => void;
 }) {
@@ -45,6 +50,16 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const options = message.options ?? EMPTY_OPTIONS;
   const showOptions = isLatestAi && options.length > 0;
   const showRerun = isLatestAi && canRerun && options.length === 0;
+  const previousMarkdown =
+    messages && messageIndex != null
+      ? findPreviousRecipeMarkdown({
+          messages: messages.map((m) => ({
+            isUser: m.role === "user",
+            text: m.text,
+          })),
+          currentIndex: messageIndex,
+        })
+      : null;
 
   return (
     <div className={`px-3 flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -93,6 +108,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 text={message.text}
                 recipes={message.recipes}
                 authToken={authToken}
+                previousMarkdown={previousMarkdown}
               />
             )}
           </div>

@@ -275,6 +275,15 @@ export function getStrings(lang: Lang) {
     recipeNotOpenableDemo: vi
       ? "Không thể mở công thức này trong bản demo."
       : "This recipe id is not openable in the demo.",
+    recipeDiffPrevious: vi ? "Trước đó" : "Previous",
+    recipeDiffCurrent: vi ? "Hiện tại" : "Now",
+    recipeDiffAdded: vi
+      ? "Đã thêm ở phiên bản này"
+      : "Added in this version",
+    recipeDiffRemoved: vi
+      ? "Đã xóa so với phiên bản trước"
+      : "Removed from previous version",
+    recipeDiffChanged: vi ? "Đã sửa" : "Changed",
 
     // ── Recipe detail / cooking mode ───────────────────────────────────────
     addPhoto: vi ? "Thêm ảnh" : "Add Photo",
