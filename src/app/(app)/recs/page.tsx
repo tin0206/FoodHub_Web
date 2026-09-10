@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Camera,
+  History,
   Loader2,
   Pencil,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   aiChat,
   aiDetectDish,
   aiDetectIngredients,
+  getChatSession,
   type DishMatch,
 } from "@/lib/api/ai";
 import { getRecipe } from "@/lib/api/recipes";
@@ -30,6 +32,7 @@ import {
   lastAssistantIndex,
   type ChatUiMessage,
 } from "@/components/chat/chat-message-bubble";
+import { ChatHistoryDrawer } from "@/components/chat/chat-history-drawer";
 import { extractRecipeMarkdownLinks, type RecipeLinkRef } from "@/components/chat/markdown-reply";
 import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { NoteDialog } from "@/components/note-dialog";
@@ -327,6 +330,7 @@ export default function RecsPage() {
   const isDetecting = detectingKind !== null;
   const [error, setError] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   // The recipe the user last opened from a chat reply — provides the title/image
   // when they save an AI-edited version ("make it vegetarian") back to their library.
   const [referencedRecipe, setReferencedRecipe] = useState<ApiRecipe | null>(null);
@@ -396,6 +400,42 @@ export default function RecsPage() {
       const msg = errorMessage(err, t.unableToReachAi);
       setError(msg);
       setMessages([{ id: `err-${Date.now()}`, role: "assistant", text: msg }]);
+    } finally {
+      setIsBootstrapping(false);
+      scrollToBottom();
+    }
+  }
+
+  // Reopens a saved conversation from the history drawer (GET /ai/sessions/{id})
+  // — the backend only stores plain role/content pairs, so options/recipe
+  // snapshots/save state naturally start blank for restored messages, same as
+  // for any older message from before this feature existed.
+  async function loadExistingSession(targetSessionId: string) {
+    if (targetSessionId === sessionId) return;
+    setIsBootstrapping(true);
+    setError("");
+    try {
+      const detail = await getChatSession(targetSessionId);
+      const uiMessages: ChatUiMessage[] = detail.messages.map((m, i) => ({
+        id: `${m.role[0]}-${i}-${targetSessionId}`,
+        role: m.role,
+        text: m.content,
+      }));
+      const historyMessages: ChatHistoryMessage[] = detail.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      setSessionId(detail.session_id);
+      setMessages(uiMessages);
+      setHistory(historyMessages);
+      setComposeDishText(null);
+      setComposeIngredientsText(null);
+      setReferencedRecipe(null);
+      setRecipeCache({});
+      const lastAssistant = [...uiMessages].reverse().find((m) => m.role === "assistant");
+      setLastCtas(lastAssistant ? extractRecipeMarkdownLinks(lastAssistant.text).links : []);
+    } catch (err) {
+      setError(errorMessage(err, t.unableToLoadChatHistory));
     } finally {
       setIsBootstrapping(false);
       scrollToBottom();
@@ -779,6 +819,20 @@ export default function RecsPage() {
         </p>
         <button
           type="button"
+          onClick={() => setShowHistory(true)}
+          disabled={busy}
+          className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40"
+          style={{
+            backgroundColor: "var(--tm-subtle)",
+            color: "var(--tm-text-2)",
+          }}
+          aria-label={t.historyLabel}
+          title={t.historyLabel}
+        >
+          <History size={16} />
+        </button>
+        <button
+          type="button"
           onClick={() => setConfirmReset(true)}
           disabled={busy}
           className="w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-40"
@@ -987,6 +1041,15 @@ export default function RecsPage() {
           confirmColor="#059669"
           onConfirm={() => void handleReset()}
           onCancel={() => setConfirmReset(false)}
+        />
+      )}
+
+      {showHistory && (
+        <ChatHistoryDrawer
+          activeSessionId={sessionId}
+          onClose={() => setShowHistory(false)}
+          onSelectSession={(id) => void loadExistingSession(id)}
+          onNewChat={() => void bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal)}
         />
       )}
     </div>

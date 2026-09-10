@@ -195,3 +195,34 @@ export interface ChatResponse {
   options: ChatOption[];
   known_info?: Record<string, unknown>;
 }
+
+/** One row of GET /ai/sessions — a saved conversation's sidebar summary. */
+export interface ChatSessionSummary {
+  session_id: string;
+  /** Null until the user has sent at least one message — show a fallback like "New chat". */
+  title: string | null;
+  last_message: string | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatSessionListResponse {
+  total_count: number;
+  sessions: ChatSessionSummary[];
+}
+
+export interface ChatSessionMessage {
+  role: "user" | "assistant";
+  content: string;
+  created_at: string | null;
+}
+
+/** GET /ai/sessions/{id} — a saved conversation's full transcript. */
+export interface ChatSessionDetail {
+  session_id: string;
+  title: string | null;
+  messages: ChatSessionMessage[];
+  created_at: string;
+  updated_at: string;
+}

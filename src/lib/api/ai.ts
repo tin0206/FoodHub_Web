@@ -4,6 +4,8 @@ import type {
   ApiRecipe,
   ChatOption,
   ChatResponse,
+  ChatSessionDetail,
+  ChatSessionListResponse,
 } from "@/lib/api/types";
 import { prepareVisionUpload } from "@/lib/vision-upload";
 
@@ -256,4 +258,33 @@ export async function aiDetectIngredients(
         ? payload.annotated_image_url
         : "",
   };
+}
+
+// ─── Chat history (saved sessions) ─────────────────────────────────────────
+
+/** GET /ai/sessions — the sidebar list of the user's past conversations. */
+export async function listChatSessions(params?: {
+  skip?: number;
+  limit?: number;
+  token?: string;
+}): Promise<ChatSessionListResponse> {
+  return apiFetch<ChatSessionListResponse>("/ai/sessions", {
+    token: params?.token,
+    query: { skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
+  });
+}
+
+/** GET /ai/sessions/{id} — reopens one conversation's full transcript. */
+export async function getChatSession(
+  sessionId: string,
+  token?: string,
+): Promise<ChatSessionDetail> {
+  return apiFetch<ChatSessionDetail>(`/ai/sessions/${sessionId}`, { token });
+}
+
+export async function deleteChatSession(
+  sessionId: string,
+  token?: string,
+): Promise<void> {
+  await apiFetch<void>(`/ai/sessions/${sessionId}`, { method: "DELETE", token });
 }

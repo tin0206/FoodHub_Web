@@ -233,6 +233,30 @@ export function getStrings(lang: Lang) {
       : "Hello! I'm your culinary companion. Tell me what you'd like to cook.",
     emptyReply: vi ? "(Không có phản hồi)" : "(Empty reply)",
 
+    // ── Chat history drawer ─────────────────────────────────────────────────
+    historyLabel: vi ? "Lịch sử" : "History",
+    chatHistoryTitle: vi ? "Lịch sử trò chuyện" : "Chat history",
+    newChatLabel: vi ? "Trò chuyện mới" : "New chat",
+    loadingChatHistory: vi ? "Đang tải…" : "Loading…",
+    noChatHistoryYet: vi
+      ? "Chưa có cuộc trò chuyện nào"
+      : "No conversations yet",
+    unableToLoadChatHistory: vi
+      ? "Không thể tải lịch sử trò chuyện."
+      : "Unable to load chat history.",
+    unableToDeleteChatSession: vi
+      ? "Không thể xóa cuộc trò chuyện này."
+      : "Unable to delete this conversation.",
+    deleteChatSessionTitle: vi
+      ? "Xóa cuộc trò chuyện này?"
+      : "Delete this conversation?",
+    deleteChatSessionDesc: vi
+      ? "Thao tác này không thể hoàn tác."
+      : "This can't be undone.",
+    loadMoreLabel: vi ? "Tải thêm" : "Load more",
+    messageCountLabel: (n: number) =>
+      vi ? `${n} tin nhắn` : `${n} message${n === 1 ? "" : "s"}`,
+
     // Dish photo / ingredients photo detection
     dishPhotoLabel: vi ? "Ảnh món ăn" : "Dish photo",
     ingredientsPhotoLabel: vi ? "Ảnh nguyên liệu" : "Ingredients photo",
