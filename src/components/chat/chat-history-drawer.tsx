@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
-import { listChatSessions, deleteChatSession } from "@/lib/api/ai";
+import { listChatSessions, deleteChatSession, renameChatSession } from "@/lib/api/ai";
 import type { ChatSessionSummary } from "@/lib/api/types";
 import { relativeTime } from "@/lib/admin";
 import { useLang } from "@/lib/use-lang";
@@ -40,6 +40,8 @@ export function ChatHistoryDrawer({
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ChatSessionSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +76,23 @@ export function ChatHistoryDrawer({
       setError(errorMessage(err, t.unableToLoadChatHistory));
     } finally {
       setLoadingMore(false);
+    }
+  }
+
+  function startRename(session: ChatSessionSummary) {
+    setRenamingId(session.session_id);
+    setRenameValue(session.title ?? "");
+  }
+
+  async function commitRename(session: ChatSessionSummary) {
+    const trimmed = renameValue.trim();
+    setRenamingId(null);
+    if (!trimmed || trimmed === (session.title ?? "")) return;
+    try {
+      const updated = await renameChatSession(session.session_id, trimmed);
+      setSessions((prev) => prev.map((s) => (s.session_id === updated.session_id ? updated : s)));
+    } catch (err) {
+      setError(errorMessage(err, t.unableToRenameChatSession));
     }
   }
 
@@ -174,12 +193,28 @@ export function ChatHistoryDrawer({
                       }}
                     >
                       <div className="flex-1 min-w-0">
-                        <p
-                          className="text-[13px] font-semibold truncate"
-                          style={{ color: "var(--tm-text)" }}
-                        >
-                          {s.title?.trim() || t.newChatLabel}
-                        </p>
+                        {renamingId === s.session_id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") void commitRename(s);
+                              else if (e.key === "Escape") setRenamingId(null);
+                            }}
+                            onBlur={() => void commitRename(s)}
+                            className="w-full text-[13px] font-semibold bg-transparent outline-none border-b"
+                            style={{ color: "var(--tm-text)", borderColor: "#059669" }}
+                          />
+                        ) : (
+                          <p
+                            className="text-[13px] font-semibold truncate"
+                            style={{ color: "var(--tm-text)" }}
+                          >
+                            {s.title?.trim() || t.newChatLabel}
+                          </p>
+                        )}
                         {s.last_message && (
                           <p
                             className="text-[11.5px] truncate mt-0.5"
@@ -192,18 +227,47 @@ export function ChatHistoryDrawer({
                           {relativeTime(s.updated_at, lang)} · {t.messageCountLabel(s.message_count)}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteTarget(s);
-                        }}
-                        className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100"
-                        style={{ color: "#DC2626" }}
-                        aria-label={t.delete}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {renamingId === s.session_id ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void commitRename(s);
+                          }}
+                          className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
+                          style={{ color: "#059669" }}
+                          aria-label={t.saveLabel}
+                        >
+                          <Check size={14} />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startRename(s);
+                            }}
+                            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100"
+                            style={{ color: "var(--tm-text-2)" }}
+                            aria-label={t.edit}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(s);
+                            }}
+                            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100"
+                            style={{ color: "#DC2626" }}
+                            aria-label={t.delete}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   );
                 })}

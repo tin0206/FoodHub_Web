@@ -6,6 +6,7 @@ import type {
   ChatResponse,
   ChatSessionDetail,
   ChatSessionListResponse,
+  ChatSessionSummary,
 } from "@/lib/api/types";
 import { prepareVisionUpload } from "@/lib/vision-upload";
 
@@ -287,4 +288,17 @@ export async function deleteChatSession(
   token?: string,
 ): Promise<void> {
   await apiFetch<void>(`/ai/sessions/${sessionId}`, { method: "DELETE", token });
+}
+
+/** PATCH /ai/sessions/{id} — user-renames a saved conversation; returns the updated summary row. */
+export async function renameChatSession(
+  sessionId: string,
+  title: string,
+  token?: string,
+): Promise<ChatSessionSummary> {
+  return apiFetch<ChatSessionSummary>(`/ai/sessions/${sessionId}`, {
+    method: "PATCH",
+    body: { title },
+    token,
+  });
 }

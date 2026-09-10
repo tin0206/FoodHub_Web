@@ -247,6 +247,9 @@ export function getStrings(lang: Lang) {
     unableToDeleteChatSession: vi
       ? "Không thể xóa cuộc trò chuyện này."
       : "Unable to delete this conversation.",
+    unableToRenameChatSession: vi
+      ? "Không thể đổi tên cuộc trò chuyện này."
+      : "Unable to rename this conversation.",
     deleteChatSessionTitle: vi
       ? "Xóa cuộc trò chuyện này?"
       : "Delete this conversation?",
