@@ -2,8 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { AVAILABLE_LABELS, ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
+import {
+  ArrowLeft,
+  IdCard,
+  ShieldCheck,
+  UserRound,
+  Flame,
+  Leaf,
+  User as UserIcon,
+  Mail,
+  AtSign,
+  Lock,
+  Cake,
+  Weight,
+  Dumbbell,
+  Wheat,
+  Droplet,
+  CheckCircle2,
+  X,
+} from "lucide-react";
+import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
 import { GENDER_OPTIONS } from "@/components/profile-editor";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useStrings } from "@/lib/use-strings";
@@ -20,21 +38,190 @@ import LoadingOverlay from "@/components/loading-overlay";
 
 const DEFAULT_PASSWORD = "123456";
 
-function FieldCard({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl p-3.5" style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}>
-      <label className="block text-[11px] font-bold mb-1.5" style={{ color: "var(--tm-text-2)" }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
+const ADMIN_GOALS = [
+  "Lose Weight",
+  "Build Muscle",
+  "Balanced Nutrition",
+  "Improve Health",
+  "Maintain Weight",
+];
+
+const ADMIN_DIETARY_OPTIONS = [
+  "Vegan",
+  "Vegetarian",
+  "Gluten Free",
+  "High Protein",
+  "Keto",
+  "Pescetarian",
+  "Healthy",
+  "Breakfast",
+];
 
 function getPasswordError(val: string, t: Strings): string {
   if (!val) return t.adminPasswordRequired;
   if (val.length < 6) return t.adminPasswordTooShort;
   return "";
+}
+
+function FormSection({
+  title,
+  icon: Icon,
+  accent,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  accent: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-3.5"
+      style={{
+        backgroundColor: "var(--tm-surface)",
+        border: "1px solid var(--tm-border-i)",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-3.5">
+        <div
+          className="rounded-lg flex items-center justify-center shrink-0"
+          style={{ width: 26, height: 26, backgroundColor: `${accent}1F` }}
+        >
+          <Icon size={14} color={accent} />
+        </div>
+        <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
+          {title}
+        </span>
+      </div>
+      <div className="space-y-2.5">{children}</div>
+    </div>
+  );
+}
+
+function FieldInput({
+  label,
+  icon: Icon,
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  type = "text",
+  error,
+  suffix,
+}: {
+  label: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  value: string;
+  onChange: (v: string) => void;
+  onBlur?: () => void;
+  placeholder?: string;
+  type?: string;
+  error?: string;
+  suffix?: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div
+        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5"
+        style={{ backgroundColor: "var(--tm-subtle)" }}
+      >
+        <Icon size={16} color="var(--tm-text-2)" />
+        <div className="min-w-0 flex-1">
+          <label className="block text-[10.5px] font-semibold" style={{ color: "var(--tm-text-2)" }}>
+            {label}
+          </label>
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            className="w-full text-sm bg-transparent focus:outline-none"
+            style={{ color: "var(--tm-text)" }}
+          />
+        </div>
+        {suffix}
+      </div>
+      {error && (
+        <p className="text-[11px] mt-1 pl-1" style={{ color: "#F43F5E" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SegmentedButtons({
+  options,
+  selected,
+  onSelect,
+  accent,
+  deselectable = false,
+}: {
+  options: { value: string; label: string }[];
+  selected: string;
+  onSelect: (value: string) => void;
+  accent: string;
+  deselectable?: boolean;
+}) {
+  return (
+    <div className="flex gap-2">
+      {options.map((option) => {
+        const sel = selected === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onSelect(sel && deselectable ? "" : option.value)}
+            className="flex-1 text-xs font-semibold py-2 rounded-lg transition-colors"
+            style={{
+              backgroundColor: sel ? accent : "var(--tm-subtle)",
+              color: sel ? "white" : "var(--tm-text-2)",
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ChipPicker({
+  options,
+  isSelected,
+  onToggle,
+  accent,
+  display,
+}: {
+  options: string[];
+  isSelected: (value: string) => boolean;
+  onToggle: (value: string) => void;
+  accent: string;
+  display: (value: string) => string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((value) => {
+        const sel = isSelected(value);
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onToggle(value)}
+            className="text-[11.5px] font-semibold px-3 py-1.5 rounded-lg border transition-colors"
+            style={{
+              backgroundColor: sel ? accent : "var(--tm-subtle)",
+              color: sel ? "white" : "var(--tm-text-2)",
+              borderColor: "transparent",
+            }}
+          >
+            {display(value)}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function AdminUserForm({ initial }: { initial?: ApiUser }) {
@@ -59,7 +246,13 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
   const [proteinTarget, setProteinTarget] = useState(
     initial?.protein_target ? String(initial.protein_target) : "",
   );
-  const [primaryGoal, setPrimaryGoal] = useState(initial?.primary_goal ?? "");
+  const [carbTarget, setCarbTarget] = useState(
+    initial?.carb_target ? String(initial.carb_target) : "",
+  );
+  const [fatTarget, setFatTarget] = useState(
+    initial?.fat_target ? String(initial.fat_target) : "",
+  );
+  const [primaryGoal, setPrimaryGoal] = useState<string | null>(initial?.primary_goal ?? null);
   const [restrictions, setRestrictions] = useState<Set<string>>(
     new Set(initial?.dietary_restrictions ?? []),
   );
@@ -113,7 +306,9 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           gender: gender || null,
           calorie_target: toNumberOrNull(calorieTarget),
           protein_target: toNumberOrNull(proteinTarget),
-          primary_goal: primaryGoal.trim() || null,
+          carb_target: toNumberOrNull(carbTarget),
+          fat_target: toNumberOrNull(fatTarget),
+          primary_goal: primaryGoal,
           dietary_restrictions: [...restrictions],
         };
         const updated = await updateAdminUser(initial.id, payload);
@@ -131,8 +326,10 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
           gender: gender || null,
           calorie_target: toNumberOrNull(calorieTarget),
           protein_target: toNumberOrNull(proteinTarget),
+          carb_target: toNumberOrNull(carbTarget),
+          fat_target: toNumberOrNull(fatTarget),
           dietary_restrictions: [...restrictions],
-          primary_goal: primaryGoal.trim() || null,
+          primary_goal: primaryGoal,
           language: "en",
           theme: "light",
           notify_recommendations: true,
@@ -153,7 +350,9 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         setGender("");
         setCalorieTarget("");
         setProteinTarget("");
-        setPrimaryGoal("");
+        setCarbTarget("");
+        setFatTarget("");
+        setPrimaryGoal(null);
         setRestrictions(new Set());
       }
     } catch (err) {
@@ -164,9 +363,6 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
       setSaving(false);
     }
   }
-
-  const inputClass = "w-full text-sm bg-transparent focus:outline-none py-1";
-  const inputStyle = { color: "var(--tm-text)" } as const;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -179,184 +375,188 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
         <ArrowLeft size={14} /> {t.back}
       </button>
 
-      <div className="space-y-2.5">
-        <FieldCard label={t.adminFullNameFieldLabel}>
-          <input
+      <div className="space-y-3">
+        <FormSection title={t.adminAccountInfoSectionTitle} icon={IdCard} accent={accent}>
+          <FieldInput
+            label={t.adminFullNameFieldLabel}
+            icon={UserIcon}
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={setFullName}
             placeholder="Jane Doe"
-            className={inputClass}
-            style={inputStyle}
           />
-        </FieldCard>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label={t.adminUsernameFieldLabel}>
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="janedoe"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </FieldCard>
-          <FieldCard label={t.adminEmailFieldLabel}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="jane@example.com"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </FieldCard>
-        </div>
-
-        {!initial && (
-          <FieldCard label={t.adminPasswordFieldLabel}>
-            <input
-              type="text"
+          <FieldInput
+            label={t.adminEmailFieldLabel}
+            icon={Mail}
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="jane@example.com"
+          />
+          <FieldInput
+            label={t.adminUsernameFieldLabel}
+            icon={AtSign}
+            value={username}
+            onChange={setUsername}
+            placeholder="janedoe"
+          />
+          {!initial && (
+            <FieldInput
+              label={t.adminPasswordFieldLabel}
+              icon={Lock}
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (passwordError) setPasswordError(getPasswordError(e.target.value, t));
+              onChange={(v) => {
+                setPassword(v);
+                if (passwordError) setPasswordError(getPasswordError(v, t));
               }}
               onBlur={() => setPasswordError(getPasswordError(password, t))}
               placeholder={t.adminPasswordHint}
-              className={inputClass}
-              style={inputStyle}
+              error={passwordError}
             />
-            {passwordError && (
-              <p className="text-[11px] mt-1" style={{ color: "#d03b3b" }}>
-                {passwordError}
-              </p>
-            )}
-          </FieldCard>
-        )}
+          )}
+        </FormSection>
 
-        <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label={t.adminRoleFieldLabel}>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className={inputClass}
-              style={inputStyle}
-            >
-              <option value="user">{t.userRoleLabel}</option>
-              <option value="admin">{t.adminRoleLabel}</option>
-            </select>
-          </FieldCard>
-          <FieldCard label={t.adminStatusFieldLabel}>
+        <FormSection title={t.adminRoleStatusSectionTitle} icon={ShieldCheck} accent={accent}>
+          <div className="flex items-end gap-4">
+            <div className="flex-1">
+              <label className="block text-xs mb-1.5" style={{ color: "var(--tm-text-2)" }}>
+                {t.adminRoleFieldLabel}
+              </label>
+              <SegmentedButtons
+                options={[
+                  { value: "user", label: t.userRoleLabel },
+                  { value: "admin", label: t.adminRoleLabel },
+                ]}
+                selected={role}
+                onSelect={(v) => v && setRole(v)}
+                accent={accent}
+              />
+            </div>
             <button
               type="button"
               onClick={() => setIsActive((v) => !v)}
-              className="flex items-center gap-2 text-sm font-semibold py-1"
-              style={{ color: isActive ? "#10B981" : "#F43F5E" }}
+              className="flex flex-col items-end gap-1.5 shrink-0"
             >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isActive ? "#10B981" : "#F43F5E" }} />
-              {isActive ? t.active : t.inactive}
+              <span className="text-xs" style={{ color: "var(--tm-text-2)" }}>
+                {t.adminStatusFieldLabel}
+              </span>
+              <span
+                className="flex items-center gap-2 text-sm font-semibold"
+                style={{ color: isActive ? "#10B981" : "#F43F5E" }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: isActive ? "#10B981" : "#F43F5E" }}
+                />
+                {isActive ? t.active : t.inactive}
+              </span>
             </button>
-          </FieldCard>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5">
-          <FieldCard label={t.adminAgeFieldLabel}>
-            <input
-              value={age}
-              onChange={(e) => setAge(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="e.g. 28"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </FieldCard>
-          <FieldCard label={t.adminWeightFieldLabel}>
-            <input
-              value={weight}
-              onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ""))}
-              placeholder="e.g. 65"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </FieldCard>
-          <FieldCard label={t.adminGenderFieldLabel}>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className={inputClass}
-              style={inputStyle}
-            >
-              <option value="">{t.adminGenderUnspecified}</option>
-              {GENDER_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {t.genderDisplay(option)}
-                </option>
-              ))}
-            </select>
-          </FieldCard>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <FieldCard label={t.adminCalorieTargetFieldLabel}>
-            <input
-              value={calorieTarget}
-              onChange={(e) => setCalorieTarget(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="e.g. 2000"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </FieldCard>
-          <FieldCard label={t.adminProteinTargetFieldLabel}>
-            <input
-              value={proteinTarget}
-              onChange={(e) => setProteinTarget(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="e.g. 120"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </FieldCard>
-        </div>
-
-        <FieldCard label={t.adminPrimaryGoalFieldLabel}>
-          <input
-            value={primaryGoal}
-            onChange={(e) => setPrimaryGoal(e.target.value)}
-            placeholder={t.adminPrimaryGoalHint}
-            className={inputClass}
-            style={inputStyle}
-          />
-        </FieldCard>
-
-        <FieldCard label={t.adminDietaryRestrictionsFieldLabel}>
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {AVAILABLE_LABELS.map((label) => {
-              const selected = restrictions.has(label);
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => toggleRestriction(label)}
-                  className="text-[10.5px] px-2.5 py-1 rounded-full border transition-colors"
-                  style={{
-                    backgroundColor: selected ? accent : "var(--tm-subtle)",
-                    color: selected ? "white" : "var(--tm-text-2)",
-                    borderColor: selected ? accent : "var(--tm-border-i)",
-                  }}
-                >
-                  {t.dietaryTagDisplay(label)}
-                </button>
-              );
-            })}
           </div>
-        </FieldCard>
+        </FormSection>
+
+        <FormSection title={t.adminGenderFieldLabel} icon={UserRound} accent={accent}>
+          <p className="text-xs -mt-1.5" style={{ color: "var(--tm-text-2)" }}>
+            {t.adminOptionalLabel}
+          </p>
+          <SegmentedButtons
+            options={GENDER_OPTIONS.map((option) => ({
+              value: option,
+              label: t.genderDisplay(option),
+            }))}
+            selected={gender}
+            onSelect={setGender}
+            accent={accent}
+            deselectable
+          />
+        </FormSection>
+
+        <FormSection title={t.adminNutritionGoalsCardTitle} icon={Flame} accent={accent}>
+          <div className="grid grid-cols-2 gap-2.5">
+            <FieldInput
+              label={t.adminAgeFieldLabel}
+              icon={Cake}
+              value={age}
+              onChange={(v) => setAge(v.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 28"
+            />
+            <FieldInput
+              label={t.adminWeightFieldLabel}
+              icon={Weight}
+              value={weight}
+              onChange={(v) => setWeight(v.replace(/[^0-9.]/g, ""))}
+              placeholder="e.g. 65"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <FieldInput
+              label={t.adminCalorieTargetFieldLabel}
+              icon={Flame}
+              value={calorieTarget}
+              onChange={(v) => setCalorieTarget(v.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 2000"
+            />
+            <FieldInput
+              label={t.adminProteinTargetFieldLabel}
+              icon={Dumbbell}
+              value={proteinTarget}
+              onChange={(v) => setProteinTarget(v.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 120"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <FieldInput
+              label={t.adminCarbTargetFieldLabel}
+              icon={Wheat}
+              value={carbTarget}
+              onChange={(v) => setCarbTarget(v.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 200"
+            />
+            <FieldInput
+              label={t.adminFatTargetFieldLabel}
+              icon={Droplet}
+              value={fatTarget}
+              onChange={(v) => setFatTarget(v.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 60"
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1.5" style={{ color: "var(--tm-text-2)" }}>
+              {t.adminPrimaryGoalFieldLabel}
+            </label>
+            <ChipPicker
+              options={ADMIN_GOALS}
+              isSelected={(v) => primaryGoal === v}
+              onToggle={(v) => setPrimaryGoal(primaryGoal === v ? null : v)}
+              accent={accent}
+              display={t.goalDisplay}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title={t.adminDietaryRestrictionsCardTitle} icon={Leaf} accent={accent}>
+          <ChipPicker
+            options={ADMIN_DIETARY_OPTIONS}
+            isSelected={(v) => restrictions.has(v)}
+            onToggle={toggleRestriction}
+            accent={accent}
+            display={t.dietaryTagDisplay}
+          />
+        </FormSection>
 
         {success && (
-          <p className="text-xs font-medium" style={{ color: "#10B981" }}>
-            {success}
-          </p>
+          <div
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold"
+            style={{ backgroundColor: "#10B98119", color: "#10B981" }}
+          >
+            <CheckCircle2 size={15} className="shrink-0" />
+            <span className="flex-1">{success}</span>
+            <button type="button" onClick={() => setSuccess(null)}>
+              <X size={14} />
+            </button>
+          </div>
         )}
 
         {error && (
-          <p className="text-xs font-medium" style={{ color: "#d03b3b" }}>
+          <p className="text-xs font-medium" style={{ color: "#F43F5E" }}>
             {error}
           </p>
         )}

@@ -25,6 +25,7 @@ import {
   Utensils,
   Wheat,
   Droplet,
+  Dumbbell,
 } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useLang } from "@/lib/use-lang";
@@ -41,7 +42,12 @@ import {
   type AdminUserDetail,
 } from "@/lib/api/admin-users";
 import type { ApiRecipe } from "@/lib/api/types";
-import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK, avatarInitials, avatarColor } from "@/lib/admin";
+import {
+  ADMIN_ACCENT_LIGHT,
+  ADMIN_ACCENT_DARK,
+  avatarInitials,
+  avatarColor,
+} from "@/lib/admin";
 
 type Tab = "profile" | "saved" | "recipes";
 
@@ -57,12 +63,18 @@ function InfoRow({
   accent: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5 py-2.5" style={{ borderTop: "1px solid var(--tm-border-i)" }}>
+    <div
+      className="flex items-center gap-2.5 py-2.5"
+      style={{ borderTop: "1px solid var(--tm-border-i)" }}
+    >
       <Icon size={14} color={accent} />
       <span className="text-xs flex-1" style={{ color: "var(--tm-text-2)" }}>
         {label}
       </span>
-      <span className="text-xs font-semibold text-right" style={{ color: "var(--tm-text)" }}>
+      <span
+        className="text-xs font-semibold text-right"
+        style={{ color: "var(--tm-text)" }}
+      >
         {value}
       </span>
     </div>
@@ -81,12 +93,24 @@ function InfoCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl p-3.5" style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}>
+    <div
+      className="rounded-2xl p-3.5"
+      style={{
+        backgroundColor: "var(--tm-surface)",
+        border: "1px solid var(--tm-border-i)",
+      }}
+    >
       <div className="flex items-center gap-2 mb-1">
-        <div className="w-6.5 h-6.5 rounded-lg flex items-center justify-center" style={{ width: 26, height: 26, backgroundColor: `${accent}1A` }}>
+        <div
+          className="w-6.5 h-6.5 rounded-lg flex items-center justify-center"
+          style={{ width: 26, height: 26, backgroundColor: `${accent}1A` }}
+        >
           <Icon size={14} color={accent} />
         </div>
-        <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
+        <span
+          className="text-[13px] font-bold"
+          style={{ color: "var(--tm-text)" }}
+        >
           {title}
         </span>
       </div>
@@ -110,14 +134,20 @@ function RecipeList({
 }) {
   if (loading && items === null) {
     return (
-      <p className="text-center text-sm py-10" style={{ color: "var(--tm-text-2)" }}>
+      <p
+        className="text-center text-sm py-10"
+        style={{ color: "var(--tm-text-2)" }}
+      >
         {t.loading}
       </p>
     );
   }
   if (!items || items.length === 0) {
     return (
-      <p className="text-center text-sm py-10" style={{ color: "var(--tm-text-2)" }}>
+      <p
+        className="text-center text-sm py-10"
+        style={{ color: "var(--tm-text-2)" }}
+      >
         {emptyLabel}
       </p>
     );
@@ -129,7 +159,10 @@ function RecipeList({
           key={r.id}
           href={`/admin/recipes/${r.id}`}
           className="flex items-center gap-3 px-3.5 py-3 rounded-2xl hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}
+          style={{
+            backgroundColor: "var(--tm-surface)",
+            border: "1px solid var(--tm-border-i)",
+          }}
         >
           {r.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -148,10 +181,16 @@ function RecipeList({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold truncate" style={{ color: "var(--tm-text)" }}>
+            <p
+              className="text-[13px] font-bold truncate"
+              style={{ color: "var(--tm-text)" }}
+            >
               {r.title}
             </p>
-            <p className="text-[11px] mt-0.5" style={{ color: "var(--tm-text-2)" }}>
+            <p
+              className="text-[11px] mt-0.5"
+              style={{ color: "var(--tm-text-2)" }}
+            >
               {r.visibility === "public" ? t.publicLabel : t.privateLabel}
             </p>
           </div>
@@ -179,7 +218,9 @@ export default function AdminUserDetailPage() {
 
   const [savedRecipes, setSavedRecipes] = useState<ApiRecipe[] | null>(null);
   const [savedLoading, setSavedLoading] = useState(false);
-  const [createdRecipes, setCreatedRecipes] = useState<ApiRecipe[] | null>(null);
+  const [createdRecipes, setCreatedRecipes] = useState<ApiRecipe[] | null>(
+    null,
+  );
   const [createdLoading, setCreatedLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -200,7 +241,11 @@ export default function AdminUserDetailPage() {
     } catch (err) {
       setDetail(null);
       if (err instanceof ApiError) {
-        setError(err.status === 404 ? t.adminUserNotFound : err.message || t.adminFailedLoadUser);
+        setError(
+          err.status === 404
+            ? t.adminUserNotFound
+            : err.message || t.adminFailedLoadUser,
+        );
       } else {
         setError(err instanceof Error ? err.message : t.adminFailedLoadUser);
       }
@@ -215,14 +260,24 @@ export default function AdminUserDetailPage() {
   }, [load]);
 
   useEffect(() => {
-    if (tab === "saved" && savedRecipes === null && !savedLoading && Number.isFinite(userId)) {
+    if (
+      tab === "saved" &&
+      savedRecipes === null &&
+      !savedLoading &&
+      Number.isFinite(userId)
+    ) {
       setSavedLoading(true);
       getAdminUserFavorites(userId)
         .then(setSavedRecipes)
         .catch(() => setSavedRecipes([]))
         .finally(() => setSavedLoading(false));
     }
-    if (tab === "recipes" && createdRecipes === null && !createdLoading && Number.isFinite(userId)) {
+    if (
+      tab === "recipes" &&
+      createdRecipes === null &&
+      !createdLoading &&
+      Number.isFinite(userId)
+    ) {
       setCreatedLoading(true);
       getAdminUserRecipes(userId)
         .then(setCreatedRecipes)
@@ -238,7 +293,9 @@ export default function AdminUserDetailPage() {
     setToggling(true);
     setConfirming(false);
     try {
-      const updated = await updateAdminUser(detail.user.id, { is_active: next });
+      const updated = await updateAdminUser(detail.user.id, {
+        is_active: next,
+      });
       setDetail({ ...detail, user: updated });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t.adminFailedUpdateUser);
@@ -261,7 +318,10 @@ export default function AdminUserDetailPage() {
     return (
       <div className="p-4 max-w-2xl mx-auto space-y-3">
         {error && (
-          <div className="rounded-2xl p-4 text-sm" style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}>
+          <div
+            className="rounded-2xl p-4 text-sm"
+            style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+          >
             {error}
           </div>
         )}
@@ -308,7 +368,10 @@ export default function AdminUserDetailPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl p-3 mb-3 text-sm" style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}>
+        <div
+          className="rounded-2xl p-3 mb-3 text-sm"
+          style={{ backgroundColor: "#F43F5E14", color: "#F43F5E" }}
+        >
           {error}
         </div>
       )}
@@ -316,16 +379,27 @@ export default function AdminUserDetailPage() {
       {/* Profile summary */}
       <div
         className="rounded-2xl p-4 mb-4 flex items-start gap-3.5"
-        style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}
+        style={{
+          backgroundColor: "var(--tm-surface)",
+          border: "1px solid var(--tm-border-i)",
+        }}
       >
         <div
           className="rounded-full flex items-center justify-center font-bold text-lg shrink-0"
-          style={{ width: 54, height: 54, backgroundColor: `${avatar}26`, color: avatar }}
+          style={{
+            width: 54,
+            height: 54,
+            backgroundColor: `${avatar}26`,
+            color: avatar,
+          }}
         >
           {avatarInitials(name)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[17px] font-extrabold tracking-tight truncate" style={{ color: "var(--tm-text)" }}>
+          <p
+            className="text-[17px] font-extrabold tracking-tight truncate"
+            style={{ color: "var(--tm-text)" }}
+          >
             {name}
           </p>
           <p className="text-xs truncate" style={{ color: "var(--tm-text-2)" }}>
@@ -335,23 +409,39 @@ export default function AdminUserDetailPage() {
             <span
               className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full"
               style={{
-                backgroundColor: user.role === "admin" ? `${accent}1F` : "#10B98119",
+                backgroundColor:
+                  user.role === "admin" ? `${accent}1F` : "#10B98119",
                 color: user.role === "admin" ? accent : "#10B981",
               }}
             >
-              {user.role === "admin" ? <Shield size={11} /> : <UserIcon size={11} />}
+              {user.role === "admin" ? (
+                <Shield size={11} />
+              ) : (
+                <UserIcon size={11} />
+              )}
               {user.role === "admin" ? t.adminRoleLabel : t.userRoleLabel}
             </span>
             <span
               className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: "var(--tm-subtle)", color: user.is_active ? "#10B981" : "#F43F5E" }}
+              style={{
+                backgroundColor: "var(--tm-subtle)",
+                color: user.is_active ? "#10B981" : "#F43F5E",
+              }}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: user.is_active ? "#10B981" : "#F43F5E" }} />
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{
+                  backgroundColor: user.is_active ? "#10B981" : "#F43F5E",
+                }}
+              />
               {user.is_active ? t.active : t.inactive}
             </span>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0 text-[11px] font-semibold" style={{ color: "var(--tm-text-2)" }}>
+        <div
+          className="flex flex-col items-end gap-1 shrink-0 text-[11px] font-semibold"
+          style={{ color: "var(--tm-text-2)" }}
+        >
           <span className="flex items-center gap-1">
             <BookOpen size={11} /> {t.adminRecipesCountStat(recipes_count)}
           </span>
@@ -362,14 +452,20 @@ export default function AdminUserDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-4" style={{ borderBottom: "1px solid var(--tm-border-i)" }}>
+      <div
+        className="flex gap-4 mb-4"
+        style={{ borderBottom: "1px solid var(--tm-border-i)" }}
+      >
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
             className="text-xs font-bold pb-2.5 border-b-2 transition-colors"
-            style={{ color: tab === t.key ? accent : "var(--tm-text-2)", borderColor: tab === t.key ? accent : "transparent" }}
+            style={{
+              color: tab === t.key ? accent : "var(--tm-text-2)",
+              borderColor: tab === t.key ? accent : "transparent",
+            }}
           >
             {t.label}
           </button>
@@ -378,44 +474,111 @@ export default function AdminUserDetailPage() {
 
       {tab === "profile" && (
         <div className="space-y-3">
-          <InfoCard title={t.adminAccountCardTitle} icon={UserIcon} accent={accent}>
-            <InfoRow icon={Hash} label={t.adminUserIdLabel} value={`#${user.id}`} accent={accent} />
-            <InfoRow icon={AtSign} label={t.adminUsernameLabel} value={user.username} accent={accent} />
-            <InfoRow icon={Mail} label={t.emailLabel} value={user.email} accent={accent} />
+          <InfoCard
+            title={t.adminAccountCardTitle}
+            icon={UserIcon}
+            accent={accent}
+          >
+            <InfoRow
+              icon={Hash}
+              label={t.adminUserIdLabel}
+              value={`#${user.id}`}
+              accent={accent}
+            />
+            <InfoRow
+              icon={AtSign}
+              label={t.adminUsernameLabel}
+              value={user.username}
+              accent={accent}
+            />
+            <InfoRow
+              icon={Mail}
+              label={t.emailLabel}
+              value={user.email}
+              accent={accent}
+            />
             <InfoRow
               icon={CalendarDays}
               label={t.adminJoinedLabel}
-              value={user.created_at ? new Date(user.created_at).toLocaleDateString(lang === "vi" ? "vi-VN" : "en-US") : "—"}
+              value={
+                user.created_at
+                  ? new Date(user.created_at).toLocaleDateString(
+                      lang === "vi" ? "vi-VN" : "en-US",
+                    )
+                  : "—"
+              }
               accent={accent}
             />
-            <InfoRow icon={Cake} label={t.ageLabel} value={user.age ? t.adminAgeYears(user.age) : "—"} accent={accent} />
-            <InfoRow icon={Weight} label={t.weightLabel} value={user.weight ? t.adminWeightKg(user.weight) : "—"} accent={accent} />
-            <InfoRow icon={UserRound} label={t.genderLabel} value={user.gender ? t.genderDisplay(user.gender) : "—"} accent={accent} />
+            <InfoRow
+              icon={Cake}
+              label={t.ageLabel}
+              value={user.age ? t.adminAgeYears(user.age) : "—"}
+              accent={accent}
+            />
+            <InfoRow
+              icon={Weight}
+              label={t.weightLabel}
+              value={user.weight ? t.adminWeightKg(user.weight) : "—"}
+              accent={accent}
+            />
+            <InfoRow
+              icon={UserRound}
+              label={t.genderLabel}
+              value={user.gender ? t.genderDisplay(user.gender) : "—"}
+              accent={accent}
+            />
           </InfoCard>
 
-          <InfoCard title={t.adminNutritionGoalsCardTitle} icon={Flame} accent={accent}>
+          <InfoCard
+            title={t.adminNutritionGoalsCardTitle}
+            icon={Flame}
+            accent={accent}
+          >
             <InfoRow
               icon={Flame}
               label={t.dailyCalorieTarget}
-              value={user.calorie_target ? t.adminCalorieDay(user.calorie_target) : "—"}
+              value={
+                user.calorie_target
+                  ? t.adminCalorieDay(user.calorie_target)
+                  : "—"
+              }
+              accent={accent}
+            />
+            <InfoRow
+              icon={Dumbbell}
+              label={t.targetProtein}
+              value={
+                user.protein_target
+                  ? t.adminProteinDay(user.protein_target)
+                  : "—"
+              }
               accent={accent}
             />
             <InfoRow
               icon={Wheat}
-              label={t.dailyCarbTarget}
+              label={t.targetCarb}
               value={user.carb_target ? t.adminCarbDay(user.carb_target) : "—"}
               accent={accent}
             />
             <InfoRow
               icon={Droplet}
-              label={t.dailyFatTarget}
+              label={t.targetFat}
               value={user.fat_target ? t.adminFatDay(user.fat_target) : "—"}
               accent={accent}
             />
-            <InfoRow icon={Flag} label={t.primaryGoalLabel} value={user.primary_goal ? t.goalDisplay(user.primary_goal) : "—"} accent={accent} />
+            <InfoRow
+              icon={Flag}
+              label={t.primaryGoalLabel}
+              value={user.primary_goal ? t.goalDisplay(user.primary_goal) : "—"}
+              accent={accent}
+            />
           </InfoCard>
 
-          <InfoCard title={t.adminDietaryRestrictionsCardTitle} icon={Tag} accent={accent}>
+          <InfoCard
+            title={t.adminDietaryRestrictionsCardTitle}
+            icon={Tag}
+            accent={accent}
+          >
             {user.dietary_restrictions.length === 0 ? (
               <p className="text-xs pt-1" style={{ color: "var(--tm-text-2)" }}>
                 {t.adminNoneSpecified}
@@ -440,7 +603,10 @@ export default function AdminUserDetailPage() {
             onClick={() => setConfirming(true)}
             disabled={toggling}
             className="w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border disabled:opacity-60"
-            style={{ color: user.is_active ? "#F43F5E" : "#10B981", borderColor: user.is_active ? "#F43F5E" : "#10B981" }}
+            style={{
+              color: user.is_active ? "#F43F5E" : "#10B981",
+              borderColor: user.is_active ? "#F43F5E" : "#10B981",
+            }}
           >
             {user.is_active ? <Ban size={16} /> : <CheckCircle2 size={16} />}
             {user.is_active ? t.adminDeactivateAccount : t.adminActivateAccount}
@@ -449,15 +615,31 @@ export default function AdminUserDetailPage() {
       )}
 
       {tab === "saved" && (
-        <RecipeList items={savedRecipes} loading={savedLoading} emptyLabel={t.adminNoSavedRecipesYet} accent={accent} t={t} />
+        <RecipeList
+          items={savedRecipes}
+          loading={savedLoading}
+          emptyLabel={t.adminNoSavedRecipesYet}
+          accent={accent}
+          t={t}
+        />
       )}
       {tab === "recipes" && (
-        <RecipeList items={createdRecipes} loading={createdLoading} emptyLabel={t.adminNoCreatedRecipesYet} accent={accent} t={t} />
+        <RecipeList
+          items={createdRecipes}
+          loading={createdLoading}
+          emptyLabel={t.adminNoCreatedRecipesYet}
+          accent={accent}
+          t={t}
+        />
       )}
 
       {confirming && (
         <ConfirmDialog
-          title={user.is_active ? t.adminDeactivateAccountTitle : t.adminActivateAccountTitle}
+          title={
+            user.is_active
+              ? t.adminDeactivateAccountTitle
+              : t.adminActivateAccountTitle
+          }
           message={
             user.is_active
               ? t.adminWillLoseAccess(name)

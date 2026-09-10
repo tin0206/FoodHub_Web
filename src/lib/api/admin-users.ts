@@ -18,6 +18,8 @@ export interface AdminUserUpdate {
   gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
+  carb_target?: number | null;
+  fat_target?: number | null;
   dietary_restrictions?: string[];
   primary_goal?: string | null;
 }
@@ -34,6 +36,8 @@ export interface AdminUserCreate {
   gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
+  carb_target?: number | null;
+  fat_target?: number | null;
   dietary_restrictions: string[];
   primary_goal?: string | null;
   language: string;

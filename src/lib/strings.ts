@@ -309,9 +309,7 @@ export function getStrings(lang: Lang) {
       : "This recipe id is not openable in the demo.",
     recipeDiffPrevious: vi ? "Trước đó" : "Previous",
     recipeDiffCurrent: vi ? "Hiện tại" : "Now",
-    recipeDiffAdded: vi
-      ? "Đã thêm ở phiên bản này"
-      : "Added in this version",
+    recipeDiffAdded: vi ? "Đã thêm ở phiên bản này" : "Added in this version",
     recipeDiffRemoved: vi
       ? "Đã xóa so với phiên bản trước"
       : "Removed from previous version",
@@ -319,7 +317,9 @@ export function getStrings(lang: Lang) {
     ingredientsInThisVersionLabel: vi
       ? "Nguyên liệu trong phiên bản này (phần thay đổi được tô sáng)"
       : "Ingredients in this version (changes highlighted)",
-    addToPersonalRecipeButton: vi ? "Thêm vào công thức cá nhân" : "Add to personal recipe",
+    addToPersonalRecipeButton: vi
+      ? "Thêm vào công thức cá nhân"
+      : "Add to personal recipe",
     savingRecipeButton: vi ? "Đang lưu…" : "Saving…",
     viewSavedRecipeLabel: vi ? "Xem công thức đã lưu" : "View saved recipe",
     unableToSaveRecipeFromChat: vi
@@ -382,7 +382,9 @@ export function getStrings(lang: Lang) {
       ? "Đặt mục tiêu dinh dưỡng"
       : "Set your dietary objectives",
     primaryGoalLabel: vi ? "Mục tiêu chính" : "Primary Goal",
-    dailyCalorieTarget: vi ? "Mục tiêu calo hàng ngày" : "Daily Calorie Target",
+    dailyCalorieTarget: vi
+      ? "Calories mục tiêu (kcal/ngày)"
+      : "Target Calories (kcal/day)",
     targetProtein: vi ? "Protein mục tiêu (g/ngày)" : "Target Protein (g/day)",
     targetCarb: vi ? "Tinh bột mục tiêu (g/ngày)" : "Target Carbs (g/day)",
     targetFat: vi ? "Chất béo mục tiêu (g/ngày)" : "Target Fat (g/day)",
@@ -477,6 +479,10 @@ export function getStrings(lang: Lang) {
         "Weight Loss": "Giảm cân",
         "Muscle Gain": "Tăng cơ",
         "High Protein": "Nhiều protein",
+        "Lose Weight": "Giảm cân",
+        "Build Muscle": "Tăng cơ",
+        "Improve Health": "Cải thiện sức khỏe",
+        "Maintain Weight": "Giữ cân",
       };
       return map[goal] ?? goal;
     },
@@ -606,15 +612,18 @@ export function getStrings(lang: Lang) {
       : "Users with suggestions",
     adminTotalSuggestionsLabel: vi ? "Tổng gợi ý đã tạo" : "Total suggestions",
     adminActiveUsersHeading: vi ? "Người dùng hoạt động" : "Active Users",
-    adminDailyActiveLabel: vi ? "Theo ngày — 14 ngày qua" : "Daily — last 14 days",
-    adminWeeklyActiveLabel: vi ? "Theo tuần — 8 tuần qua" : "Weekly — last 8 weeks",
+    adminDailyActiveLabel: vi
+      ? "Theo ngày — 14 ngày qua"
+      : "Daily — last 14 days",
+    adminWeeklyActiveLabel: vi
+      ? "Theo tuần — 8 tuần qua"
+      : "Weekly — last 8 weeks",
     adminAiUsageHeading: vi ? "Mức sử dụng tính năng AI" : "AI Feature Usage",
     adminAiUsageSubtitle: vi ? "30 ngày qua" : "Last 30 days",
     adminNoAiUsage: vi
       ? "Chưa có yêu cầu AI nào trong 30 ngày qua."
       : "No AI requests in the last 30 days yet.",
-    adminFailRateLabel: (pct: string) =>
-      vi ? `${pct} lỗi` : `${pct} fail`,
+    adminFailRateLabel: (pct: string) => (vi ? `${pct} lỗi` : `${pct} fail`),
     adminTopUsersHeading: vi
       ? "Người dùng hoạt động tích cực nhất"
       : "Most Active Users",
@@ -634,7 +643,10 @@ export function getStrings(lang: Lang) {
     adminChatSessionsShort: (n: number) =>
       vi ? `${n} phiên chat` : `${n} chat${n === 1 ? "" : "s"}`,
     aiRequestTypeDisplay(value: string): string {
-      if (!vi) return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      if (!vi)
+        return value
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
       const map: Record<string, string> = {
         chat: "Trò chuyện AI",
         dish_recognition: "Nhận diện món ăn",
@@ -866,6 +878,8 @@ export function getStrings(lang: Lang) {
     adminAgeYears: (age: number) => (vi ? `${age} tuổi` : `${age} years`),
     adminWeightKg: (w: number) => `${w} kg`,
     adminCalorieDay: (c: number) => (vi ? `${c} calo/ngày` : `${c} cal/day`),
+    adminProteinDay: (c: number) =>
+      vi ? `${c} g protein/ngày` : `${c} g protein/day`,
     adminCarbDay: (c: number) =>
       vi ? `${c} g tinh bột/ngày` : `${c} g carbs/day`,
     adminFatDay: (c: number) =>
@@ -918,10 +932,19 @@ export function getStrings(lang: Lang) {
     adminProteinTargetFieldLabel: vi
       ? "Mục tiêu protein (g/ngày)"
       : "Protein target (g/day)",
+    adminCarbTargetFieldLabel: vi
+      ? "Mục tiêu tinh bột (g)"
+      : "Carb target (g)",
+    adminFatTargetFieldLabel: vi
+      ? "Mục tiêu chất béo (g)"
+      : "Fat target (g)",
     adminPrimaryGoalFieldLabel: vi ? "Mục tiêu chính" : "Primary goal",
     adminDietaryRestrictionsFieldLabel: vi
       ? "Chế độ ăn đặc biệt"
       : "Dietary restrictions",
+    adminAccountInfoSectionTitle: vi ? "Thông tin tài khoản" : "Account Info",
+    adminRoleStatusSectionTitle: vi ? "Vai trò & trạng thái" : "Role & Status",
+    adminOptionalLabel: vi ? "Không bắt buộc" : "Optional",
     adminPasswordHint: vi ? "Ít nhất 6 ký tự" : "At least 6 characters",
     adminPrimaryGoalHint: vi ? "vd. Tăng cơ" : "e.g. Build Muscle",
     adminPasswordRequired: vi
