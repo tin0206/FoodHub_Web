@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChefHat, RotateCcw } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { aiChat, aiWelcome } from "@/lib/api/ai";
-import type { ChatHistoryMessage, ChatOption } from "@/lib/api/types";
+import type { ApiRecipe, ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 import { ensureDemoSession } from "@/lib/demo-session";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import {
@@ -59,9 +59,21 @@ export function DemoChatPanel({
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
-  const [lastSent, setLastSent] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [shouldStart, setShouldStart] = useState(!embedded);
+  // Every full recipe the AI has embedded in a `recipes[]` list so far this
+  // session, keyed by id — the chat API already sends the same shape as
+  // `GET /recipes/{id}` (image_url included), so CTA images never need a fetch.
+  const [recipeCache, setRecipeCache] = useState<Record<number, ApiRecipe>>({});
+
+  function cacheRecipes(recipes: ApiRecipe[]) {
+    if (recipes.length === 0) return;
+    setRecipeCache((prev) => {
+      const next = { ...prev };
+      for (const r of recipes) next[r.id] = r;
+      return next;
+    });
+  }
 
   const busy = isBootstrapping || isSending;
 
@@ -102,13 +114,14 @@ export function DemoChatPanel({
     setError("");
     setMessages([]);
     setHistory([]);
-    setLastSent(null);
     setSessionId(sid);
+    setRecipeCache({});
 
     try {
       const response = await aiWelcome({ sessionId: sid, token });
       const finalSession = response.session_id || sid;
       setSessionId(finalSession);
+      cacheRecipes(response.recipes);
       const reply =
         response.reply.trim() ||
         "Hello! I'm your AI companion. Tell me what you'd like to cook.";
@@ -117,7 +130,6 @@ export function DemoChatPanel({
           id: `a-${Date.now()}`,
           role: "assistant",
           text: reply,
-          recipes: response.recipes ?? [],
           options: response.options ?? [],
         },
       ]);
@@ -170,38 +182,17 @@ export function DemoChatPanel({
     };
   }, [shouldStart, bootstrapWelcome]);
 
-  async function sendMessage(raw: string, opts?: { rerun?: boolean }) {
+  async function sendMessage(raw: string) {
     const text = raw.trim();
     const token = tokenRef.current;
     if (!text || busy || !sessionId || !token) return;
 
     setError("");
     setIsSending(true);
-
-    let nextHistory = history;
-    if (!opts?.rerun) {
-      setMessages((prev) => [
-        ...prev,
-        { id: `u-${Date.now()}`, role: "user", text },
-      ]);
-      setLastSent(text);
-    } else {
-      setMessages((prev) => {
-        const copy = [...prev];
-        if (copy.length && copy[copy.length - 1].role === "assistant") {
-          copy.pop();
-        }
-        return copy;
-      });
-      nextHistory = [...history];
-      if (
-        nextHistory.length &&
-        nextHistory[nextHistory.length - 1].role === "assistant"
-      ) {
-        nextHistory = nextHistory.slice(0, -1);
-      }
-      setHistory(nextHistory);
-    }
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, role: "user", text },
+    ]);
 
     try {
       const response = await aiChat({
@@ -210,6 +201,7 @@ export function DemoChatPanel({
         token,
       });
       if (response.session_id) setSessionId(response.session_id);
+      cacheRecipes(response.recipes);
 
       const reply = response.reply.trim() || "(Empty reply from AI)";
       setMessages((prev) => [
@@ -218,16 +210,14 @@ export function DemoChatPanel({
           id: `a-${Date.now()}`,
           role: "assistant",
           text: reply,
-          recipes: response.recipes ?? [],
           options: response.options ?? [],
         },
       ]);
-      setHistory([
-        ...nextHistory,
+      setHistory((prev) => [
+        ...prev,
         { role: "user", content: text },
         { role: "assistant", content: reply },
       ]);
-      setLastSent(text);
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -378,12 +368,10 @@ export function DemoChatPanel({
                   message.role === "assistant" &&
                   index === lastAi
                 }
-                canRerun={!!lastSent}
                 optionsIntro={demoOptionsIntro}
-                rerunLabel="Rerun"
                 authToken={tokenRef.current ?? undefined}
+                recipeCache={recipeCache}
                 onSelectOption={(opt) => void handleSelectOption(opt)}
-                onRerun={() => void sendMessage(lastSent!, { rerun: true })}
               />
             ))}
             {busy && (

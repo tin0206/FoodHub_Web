@@ -114,6 +114,7 @@ export function getStrings(lang: Lang) {
     // Add recipe panel
     newRecipeTitle: vi ? "Công thức mới" : "New Recipe",
     recipeNameHint: vi ? "Tên công thức…" : "Recipe name…",
+    detectingDishTitleHint: vi ? "Đang nhận diện món ăn…" : "Recognizing dish…",
     minSuffix: vi ? "phút" : "min",
     calSuffix: vi ? "calo" : "cal",
     servingsSuffix: vi ? "khẩu phần" : "servings",
@@ -232,6 +233,33 @@ export function getStrings(lang: Lang) {
       : "Hello! I'm your culinary companion. Tell me what you'd like to cook.",
     emptyReply: vi ? "(Không có phản hồi)" : "(Empty reply)",
 
+    // ── Chat history drawer ─────────────────────────────────────────────────
+    historyLabel: vi ? "Lịch sử" : "History",
+    chatHistoryTitle: vi ? "Lịch sử trò chuyện" : "Chat history",
+    newChatLabel: vi ? "Trò chuyện mới" : "New chat",
+    loadingChatHistory: vi ? "Đang tải…" : "Loading…",
+    noChatHistoryYet: vi
+      ? "Chưa có cuộc trò chuyện nào"
+      : "No conversations yet",
+    unableToLoadChatHistory: vi
+      ? "Không thể tải lịch sử trò chuyện."
+      : "Unable to load chat history.",
+    unableToDeleteChatSession: vi
+      ? "Không thể xóa cuộc trò chuyện này."
+      : "Unable to delete this conversation.",
+    unableToRenameChatSession: vi
+      ? "Không thể đổi tên cuộc trò chuyện này."
+      : "Unable to rename this conversation.",
+    deleteChatSessionTitle: vi
+      ? "Xóa cuộc trò chuyện này?"
+      : "Delete this conversation?",
+    deleteChatSessionDesc: vi
+      ? "Thao tác này không thể hoàn tác."
+      : "This can't be undone.",
+    loadMoreLabel: vi ? "Tải thêm" : "Load more",
+    messageCountLabel: (n: number) =>
+      vi ? `${n} tin nhắn` : `${n} message${n === 1 ? "" : "s"}`,
+
     // Dish photo / ingredients photo detection
     dishPhotoLabel: vi ? "Ảnh món ăn" : "Dish photo",
     ingredientsPhotoLabel: vi ? "Ảnh nguyên liệu" : "Ingredients photo",
@@ -260,6 +288,10 @@ export function getStrings(lang: Lang) {
       ? "Chỉnh sửa trước khi thêm vào tin nhắn…"
       : "Edit before adding to your message…",
     useThisLabel: vi ? "Dùng cái này" : "Use this",
+    wantRecipeSuggestionsHint: vi
+      ? "💡 Bạn có muốn mình gợi ý món ăn dựa trên nguyên liệu/món này không? Nhấn gửi để xem gợi ý!"
+      : "💡 Want recipe suggestions based on this? Hit send to see some ideas!",
+    sendLabel: vi ? "Gửi" : "Send",
 
     // ── Recipe preview (chat link) ────────────────────────────────────────
     close: vi ? "Đóng" : "Close",
@@ -284,6 +316,15 @@ export function getStrings(lang: Lang) {
       ? "Đã xóa so với phiên bản trước"
       : "Removed from previous version",
     recipeDiffChanged: vi ? "Đã sửa" : "Changed",
+    ingredientsInThisVersionLabel: vi
+      ? "Nguyên liệu trong phiên bản này (phần thay đổi được tô sáng)"
+      : "Ingredients in this version (changes highlighted)",
+    addToPersonalRecipeButton: vi ? "Thêm vào công thức cá nhân" : "Add to personal recipe",
+    savingRecipeButton: vi ? "Đang lưu…" : "Saving…",
+    viewSavedRecipeLabel: vi ? "Xem công thức đã lưu" : "View saved recipe",
+    unableToSaveRecipeFromChat: vi
+      ? "Không thể lưu công thức. Vui lòng thử lại."
+      : "Unable to save this recipe. Please try again.",
 
     // ── Recipe detail / cooking mode ───────────────────────────────────────
     addPhoto: vi ? "Thêm ảnh" : "Add Photo",
@@ -335,6 +376,7 @@ export function getStrings(lang: Lang) {
     emailLabel: "Email",
     ageLabel: vi ? "Tuổi" : "Age",
     weightLabel: vi ? "Cân nặng (kg)" : "Weight (kg)",
+    genderLabel: vi ? "Giới tính" : "Gender",
     nutritionGoals: vi ? "Mục tiêu dinh dưỡng" : "Nutrition Goals",
     setDietaryObjectives: vi
       ? "Đặt mục tiêu dinh dưỡng"
@@ -438,6 +480,17 @@ export function getStrings(lang: Lang) {
         "High Protein": "Nhiều protein",
       };
       return map[goal] ?? goal;
+    },
+
+    // Gender display
+    genderDisplay(gender: string): string {
+      if (!vi) return gender;
+      const map: Record<string, string> = {
+        Male: "Nam",
+        Female: "Nữ",
+        Other: "Khác",
+      };
+      return map[gender] ?? gender;
     },
 
     // Label/tag display — covers recipe labels + dietary restriction tags
@@ -554,46 +607,6 @@ export function getStrings(lang: Lang) {
     adminRecipesTitle: vi ? "Công thức" : "Recipes",
     adminNewRecipe: vi ? "Công thức mới" : "New Recipe",
 
-    // ── Aisle mapping job (admin recipes) ──────────────────────────────────
-    adminMapAislesTitle: vi ? "Gán khu hàng" : "Map aisles",
-    adminMappedStat: (mapped: number, total: number) =>
-      vi
-        ? `${mapped} / ${total} công thức đã gán`
-        : `${mapped} / ${total} recipes mapped`,
-    adminMissingStat: (n: number) =>
-      vi
-        ? `${n} công thức chưa có khu hàng`
-        : `${n} recipe${n === 1 ? "" : "s"} missing aisle`,
-    adminProcessedStat: (processed: number, total: number) =>
-      vi
-        ? `${processed} / ${total} đã xử lý`
-        : `${processed} / ${total} processed`,
-    adminMapAislesButton: vi ? "Gán khu hàng" : "Map aisles",
-    adminRemapAislesButton: vi ? "Gán lại toàn bộ" : "Remap aisles",
-    adminMappingAislesButton: vi ? "Đang gán khu hàng…" : "Mapping aisles…",
-    adminStopButton: vi ? "Dừng" : "Stop",
-    adminRemapConfirmTitle: vi
-      ? "Gán lại toàn bộ khu hàng?"
-      : "Remap all aisles?",
-    adminRemapConfirmMessage: vi
-      ? "Tất cả công thức đã có khu hàng sẽ được AI gán lại từ đầu. Việc này tốn nhiều token AI hơn."
-      : "Every recipe that already has an aisle will be re-mapped by the AI from scratch. This uses more AI tokens than mapping only what's missing.",
-    adminRemapConfirmButton: vi ? "Gán lại" : "Remap",
-    adminAisleMappingStoppedToast: vi
-      ? "Đã dừng gán khu hàng."
-      : "Aisle mapping stopped.",
-    adminAisleMappingFinishedToast: vi
-      ? "Đã gán khu hàng xong."
-      : "Aisle mapping finished.",
-    adminUnableToLoadAisleStatus: vi
-      ? "Không thể tải trạng thái gán khu hàng."
-      : "Unable to load aisle mapping status.",
-    adminUnableToStartAisleMapping: vi
-      ? "Không thể bắt đầu gán khu hàng."
-      : "Unable to start aisle mapping.",
-    adminUnableToStopAisleMapping: vi
-      ? "Không thể dừng gán khu hàng."
-      : "Unable to stop aisle mapping.",
     adminSearchRecipesHint: vi
       ? "Tìm theo tên, id, nguyên liệu…"
       : "Search by title, id, ingredients…",
@@ -846,6 +859,8 @@ export function getStrings(lang: Lang) {
     adminStatusFieldLabel: vi ? "Trạng thái" : "Status",
     adminAgeFieldLabel: vi ? "Tuổi" : "Age",
     adminWeightFieldLabel: vi ? "Cân nặng (kg)" : "Weight (kg)",
+    adminGenderFieldLabel: vi ? "Giới tính" : "Gender",
+    adminGenderUnspecified: vi ? "Không xác định" : "Unspecified",
     adminCalorieTargetFieldLabel: vi
       ? "Mục tiêu calo (calo/ngày)"
       : "Calorie target (cal/day)",

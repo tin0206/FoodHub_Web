@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Bot, ChevronRight } from "lucide-react";
-import type { ChatOption, RagRecipe } from "@/lib/api/types";
+import type { ApiRecipe, ChatOption } from "@/lib/api/types";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 import { findPreviousRecipeMarkdown } from "@/lib/recipe-version-diff";
 
@@ -10,8 +10,18 @@ export interface ChatUiMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  recipes?: RagRecipe[];
   options?: ChatOption[];
+  /** Set once this message's "Add to personal recipe" action has succeeded —
+   * survives a page reload so the button doesn't reset to unsaved. */
+  savedRecipeId?: number;
+  /** True when this reply is just the first full view of a freshly-picked
+   * recipe (nothing was asked to change yet) — see MarkdownReply. */
+  isFreshReferenceView?: boolean;
+  /** The recipe this specific reply is about, frozen at the moment the reply
+   * was requested — never a live/shared value, since the "current" recipe
+   * context can move on to a different pick before the user acts on an
+   * earlier message still visible in the transcript. */
+  referencedRecipeSnapshot?: ApiRecipe | null;
 }
 
 const EMPTY_OPTIONS: ChatOption[] = [];
@@ -26,30 +36,35 @@ export function lastAssistantIndex(messages: ChatUiMessage[]) {
 export const ChatMessageBubble = memo(function ChatMessageBubble({
   message,
   isLatestAi,
-  canRerun,
   optionsIntro,
-  rerunLabel,
   authToken,
   messages,
   messageIndex,
+  referencedRecipe,
+  recipeCache,
+  onRecipeOpened,
+  canSaveRecipes,
+  onRecipeSaved,
   onSelectOption,
-  onRerun,
 }: {
   message: ChatUiMessage;
   isLatestAi: boolean;
-  canRerun: boolean;
   optionsIntro: (count: number) => string;
-  rerunLabel: string;
   authToken?: string;
   messages?: ChatUiMessage[];
   messageIndex?: number;
+  referencedRecipe?: ApiRecipe | null;
+  /** Every full recipe the AI has embedded in a `recipes[]` list so far this
+   * session, keyed by id — lets CTA images and "view recipe" taps skip a fetch. */
+  recipeCache?: Record<number, ApiRecipe>;
+  onRecipeOpened?: (recipe: ApiRecipe) => void;
+  canSaveRecipes?: boolean;
+  onRecipeSaved?: (recipeId: number) => void;
   onSelectOption: (option: ChatOption) => void;
-  onRerun: () => void;
 }) {
   const isUser = message.role === "user";
   const options = message.options ?? EMPTY_OPTIONS;
   const showOptions = isLatestAi && options.length > 0;
-  const showRerun = isLatestAi && canRerun && options.length === 0;
   const previousMarkdown =
     messages && messageIndex != null
       ? findPreviousRecipeMarkdown({
@@ -106,9 +121,15 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             ) : (
               <MarkdownReply
                 text={message.text}
-                recipes={message.recipes}
                 authToken={authToken}
                 previousMarkdown={previousMarkdown}
+                referencedRecipe={referencedRecipe}
+                recipeCache={recipeCache}
+                onRecipeOpened={onRecipeOpened}
+                canSaveRecipes={canSaveRecipes}
+                savedRecipeId={message.savedRecipeId}
+                onRecipeSaved={onRecipeSaved}
+                isFreshReferenceView={message.isFreshReferenceView}
               />
             )}
           </div>
@@ -155,19 +176,6 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 </button>
               ))}
             </div>
-          )}
-          {showRerun && (
-            <button
-              type="button"
-              onClick={onRerun}
-              className="mt-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg"
-              style={{
-                color: "#059669",
-                backgroundColor: "rgba(5,150,105,0.12)",
-              }}
-            >
-              {rerunLabel}
-            </button>
           )}
         </div>
       </div>

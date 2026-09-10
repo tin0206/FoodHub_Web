@@ -12,6 +12,7 @@ export interface ApiUser {
   google_id?: string | null;
   age?: number | null;
   weight?: number | null;
+  gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
   carb_target?: number | null;
@@ -37,6 +38,7 @@ export interface UserProfileUpdate {
   full_name?: string | null;
   age?: number | null;
   weight?: number | null;
+  gender?: string | null;
   calorie_target?: number | null;
   protein_target?: number | null;
   carb_target?: number | null;
@@ -172,14 +174,10 @@ export interface AiRequestDetail {
   session_id?: string | null;
 }
 
-export interface RagRecipe {
-  recipe_id?: string | null;
-  title: string;
-  ingredients: string[];
-  directions: string[];
-  dietary_restrictions?: string[];
-  estimated_servings?: number | null;
-}
+/** The chat AI now embeds the full recipe record (same shape as `GET
+ * /recipes/{id}`, image_url/nutrition included) for every recipe it mentions
+ * in a recommendation list — no separate fetch needed to show it. */
+export type RagRecipe = ApiRecipe;
 
 /** One AI-suggested reply choice — rendered as a tappable card instead of free text. */
 export interface ChatOption {
@@ -193,7 +191,38 @@ export interface ChatResponse {
   reply: string;
   phase: string;
   session_id?: string | null;
-  recipes: RagRecipe[];
+  recipes: ApiRecipe[];
   options: ChatOption[];
   known_info?: Record<string, unknown>;
+}
+
+/** One row of GET /ai/sessions — a saved conversation's sidebar summary. */
+export interface ChatSessionSummary {
+  session_id: string;
+  /** Null until the user has sent at least one message — show a fallback like "New chat". */
+  title: string | null;
+  last_message: string | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatSessionListResponse {
+  total_count: number;
+  sessions: ChatSessionSummary[];
+}
+
+export interface ChatSessionMessage {
+  role: "user" | "assistant";
+  content: string;
+  created_at: string | null;
+}
+
+/** GET /ai/sessions/{id} — a saved conversation's full transcript. */
+export interface ChatSessionDetail {
+  session_id: string;
+  title: string | null;
+  messages: ChatSessionMessage[];
+  created_at: string;
+  updated_at: string;
 }

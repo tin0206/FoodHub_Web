@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag } from 'lucide-react'
+import { Plus, X, Clock, Users, ShoppingBasket, ListOrdered, Tag, Loader2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
 import { createRecipe, uploadRecipeImage } from '@/lib/api/recipes'
+import { aiDetectDish } from '@/lib/api/ai'
 import type { ApiRecipe } from '@/lib/api/types'
 import { setRecipeMeta, estimateStats } from '@/lib/recipe-meta'
 import { useDarkMode } from '@/lib/use-dark-mode'
+import { useLang } from '@/lib/use-lang'
 import { useStrings } from '@/lib/use-strings'
 import { SectionCard } from './section-card'
 import { LabelChips } from './label-chips'
@@ -37,8 +39,10 @@ export function AddRecipePanel({
 }: { onCancel: () => void; onSave: (r: ApiRecipe) => void }) {
   const dark = useDarkMode()
   const t = useStrings()
+  const lang = useLang()
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState('')
+  const [detectingTitle, setDetectingTitle] = useState(false)
   const [name, setName] = useState('')
   const [minutes, setMinutes] = useState('')
   const [servings, setServings] = useState('2')
@@ -59,6 +63,20 @@ export function AddRecipePanel({
   async function handlePickImage(file: File) {
     setImageFile(file)
     setImagePreview(await readFileAsDataUrl(file))
+
+    // Best-effort: guess the title from the photo so the user has a starting
+    // point to edit rather than a blank field — silently skip on failure.
+    setDetectingTitle(true)
+    try {
+      const result = await aiDetectDish(file, lang)
+      const top = result.results[0]
+      const guessedTitle = top?.recipe?.title || top?.dishName || result.dishName
+      if (guessedTitle) setName(guessedTitle)
+    } catch {
+      // ignore — title guessing is a convenience, not a requirement
+    } finally {
+      setDetectingTitle(false)
+    }
   }
 
   function handleClearImage() {
@@ -143,13 +161,16 @@ export function AddRecipePanel({
         <PhotoPicker preview={imagePreview} onPick={handlePickImage} onClear={handleClearImage} />
 
         <SectionCard>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder={t.recipeNameHint}
-            className={`text-[17px] font-bold tracking-tight ${inlineInputClass}`}
-            style={{ color: 'var(--tm-text)' }}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder={detectingTitle ? t.detectingDishTitleHint : t.recipeNameHint}
+              className={`text-[17px] font-bold tracking-tight flex-1 ${inlineInputClass}`}
+              style={{ color: 'var(--tm-text)' }}
+            />
+            {detectingTitle && <Loader2 size={16} className="animate-spin shrink-0" color="#059669" />}
+          </div>
         </SectionCard>
 
         <SectionCard>

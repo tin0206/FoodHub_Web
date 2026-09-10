@@ -1,4 +1,4 @@
-import type { ChatHistoryMessage, ChatOption, RagRecipe } from "@/lib/api/types";
+import type { ApiRecipe, ChatHistoryMessage, ChatOption } from "@/lib/api/types";
 
 const CHAT_SESSION_KEY = "fh_recs_chat_session";
 
@@ -6,8 +6,10 @@ export interface PersistedChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  recipes?: RagRecipe[];
   options?: ChatOption[];
+  savedRecipeId?: number;
+  isFreshReferenceView?: boolean;
+  referencedRecipeSnapshot?: ApiRecipe | null;
 }
 
 export interface PersistedChatSession {
@@ -16,8 +18,14 @@ export interface PersistedChatSession {
   history: ChatHistoryMessage[];
   composeDishText: string | null;
   composeIngredientsText: string | null;
-  lastSentMessage: string | null;
-  lastSentIngredients: string[];
+  /** The recipe the user last opened from a chat reply — kept across a reload
+   * so the "Add to personal recipe" / diff-highlight UI doesn't disappear
+   * after navigating to a saved recipe's detail page and coming back. */
+  referencedRecipe?: ApiRecipe | null;
+  /** Every full recipe the AI has embedded in a `recipes[]` list so far this
+   * session, keyed by id — kept across a reload so a plain-text pick
+   * ("choose option 2") still resolves without a fetch afterward. */
+  recipeCache?: Record<number, ApiRecipe>;
 }
 
 /** Survives a page reload but clears when the tab/browser closes — matches how far a chat should follow the user. */
