@@ -84,6 +84,10 @@ export default function OnboardingPage() {
     );
   }
 
+  function selectPrimaryGoal(goal: string) {
+    setPrimaryGoal((prev) => (prev === goal ? "" : goal));
+  }
+
   function handleNext() {
     if (step === 1 && !validateAboutStep()) return;
     setStep((s) => Math.min(TOTAL_STEPS, s + 1));
@@ -243,7 +247,7 @@ export default function OnboardingPage() {
                   <button
                     key={goal}
                     type="button"
-                    onClick={() => setPrimaryGoal(active ? "" : goal)}
+                    onClick={() => selectPrimaryGoal(goal)}
                     className="py-2.5 px-3 rounded-lg border text-sm text-left transition-colors"
                     style={{
                       backgroundColor: active ? "#ECFDF5" : "#fff",

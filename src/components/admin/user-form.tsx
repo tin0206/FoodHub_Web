@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK } from "@/lib/admin";
-import { GENDER_OPTIONS } from "@/components/profile-editor";
+import { GENDER_OPTIONS, PRIMARY_GOALS } from "@/components/profile-editor";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useStrings } from "@/lib/use-strings";
 import type { Strings } from "@/lib/strings";
@@ -37,14 +37,6 @@ import type { ApiUser } from "@/lib/api/types";
 import LoadingOverlay from "@/components/loading-overlay";
 
 const DEFAULT_PASSWORD = "123456";
-
-const ADMIN_GOALS = [
-  "Lose Weight",
-  "Build Muscle",
-  "Balanced Nutrition",
-  "Improve Health",
-  "Maintain Weight",
-];
 
 const ADMIN_DIETARY_OPTIONS = [
   "Vegan",
@@ -104,43 +96,59 @@ function FieldInput({
   value,
   onChange,
   onBlur,
+  onFocus,
   placeholder,
   type = "text",
   error,
   suffix,
+  accent,
 }: {
   label: string;
   icon: React.ComponentType<{ size?: number; color?: string }>;
   value: string;
   onChange: (v: string) => void;
   onBlur?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
   type?: string;
   error?: string;
   suffix?: React.ReactNode;
+  accent: string;
 }) {
+  const [focused, setFocused] = useState(false);
+  const outlineColor = error ? "#F43F5E" : focused ? accent : "var(--tm-border-i)";
   return (
     <div>
-      <div
-        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5"
-        style={{ backgroundColor: "var(--tm-subtle)" }}
-      >
-        <Icon size={16} color="var(--tm-text-2)" />
-        <div className="min-w-0 flex-1">
-          <label className="block text-[10.5px] font-semibold" style={{ color: "var(--tm-text-2)" }}>
-            {label}
-          </label>
+      <div className="relative">
+        <div
+          className="flex items-center gap-2.5 rounded-xl px-3 h-11.5 transition-colors"
+          style={{ backgroundColor: "var(--tm-surface)", border: `1.5px solid ${outlineColor}` }}
+        >
+          <Icon size={16} color={focused ? accent : "var(--tm-text-2)"} />
           <input
             type={type}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            onBlur={onBlur}
+            onFocus={() => {
+              setFocused(true);
+              onFocus?.();
+            }}
+            onBlur={() => {
+              setFocused(false);
+              onBlur?.();
+            }}
             placeholder={placeholder}
-            className="w-full text-sm bg-transparent focus:outline-none"
+            className="min-w-0 flex-1 text-sm bg-transparent focus:outline-none"
             style={{ color: "var(--tm-text)" }}
           />
+          {suffix}
         </div>
-        {suffix}
+        <span
+          className="absolute -top-2 left-2.5 px-1 text-[10.5px] font-semibold pointer-events-none"
+          style={{ backgroundColor: "var(--tm-surface)", color: outlineColor }}
+        >
+          {label}
+        </span>
       </div>
       {error && (
         <p className="text-[11px] mt-1 pl-1" style={{ color: "#F43F5E" }}>
@@ -259,6 +267,10 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function selectPrimaryGoal(goal: string) {
+    setPrimaryGoal((prev) => (prev === goal ? null : goal));
+  }
 
   function toggleRestriction(label: string) {
     setRestrictions((prev) => {
@@ -383,6 +395,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
             value={fullName}
             onChange={setFullName}
             placeholder="Jane Doe"
+            accent={accent}
           />
           <FieldInput
             label={t.adminEmailFieldLabel}
@@ -391,6 +404,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
             value={email}
             onChange={setEmail}
             placeholder="jane@example.com"
+            accent={accent}
           />
           <FieldInput
             label={t.adminUsernameFieldLabel}
@@ -398,6 +412,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
             value={username}
             onChange={setUsername}
             placeholder="janedoe"
+            accent={accent}
           />
           {!initial && (
             <FieldInput
@@ -411,6 +426,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               onBlur={() => setPasswordError(getPasswordError(password, t))}
               placeholder={t.adminPasswordHint}
               error={passwordError}
+              accent={accent}
             />
           )}
         </FormSection>
@@ -477,6 +493,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               value={age}
               onChange={(v) => setAge(v.replace(/[^0-9]/g, ""))}
               placeholder="e.g. 28"
+              accent={accent}
             />
             <FieldInput
               label={t.adminWeightFieldLabel}
@@ -484,6 +501,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               value={weight}
               onChange={(v) => setWeight(v.replace(/[^0-9.]/g, ""))}
               placeholder="e.g. 65"
+              accent={accent}
             />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
@@ -493,6 +511,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               value={calorieTarget}
               onChange={(v) => setCalorieTarget(v.replace(/[^0-9]/g, ""))}
               placeholder="e.g. 2000"
+              accent={accent}
             />
             <FieldInput
               label={t.adminProteinTargetFieldLabel}
@@ -500,6 +519,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               value={proteinTarget}
               onChange={(v) => setProteinTarget(v.replace(/[^0-9]/g, ""))}
               placeholder="e.g. 120"
+              accent={accent}
             />
           </div>
           <div className="grid grid-cols-2 gap-2.5">
@@ -509,6 +529,7 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               value={carbTarget}
               onChange={(v) => setCarbTarget(v.replace(/[^0-9]/g, ""))}
               placeholder="e.g. 200"
+              accent={accent}
             />
             <FieldInput
               label={t.adminFatTargetFieldLabel}
@@ -516,19 +537,32 @@ export function AdminUserForm({ initial }: { initial?: ApiUser }) {
               value={fatTarget}
               onChange={(v) => setFatTarget(v.replace(/[^0-9]/g, ""))}
               placeholder="e.g. 60"
+              accent={accent}
             />
           </div>
           <div>
             <label className="block text-xs mb-1.5" style={{ color: "var(--tm-text-2)" }}>
               {t.adminPrimaryGoalFieldLabel}
             </label>
-            <ChipPicker
-              options={ADMIN_GOALS}
-              isSelected={(v) => primaryGoal === v}
-              onToggle={(v) => setPrimaryGoal(primaryGoal === v ? null : v)}
-              accent={accent}
-              display={t.goalDisplay}
-            />
+            <div className="flex flex-wrap gap-1.5">
+              {PRIMARY_GOALS.map((goal) => {
+                const sel = primaryGoal === goal;
+                return (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => selectPrimaryGoal(goal)}
+                    className="text-[11.5px] font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: sel ? accent : "var(--tm-subtle)",
+                      color: sel ? "white" : "var(--tm-text-2)",
+                    }}
+                  >
+                    {t.goalDisplay(goal)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </FormSection>
 

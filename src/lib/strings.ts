@@ -480,6 +480,7 @@ export function getStrings(lang: Lang) {
         "Muscle Gain": "Tăng cơ",
         "High Protein": "Nhiều protein",
         "Lose Weight": "Giảm cân",
+        "Gain Weight": "Tăng cân",
         "Build Muscle": "Tăng cơ",
         "Improve Health": "Cải thiện sức khỏe",
         "Maintain Weight": "Giữ cân",
@@ -946,7 +947,6 @@ export function getStrings(lang: Lang) {
     adminRoleStatusSectionTitle: vi ? "Vai trò & trạng thái" : "Role & Status",
     adminOptionalLabel: vi ? "Không bắt buộc" : "Optional",
     adminPasswordHint: vi ? "Ít nhất 6 ký tự" : "At least 6 characters",
-    adminPrimaryGoalHint: vi ? "vd. Tăng cơ" : "e.g. Build Muscle",
     adminPasswordRequired: vi
       ? "Vui lòng nhập mật khẩu."
       : "Please enter a password.",

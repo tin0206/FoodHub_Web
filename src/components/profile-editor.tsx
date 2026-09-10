@@ -41,7 +41,14 @@ interface FieldErrors {
   fatTarget: string;
 }
 
-export const PRIMARY_GOALS = ["Balanced Nutrition", "Weight Loss", "Muscle Gain", "High Protein"];
+export const PRIMARY_GOALS = [
+  "Lose Weight",
+  "Gain Weight",
+  "Build Muscle",
+  "Balanced Nutrition",
+  "Improve Health",
+  "Maintain Weight",
+];
 export const GENDER_OPTIONS = ["Male", "Female", "Other"];
 export const DIETARY_TAGS = ["Dairy Free", "Non-Alcoholic", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
 const NO_ERRORS: FieldErrors = { age: "", weight: "", calorieTarget: "", proteinTarget: "", carbTarget: "", fatTarget: "" };
@@ -369,6 +376,11 @@ export function ProfileEditor() {
     setSaveError("");
   }
 
+  function selectPrimaryGoal(goal: string) {
+    if (!formData) return;
+    set("primaryGoal", formData.primaryGoal === goal ? "" : goal);
+  }
+
   function handleLogout() {
     logout();
     router.replace("/login");
@@ -555,7 +567,7 @@ export function ProfileEditor() {
                     <button
                       key={goal}
                       type="button"
-                      onClick={() => set("primaryGoal", active ? "" : goal)}
+                      onClick={() => selectPrimaryGoal(goal)}
                       className="py-2.5 px-3 rounded-lg border text-sm text-left transition-colors"
                       style={{
                         backgroundColor: active ? "#ECFDF5" : "var(--tm-surface)",
@@ -707,7 +719,7 @@ export function ProfileEditor() {
         {/* Floating Cancel/Save bar — mirrors the mobile app's scroll-aware action bar,
             shown only while unsaved changes exist and the fixed bottom row is off-screen. */}
         <div
-          className="absolute inset-x-0 bottom-20 md:bottom-6 flex justify-center px-4 z-40 transition-all duration-200"
+          className="fixed inset-x-0 bottom-20 md:bottom-6 flex justify-center px-4 z-40 transition-all duration-200"
           style={{
             opacity: showFloatingActions ? 1 : 0,
             transform: showFloatingActions ? "translateY(0)" : "translateY(12px)",
