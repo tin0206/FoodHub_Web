@@ -1,10 +1,176 @@
 "use client";
 
-import { memo } from "react";
-import { Bot, ChevronRight } from "lucide-react";
+import { memo, useState } from "react";
+import { Bot, ChevronRight, ThumbsUp, Flag, Loader2 } from "lucide-react";
 import type { ApiRecipe, ChatOption } from "@/lib/api/types";
 import { MarkdownReply } from "@/components/chat/markdown-reply";
 import { findPreviousRecipeMarkdown } from "@/lib/recipe-version-diff";
+import { useStrings } from "@/lib/use-strings";
+import { ApiError } from "@/lib/api-client";
+import { submitFeedback } from "@/lib/api/feedback";
+
+const REPORT_CATEGORIES: { value: "bug" | "complaint"; key: "bug" | "complaint" }[] = [
+  { value: "bug", key: "bug" },
+  { value: "complaint", key: "complaint" },
+];
+
+function truncateForFeedback(text: string, max = 600): string {
+  const trimmed = text.trim();
+  return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+}
+
+function MessageActions({ text }: { text: string }) {
+  const t = useStrings();
+  const [liked, setLiked] = useState(false);
+  const [likeSubmitting, setLikeSubmitting] = useState(false);
+  const [likeError, setLikeError] = useState(false);
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState<"bug" | "complaint">("bug");
+  const [reportNote, setReportNote] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
+  const [reportError, setReportError] = useState("");
+
+  async function handleLike() {
+    if (liked || likeSubmitting) return;
+    setLikeSubmitting(true);
+    setLikeError(false);
+    try {
+      await submitFeedback({
+        category: "general",
+        message: `[Liked AI response]\n${truncateForFeedback(text)}`,
+        rating: 5,
+      });
+      setLiked(true);
+    } catch {
+      setLikeError(true);
+    } finally {
+      setLikeSubmitting(false);
+    }
+  }
+
+  async function handleReportSubmit() {
+    if (reportSubmitting) return;
+    setReportSubmitting(true);
+    setReportError("");
+    try {
+      const note = reportNote.trim();
+      const message = `${note ? `${note}\n\n` : ""}[Reported AI response]\n${truncateForFeedback(text)}`;
+      await submitFeedback({ category: reportCategory, message });
+      setReportDone(true);
+    } catch (err) {
+      setReportError(err instanceof ApiError ? err.message : t.chatReportFailed);
+    } finally {
+      setReportSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mt-1">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void handleLike()}
+          disabled={likeSubmitting || liked}
+          className="flex items-center gap-1 text-[11px] font-medium disabled:opacity-100"
+          style={{ color: liked ? "#059669" : "var(--tm-text-3)" }}
+        >
+          {likeSubmitting ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <ThumbsUp size={12} fill={liked ? "#059669" : "none"} />
+          )}
+          {liked ? t.chatLikedLabel : t.chatLikeAction}
+        </button>
+        <button
+          type="button"
+          onClick={() => setReportOpen((v) => !v)}
+          className="flex items-center gap-1 text-[11px] font-medium"
+          style={{ color: reportOpen ? "#F43F5E" : "var(--tm-text-3)" }}
+        >
+          <Flag size={12} />
+          {t.chatReportAction}
+        </button>
+      </div>
+      {likeError && (
+        <p className="text-[10.5px] mt-1" style={{ color: "#F43F5E" }}>
+          {t.chatLikeFailed}
+        </p>
+      )}
+
+      {reportOpen && (
+        <div
+          className="mt-2 rounded-xl p-2.5"
+          style={{ backgroundColor: "var(--tm-subtle)" }}
+        >
+          {reportDone ? (
+            <p className="text-[11.5px] font-medium" style={{ color: "#059669" }}>
+              {t.chatReportSuccess}
+            </p>
+          ) : (
+            <>
+              <p className="text-[11px] font-semibold mb-1.5" style={{ color: "var(--tm-text)" }}>
+                {t.chatReportTitle}
+              </p>
+              <div className="flex gap-1.5 mb-1.5">
+                {REPORT_CATEGORIES.map((c) => {
+                  const active = reportCategory === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setReportCategory(c.value)}
+                      className="text-[10.5px] font-semibold px-2.5 py-1 rounded-lg"
+                      style={{
+                        backgroundColor: active ? "#F43F5E" : "var(--tm-surface)",
+                        color: active ? "white" : "var(--tm-text-2)",
+                      }}
+                    >
+                      {t.feedbackCategoryDisplay(c.key)}
+                    </button>
+                  );
+                })}
+              </div>
+              <textarea
+                value={reportNote}
+                onChange={(e) => setReportNote(e.target.value)}
+                placeholder={t.chatReportPlaceholder}
+                rows={2}
+                className="w-full px-2.5 py-2 rounded-lg text-[12px] focus:outline-none resize-none"
+                style={{ backgroundColor: "var(--tm-surface)", color: "var(--tm-text)" }}
+              />
+              {reportError && (
+                <p className="text-[10.5px] mt-1" style={{ color: "#F43F5E" }}>
+                  {reportError}
+                </p>
+              )}
+              <div className="flex gap-2 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold"
+                  style={{ backgroundColor: "var(--tm-surface)", color: "var(--tm-text-2)" }}
+                >
+                  {t.cancel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleReportSubmit()}
+                  disabled={reportSubmitting}
+                  className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold text-white disabled:opacity-60"
+                  style={{ backgroundColor: "#F43F5E" }}
+                >
+                  {reportSubmitting ? t.saving : t.chatReportSubmit}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface ChatUiMessage {
   id: string;
@@ -22,6 +188,9 @@ export interface ChatUiMessage {
    * context can move on to a different pick before the user acts on an
    * earlier message still visible in the transcript. */
   referencedRecipeSnapshot?: ApiRecipe | null;
+  /** True for the auto-generated session opener — reporting a scripted
+   * greeting doesn't make sense, so it only gets the Like action. */
+  isWelcome?: boolean;
 }
 
 const EMPTY_OPTIONS: ChatOption[] = [];
@@ -176,6 +345,9 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 </button>
               ))}
             </div>
+          )}
+          {!isUser && !showOptions && !message.isWelcome && (
+            <MessageActions text={message.text} />
           )}
         </div>
       </div>

@@ -391,6 +391,7 @@ export default function RecsPage() {
           role: "assistant",
           text: reply,
           options: response.options,
+          isWelcome: true,
         },
       ]);
       setLastCtas(extractRecipeMarkdownLinks(reply).links);
@@ -730,7 +731,12 @@ export default function RecsPage() {
     setIsSending(true);
     setError("");
     scrollToBottom();
-    await sendToAi(option.label, [], history, false, referencedRecipe);
+    // Same resolution step handleSubmit does — without it, picking a numbered
+    // option never resolves which recipe was picked, so the follow-up detail
+    // reply has no snapshot to hang the "Add to personal recipe" button off.
+    const resolved = await tryResolveReferencedRecipe(option.label);
+    const snapshot = resolved ?? referencedRecipe;
+    await sendToAi(option.label, [], history, resolved != null, snapshot);
   }
 
   async function handleReset() {

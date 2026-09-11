@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChefHat, LayoutDashboard, BarChart3, BookOpen, Users, User, LogOut, ArrowLeft } from "lucide-react";
+import { ChefHat, LayoutDashboard, BarChart3, BookOpen, Users, User, LogOut, ArrowLeft, MessageSquareText } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { getCurrentUser, logout, isAdminRole } from "@/lib/auth";
 import { applyTheme, readStoredTheme } from "@/lib/theme";
@@ -24,6 +24,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/analytics", label: t.adminNavAnalytics, icon: BarChart3, match: (p: string) => p.startsWith("/admin/analytics") },
     { href: "/admin/recipes", label: t.adminNavRecipes, icon: BookOpen, match: (p: string) => p.startsWith("/admin/recipes") },
     { href: "/admin/users", label: t.adminNavUsers, icon: Users, match: (p: string) => p.startsWith("/admin/users") },
+    { href: "/admin/feedback", label: t.adminNavFeedback, icon: MessageSquareText, match: (p: string) => p.startsWith("/admin/feedback") },
     { href: "/admin/profile", label: t.adminNavProfile, icon: User, match: (p: string) => p.startsWith("/admin/profile") },
   ];
 

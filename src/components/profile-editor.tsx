@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Target, Palette, LogOut, KeyRound, UserRound, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { User, Target, Palette, LogOut, KeyRound, MessageSquareText, UserRound, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { logout, updateCachedUser, isGoogleOnlyUser, forgotPassword } from "@/lib/auth";
 import { apiGetMe, apiUpdateMe, apiChangePassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api-client";
@@ -683,6 +683,24 @@ export function ProfileEditor() {
             {isGoogleOnly && setPasswordError && (
               <p className="text-xs mt-2 ml-11" style={{ color: "#f87171" }}>{setPasswordError}</p>
             )}
+          </div>
+
+          {/* Send feedback — same single-action row style as Change password */}
+          <div className="border rounded-xl p-4 mb-4" style={{ backgroundColor: "var(--tm-surface)", borderColor: "var(--tm-border)" }}>
+            <button
+              type="button"
+              onClick={() => router.push("/feedback")}
+              className="flex items-center justify-between w-full text-sm"
+              style={{ color: "var(--tm-text)" }}
+            >
+              <span className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#DBEAFE" }}>
+                  <MessageSquareText size={16} color="#2563EB" />
+                </div>
+                <span className="font-semibold">{t.sendFeedbackLabel}</span>
+              </span>
+              <ChevronRight size={16} color="var(--tm-text-3)" />
+            </button>
           </div>
 
           {/* Cancel + Save changes */}

@@ -394,6 +394,7 @@ export function getStrings(lang: Lang) {
       ? "Chế độ ăn đặc biệt"
       : "Dietary Restrictions",
     changePasswordLabel: vi ? "Đổi mật khẩu" : "Change password",
+    sendFeedbackLabel: vi ? "Gửi phản hồi" : "Send feedback",
     saveChanges: vi ? "Lưu thay đổi" : "Save changes",
     logOut: vi ? "Đăng xuất" : "Log out",
     mustBePositiveNumber: vi ? "Phải là số dương" : "Must be a positive number",
@@ -548,6 +549,7 @@ export function getStrings(lang: Lang) {
     adminNavRecipes: vi ? "Công thức" : "Recipes",
     adminNavUsers: vi ? "Người dùng" : "Users",
     adminNavProfile: vi ? "Hồ sơ" : "Profile",
+    adminNavFeedback: vi ? "Phản hồi" : "Feedback",
     adminBackToApp: vi ? "Về ứng dụng" : "Back to app",
 
     // ── Admin: overview ────────────────────────────────────────────────────
@@ -965,6 +967,100 @@ export function getStrings(lang: Lang) {
         : `User "${username}" created successfully.`,
     adminSaveUserChanges: vi ? "Lưu thay đổi" : "Save Changes",
     adminAddUserCta: vi ? "Thêm người dùng" : "Add User",
+
+    // ── Feedback (user-facing) ──────────────────────────────────────────────
+    feedbackPageTitle: vi ? "Gửi phản hồi" : "Send Feedback",
+    feedbackPageSubtitle: vi
+      ? "Cho chúng tôi biết điều bạn nghĩ — góp ý của bạn giúp FoodHub tốt hơn."
+      : "Tell us what you think — your input helps make FoodHub better.",
+    feedbackCategoryLabel: vi ? "Loại phản hồi" : "Category",
+    feedbackCategoryDisplay(category: string): string {
+      const map: Record<string, string> = {
+        bug: vi ? "Báo lỗi" : "Bug report",
+        feature: vi ? "Đề xuất tính năng" : "Feature request",
+        general: vi ? "Góp ý chung" : "General feedback",
+        complaint: vi ? "Khiếu nại" : "Complaint",
+      };
+      return map[category] ?? category;
+    },
+    feedbackRatingLabel: vi ? "Đánh giá (không bắt buộc)" : "Rating (optional)",
+    feedbackMessageLabel: vi ? "Nội dung" : "Message",
+    feedbackMessagePlaceholder: vi
+      ? "Mô tả chi tiết góp ý của bạn…"
+      : "Describe your feedback in detail…",
+    feedbackMessageRequired: vi
+      ? "Vui lòng nhập nội dung phản hồi."
+      : "Please enter your feedback message.",
+    feedbackSubmitCta: vi ? "Gửi phản hồi" : "Submit Feedback",
+    feedbackSubmitSuccess: vi
+      ? "Đã gửi phản hồi thành công. Cảm ơn bạn!"
+      : "Feedback submitted successfully. Thank you!",
+    feedbackFailedSubmit: vi
+      ? "Không thể gửi phản hồi"
+      : "Failed to submit feedback",
+    feedbackFailedLoad: vi
+      ? "Không thể tải lịch sử phản hồi"
+      : "Failed to load feedback history",
+    feedbackHistoryTitle: vi ? "Phản hồi của bạn" : "My Feedback",
+    feedbackNoneYet: vi
+      ? "Bạn chưa gửi phản hồi nào."
+      : "You haven't submitted any feedback yet.",
+    feedbackAdminReplyLabel: vi ? "Phản hồi từ Admin" : "Admin reply",
+    feedbackStatusDisplay(status: string): string {
+      const map: Record<string, string> = {
+        open: vi ? "Chưa xử lý" : "Open",
+        in_progress: vi ? "Đang xử lý" : "In Progress",
+        resolved: vi ? "Đã xử lý" : "Resolved",
+      };
+      return map[status] ?? status;
+    },
+
+    // ── Feedback (inline chat actions) ──────────────────────────────────────
+    chatLikeAction: vi ? "Thích" : "Like",
+    chatLikedLabel: vi ? "Đã thích" : "Liked",
+    chatReportAction: vi ? "Báo cáo" : "Report",
+    chatReportTitle: vi ? "Báo cáo phản hồi này" : "Report this response",
+    chatReportPlaceholder: vi
+      ? "Vấn đề với phản hồi này là gì? (không bắt buộc)"
+      : "What's wrong with this response? (optional)",
+    chatReportSubmit: vi ? "Gửi báo cáo" : "Submit report",
+    chatReportSuccess: vi
+      ? "Đã báo cáo. Cảm ơn phản hồi của bạn!"
+      : "Reported. Thanks for the feedback!",
+    chatReportFailed: vi ? "Không thể gửi báo cáo" : "Failed to submit report",
+    chatLikeFailed: vi ? "Không thể gửi lượt thích" : "Failed to submit like",
+
+    // ── Admin: feedback ──────────────────────────────────────────────────────
+    adminFeedbackTitle: vi ? "Phản hồi người dùng" : "Feedback",
+    adminNoFeedbackFound: vi ? "Không có phản hồi nào" : "No feedback found",
+    adminFailedLoadFeedback: vi
+      ? "Không thể tải phản hồi"
+      : "Failed to load feedback",
+    adminShowingFeedback: (start: number, end: number, hasNext: boolean) =>
+      vi
+        ? `Hiện ${start}–${end} trong ${end}${hasNext ? "+" : ""} phản hồi`
+        : `Showing ${start}–${end} of ${end}${hasNext ? "+" : ""} feedback`,
+    adminFeedbackNotFound: vi ? "Không tìm thấy phản hồi." : "Feedback not found.",
+    adminBackToFeedback: vi ? "Về danh sách phản hồi" : "Back to feedback",
+    adminFeedbackSubmittedByTitle: vi ? "Người gửi" : "Submitted By",
+    adminFeedbackDetailsTitle: vi ? "Nội dung phản hồi" : "Feedback",
+    adminFeedbackStatusReplyTitle: vi ? "Trạng thái & phản hồi" : "Status & Reply",
+    adminFeedbackStatusFieldLabel: vi ? "Trạng thái" : "Status",
+    adminFeedbackReplyFieldLabel: vi ? "Nội dung phản hồi" : "Reply message",
+    adminFeedbackReplyPlaceholder: vi
+      ? "Nhập phản hồi cho người dùng…"
+      : "Write a reply to the user…",
+    adminFeedbackNoReplyYet: vi
+      ? "Admin chưa phản hồi."
+      : "No admin reply yet.",
+    adminFeedbackSaveCta: vi ? "Lưu thay đổi" : "Save Changes",
+    adminFeedbackSaveSuccess: vi
+      ? "Đã cập nhật phản hồi thành công."
+      : "Feedback updated successfully.",
+    adminFeedbackFailedSave: vi
+      ? "Không thể cập nhật phản hồi"
+      : "Failed to update feedback",
+    adminSubmittedOn: vi ? "Gửi lúc" : "Submitted",
 
     // ── Onboarding survey (post sign-up) ────────────────────────────────────
     onboardingWelcomeTitle: vi
