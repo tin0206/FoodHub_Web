@@ -880,7 +880,7 @@ export function getStrings(lang: Lang) {
     adminJoinedLabel: vi ? "Ngày tham gia" : "Joined",
     adminAgeYears: (age: number) => (vi ? `${age} tuổi` : `${age} years`),
     adminWeightKg: (w: number) => `${w} kg`,
-    adminCalorieDay: (c: number) => (vi ? `${c} calo/ngày` : `${c} cal/day`),
+    adminCalorieDay: (c: number) => (vi ? `${c} kcal/ngày` : `${c} kcal/day`),
     adminProteinDay: (c: number) =>
       vi ? `${c} g protein/ngày` : `${c} g protein/day`,
     adminCarbDay: (c: number) =>
@@ -930,17 +930,13 @@ export function getStrings(lang: Lang) {
     adminGenderFieldLabel: vi ? "Giới tính" : "Gender",
     adminGenderUnspecified: vi ? "Không xác định" : "Unspecified",
     adminCalorieTargetFieldLabel: vi
-      ? "Mục tiêu calo (calo/ngày)"
-      : "Calorie target (cal/day)",
+      ? "Mục tiêu calo (kcal/ngày)"
+      : "Calorie target (kcal/day)",
     adminProteinTargetFieldLabel: vi
       ? "Mục tiêu protein (g/ngày)"
       : "Protein target (g/day)",
-    adminCarbTargetFieldLabel: vi
-      ? "Mục tiêu tinh bột (g)"
-      : "Carb target (g)",
-    adminFatTargetFieldLabel: vi
-      ? "Mục tiêu chất béo (g)"
-      : "Fat target (g)",
+    adminCarbTargetFieldLabel: vi ? "Mục tiêu tinh bột (g)" : "Carb target (g)",
+    adminFatTargetFieldLabel: vi ? "Mục tiêu chất béo (g)" : "Fat target (g)",
     adminPrimaryGoalFieldLabel: vi ? "Mục tiêu chính" : "Primary goal",
     adminDietaryRestrictionsFieldLabel: vi
       ? "Chế độ ăn đặc biệt"
@@ -1040,11 +1036,15 @@ export function getStrings(lang: Lang) {
       vi
         ? `Hiện ${start}–${end} trong ${end}${hasNext ? "+" : ""} phản hồi`
         : `Showing ${start}–${end} of ${end}${hasNext ? "+" : ""} feedback`,
-    adminFeedbackNotFound: vi ? "Không tìm thấy phản hồi." : "Feedback not found.",
+    adminFeedbackNotFound: vi
+      ? "Không tìm thấy phản hồi."
+      : "Feedback not found.",
     adminBackToFeedback: vi ? "Về danh sách phản hồi" : "Back to feedback",
     adminFeedbackSubmittedByTitle: vi ? "Người gửi" : "Submitted By",
     adminFeedbackDetailsTitle: vi ? "Nội dung phản hồi" : "Feedback",
-    adminFeedbackStatusReplyTitle: vi ? "Trạng thái & phản hồi" : "Status & Reply",
+    adminFeedbackStatusReplyTitle: vi
+      ? "Trạng thái & phản hồi"
+      : "Status & Reply",
     adminFeedbackStatusFieldLabel: vi ? "Trạng thái" : "Status",
     adminFeedbackReplyFieldLabel: vi ? "Nội dung phản hồi" : "Reply message",
     adminFeedbackReplyPlaceholder: vi
