@@ -28,9 +28,16 @@ export interface AdminAiUsageStat {
 }
 
 export interface AdminActiveUsersPoint {
-  /** "YYYY-MM-DD" for the daily series, "YYYY-MM-DD" (week start) for the weekly series. */
+  /** "YYYY-MM-DD" */
   period: string;
   active_users: number;
+}
+
+export interface AdminResponseTimePoint {
+  /** "YYYY-MM-DD" */
+  period: string;
+  avg_duration_ms: number;
+  count: number;
 }
 
 export interface AdminMealPlanAdoption {
@@ -62,8 +69,8 @@ export interface AdminAnalytics {
   ai_usage: AdminAiUsageStat[];
   /** Sparse — last 14 days. Zero-fill client-side. */
   daily_active_users: AdminActiveUsersPoint[];
-  /** Sparse — last 8 weeks. Zero-fill client-side. */
-  weekly_active_users: AdminActiveUsersPoint[];
+  /** Sparse — last 14 days, same window as daily_active_users. Zero-fill client-side. */
+  response_time_trend: AdminResponseTimePoint[];
   /** Dietary-label distribution across the whole catalog (not just favorited recipes). */
   dietary_restriction_distribution: AdminLabelCount[];
   meal_plan_adoption: AdminMealPlanAdoption;
@@ -73,4 +80,34 @@ export interface AdminAnalytics {
 
 export async function getAdminAnalytics(): Promise<AdminAnalytics> {
   return apiFetch<AdminAnalytics>("/admin/analytics");
+}
+
+export interface AdminAiRequestLogEntry {
+  id: string;
+  request_type: string;
+  status: string;
+  duration_ms: number | null;
+  /** Always null for now — backend doesn't track this yet. */
+  token_usage: number | null;
+  /** Always null for now — backend doesn't track this yet. */
+  provider: string | null;
+  error_message: string | null;
+  created_at: string;
+  user_id: number;
+}
+
+export async function getAdminAiRequests(params?: {
+  skip?: number;
+  limit?: number;
+  status?: string;
+  request_type?: string;
+}): Promise<AdminAiRequestLogEntry[]> {
+  return apiFetch<AdminAiRequestLogEntry[]>("/admin/ai-requests", {
+    query: {
+      skip: params?.skip ?? 0,
+      limit: params?.limit ?? 50,
+      status: params?.status || undefined,
+      request_type: params?.request_type || undefined,
+    },
+  });
 }

@@ -2,27 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronRight,
-  Eye,
-  Heart,
-  RefreshCw,
-  XCircle,
-} from "lucide-react";
+import { ChevronRight, Eye, Heart, RefreshCw } from "lucide-react";
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useLang } from "@/lib/use-lang";
 import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
-import { getAdminAnalytics, type AdminAnalytics, type AdminLabelCount } from "@/lib/api/admin-analytics";
+import { getAdminAnalytics, type AdminAnalytics } from "@/lib/api/admin-analytics";
 import { getRecipe } from "@/lib/api/admin-recipes";
 import { ADMIN_ACCENT_LIGHT, ADMIN_ACCENT_DARK, avatarColor, avatarInitials } from "@/lib/admin";
 import type { Lang } from "@/lib/i18n";
+import { TrendLineChart, ColumnBarChart, RankedBarChart } from "@/components/admin/charts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
 
 /** Last N calendar days (oldest first) as "YYYY-MM-DD", for zero-filling a sparse day-count series. */
 function lastNDays(n: number): string[] {
@@ -31,20 +23,6 @@ function lastNDays(n: number): string[] {
   today.setHours(0, 0, 0, 0);
   for (let i = n - 1; i >= 0; i--) {
     out.push(new Date(today.getTime() - i * DAY_MS).toISOString().slice(0, 10));
-  }
-  return out;
-}
-
-/** Last N Monday-anchored week-starts (oldest first) — matches Postgres date_trunc('week', ...). */
-function lastNWeekStarts(n: number): string[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dow = today.getDay(); // 0=Sun..6=Sat
-  const daysSinceMonday = (dow + 6) % 7;
-  const thisMonday = today.getTime() - daysSinceMonday * DAY_MS;
-  const out: string[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    out.push(new Date(thisMonday - i * WEEK_MS).toISOString().slice(0, 10));
   }
   return out;
 }
@@ -70,16 +48,10 @@ function formatPercent(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`;
 }
 
-function failRateStatus(rate: number): { color: string; Icon: typeof CheckCircle2 } {
-  if (rate <= 0.05) return { color: "#0ca30c", Icon: CheckCircle2 };
-  if (rate <= 0.2) return { color: "#fab219", Icon: AlertTriangle };
-  return { color: "#d03b3b", Icon: XCircle };
-}
-
-function Card({ children }: { children: React.ReactNode }) {
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className="rounded-2xl p-3.5"
+      className={`rounded-2xl p-3.5 ${className}`}
       style={{ backgroundColor: "var(--tm-surface)", border: "1px solid var(--tm-border-i)" }}
     >
       {children}
@@ -129,127 +101,6 @@ function Meter({ fraction, color }: { fraction: number; color: string }) {
   return (
     <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: `${color}22` }}>
       <div className="h-full rounded-full transition-[width]" style={{ width: `${pct}%`, backgroundColor: color }} />
-    </div>
-  );
-}
-
-/** Ranked magnitude across categories — one sequential hue, never per-bar cycling. */
-function SequentialBars({
-  items,
-  color,
-  labelFor,
-}: {
-  items: AdminLabelCount[];
-  color: string;
-  labelFor: (label: string) => string;
-}) {
-  const max = Math.max(...items.map((l) => l.count), 1);
-  return (
-    <div className="space-y-2.5">
-      {items.map((l) => {
-        const frac = l.count / max;
-        return (
-          <div key={l.label} className="flex items-center gap-2.5">
-            <span
-              className="w-28 text-[11.5px] font-medium shrink-0 truncate"
-              style={{ color: "var(--tm-text-2)" }}
-            >
-              {labelFor(l.label)}
-            </span>
-            <div
-              className="flex-1 h-5 rounded-md relative"
-              style={{ backgroundColor: "var(--tm-subtle)" }}
-              title={`${l.count}`}
-            >
-              <div
-                className="h-full rounded-md"
-                style={{ width: `${Math.max(frac * 100, l.count > 0 ? 3 : 0)}%`, backgroundColor: `${color}33` }}
-              />
-            </div>
-            <span className="w-9 text-xs font-bold text-right shrink-0" style={{ color }}>
-              {l.count}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Column chart — 4px rounded cap, square at the baseline, one hue. */
-function ColumnChart({ values, labels, color }: { values: number[]; labels: string[]; color: string }) {
-  const max = Math.max(...values, 0);
-  return (
-    <div>
-      <div className="flex items-end justify-between gap-2" style={{ height: 96 }}>
-        {values.map((v, i) => {
-          const frac = max === 0 ? 0 : Math.max(v / max, v > 0 ? 0.08 : 0);
-          return (
-            <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 h-full" title={`${v}`}>
-              <span className="text-[10px] font-bold" style={{ color }}>
-                {v}
-              </span>
-              <div
-                className="w-full rounded-t-[4px]"
-                style={{ maxWidth: 24, height: `${frac * 100}%`, backgroundColor: color }}
-              />
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex justify-between mt-2">
-        {labels.map((l, i) => (
-          <span key={i} className="flex-1 text-center text-[10px] font-medium" style={{ color: "var(--tm-text-2)" }}>
-            {l}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Trend over time, single series — 2px line, 10% area wash, end labelled. */
-function TrendLine({ values, labels, color }: { values: number[]; labels: string[]; color: string }) {
-  const w = 100;
-  const h = 40;
-  const max = Math.max(...values, 1);
-  const stepX = values.length > 1 ? w / (values.length - 1) : 0;
-  const points = values.map((v, i) => {
-    const x = i * stepX;
-    const y = h - 3 - (v / max) * (h - 8);
-    return [x, y] as const;
-  });
-  const linePath = points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
-  const last = points[points.length - 1];
-  const areaPath = last ? `${linePath} L${last[0].toFixed(2)},${h} L0,${h} Z` : "";
-  const midIdx = Math.floor((labels.length - 1) / 2);
-
-  return (
-    <div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 96 }} preserveAspectRatio="none">
-        {areaPath && <path d={areaPath} fill={color} opacity={0.1} stroke="none" />}
-        <path
-          d={linePath}
-          fill="none"
-          stroke={color}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-        {points.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={i === points.length - 1 ? 2.2 : 1.4} fill={color}>
-            <title>{`${labels[i]}: ${values[i]}`}</title>
-          </circle>
-        ))}
-      </svg>
-      <div className="flex justify-between mt-1">
-        {labels.map((l, i) => (
-          <span key={i} className="text-[9px]" style={{ color: "var(--tm-text-3)" }}>
-            {i === 0 || i === labels.length - 1 || i === midIdx ? l : ""}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
@@ -324,12 +175,13 @@ export default function AdminAnalyticsPage() {
   const activeByDay = new Map((data?.daily_active_users ?? []).map((d) => [d.period, d.active_users]));
   const dailyActiveCounts = activeDays.map((d) => activeByDay.get(d) ?? 0);
 
-  const activeWeeks = lastNWeekStarts(8);
-  const activeByWeek = new Map((data?.weekly_active_users ?? []).map((d) => [d.period, d.active_users]));
-  const weeklyActiveCounts = activeWeeks.map((d) => activeByWeek.get(d) ?? 0);
+  const responseTimeByDay = new Map(
+    (data?.response_time_trend ?? []).map((d) => [d.period, { avg: d.avg_duration_ms, count: d.count }]),
+  );
+  const responseTimeCounts = activeDays.map((d) => responseTimeByDay.get(d) ?? { avg: 0, count: 0 });
+  const responseTimeAvgs = responseTimeCounts.map((d) => d.avg);
 
   const adoption = data?.meal_plan_adoption;
-  const maxAiTotal = Math.max(...(data?.ai_usage ?? []).map((u) => u.total), 1);
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-5">
@@ -472,7 +324,12 @@ export default function AdminAnalyticsPage() {
             {data && data.popular_recipes.length === 0 ? (
               <EmptyNote>{t.adminNoFavoritesYet}</EmptyNote>
             ) : (
-              <SequentialBars items={data?.popular_recipes ?? []} color={accent} labelFor={t.categoryDisplay} />
+              <RankedBarChart
+                items={data?.popular_recipes ?? []}
+                color={accent}
+                isDark={isDark}
+                labelFor={t.categoryDisplay}
+              />
             )}
           </Card>
         </section>
@@ -484,9 +341,10 @@ export default function AdminAnalyticsPage() {
             {data && data.dietary_restriction_distribution.length === 0 ? (
               <EmptyNote>{t.adminNoDietaryDistribution}</EmptyNote>
             ) : (
-              <SequentialBars
+              <RankedBarChart
                 items={data?.dietary_restriction_distribution ?? []}
                 color={accent}
+                isDark={isDark}
                 labelFor={t.categoryDisplay}
               />
             )}
@@ -502,20 +360,24 @@ export default function AdminAnalyticsPage() {
             <p className="text-[11px] font-semibold mb-2" style={{ color: "var(--tm-text-2)" }}>
               {t.adminDailyActiveLabel}
             </p>
-            <TrendLine
+            <TrendLineChart
               values={dailyActiveCounts}
               labels={activeDays.map((d) => shortDateLabel(d, lang))}
               color={accent}
+              isDark={isDark}
+              tooltipLabel={(i, v) => `${shortDateLabel(activeDays[i], lang)}: ${v}`}
             />
           </Card>
           <Card>
             <p className="text-[11px] font-semibold mb-2" style={{ color: "var(--tm-text-2)" }}>
-              {t.adminWeeklyActiveLabel}
+              {t.adminResponseTimeLabel}
             </p>
-            <ColumnChart
-              values={weeklyActiveCounts}
-              labels={activeWeeks.map((d) => shortDateLabel(d, lang))}
+            <TrendLineChart
+              values={responseTimeAvgs}
+              labels={activeDays.map((d) => shortDateLabel(d, lang))}
               color={accent}
+              isDark={isDark}
+              tooltipLabel={(i) => t.adminResponseTimeTooltip(responseTimeCounts[i].avg, responseTimeCounts[i].count)}
             />
           </Card>
         </div>
@@ -525,15 +387,20 @@ export default function AdminAnalyticsPage() {
       <section>
         <SectionHeading>{t.adminNewUsersHeading}</SectionHeading>
         <Card>
-          <ColumnChart values={signupCounts} labels={days.map((d) => dayLabel(d, lang))} color={accent} />
+          <ColumnBarChart
+            values={signupCounts}
+            labels={days.map((d) => dayLabel(d, lang))}
+            color={accent}
+            isDark={isDark}
+          />
         </Card>
       </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
         {/* Meal plan adoption */}
-        <section>
+        <section className="flex flex-col">
           <SectionHeading>{t.adminMealPlanAdoptionHeading}</SectionHeading>
-          <Card>
+          <Card className="flex-1">
             {!adoption ? (
               <EmptyNote>{t.loading}</EmptyNote>
             ) : (
@@ -547,6 +414,9 @@ export default function AdminAnalyticsPage() {
                   </span>
                 </div>
                 <Meter fraction={adoption.adoption_rate} color={accent} />
+                <p className="text-[10.5px] mt-1.5" style={{ color: "var(--tm-text-3)" }}>
+                  {t.adminAdoptionRateDescription}
+                </p>
                 <div className="grid grid-cols-2 gap-2 mt-3.5">
                   <StatTile label={t.adminTotalUsersLabel} value={formatCompact(adoption.total_users)} />
                   <StatTile
@@ -565,47 +435,36 @@ export default function AdminAnalyticsPage() {
         </section>
 
         {/* AI feature usage */}
-        <section>
-          <SectionHeading subtitle={t.adminAiUsageSubtitle}>{t.adminAiUsageHeading}</SectionHeading>
-          <Card>
+        <section className="flex flex-col">
+          <SectionHeading>{t.adminAiUsageHeading}</SectionHeading>
+          <Card className="flex-1 flex flex-col">
+            <p className="text-[11px] mb-2.5" style={{ color: "var(--tm-text-3)" }}>
+              {t.adminAiUsageSubtitle}
+            </p>
             {data && data.ai_usage.length === 0 ? (
               <EmptyNote>{t.adminNoAiUsage}</EmptyNote>
             ) : (
-              <div className="space-y-3">
-                {(data?.ai_usage ?? []).map((u) => {
-                  const frac = u.total / maxAiTotal;
-                  const status = failRateStatus(u.fail_rate);
-                  return (
-                    <div key={u.request_type}>
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[11.5px] font-medium truncate" style={{ color: "var(--tm-text-2)" }}>
-                          {t.aiRequestTypeDisplay(u.request_type)}
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {u.failed > 0 && (
-                            <span
-                              className="flex items-center gap-0.5 text-[10px] font-bold"
-                              style={{ color: status.color }}
-                            >
-                              <status.Icon size={11} />
-                              {t.adminFailRateLabel(formatPercent(u.fail_rate))}
-                            </span>
-                          )}
-                          <span className="text-xs font-bold" style={{ color: accent }}>
-                            {u.total}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="h-4 rounded-md" style={{ backgroundColor: "var(--tm-subtle)" }} title={`${u.total}`}>
-                        <div
-                          className="h-full rounded-md"
-                          style={{ width: `${Math.max(frac * 100, u.total > 0 ? 3 : 0)}%`, backgroundColor: `${accent}33` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <RankedBarChart
+                  items={(data?.ai_usage ?? []).map((u) => ({ label: u.request_type, count: u.total }))}
+                  color={accent}
+                  isDark={isDark}
+                  labelFor={t.aiRequestTypeDisplay}
+                  tooltipLabel={(i) => {
+                    const u = data!.ai_usage[i];
+                    const failPct = u.failed > 0 ? formatPercent(u.fail_rate) : null;
+                    return t.adminAiUsageTooltip(u.total, failPct);
+                  }}
+                />
+                <Link
+                  href="/admin/ai-requests"
+                  className="flex items-center justify-center gap-1 text-xs font-semibold mt-3 py-2 rounded-lg"
+                  style={{ backgroundColor: `${accent}1F`, color: accent }}
+                >
+                  {t.adminViewAllAiRequests}
+                  <ChevronRight size={14} />
+                </Link>
+              </>
             )}
           </Card>
         </section>

@@ -605,6 +605,9 @@ export function getStrings(lang: Lang) {
       ? "Mức độ dùng kế hoạch bữa ăn"
       : "Meal Plan Adoption",
     adminAdoptionRateLabel: vi ? "Tỷ lệ dùng" : "Adoption rate",
+    adminAdoptionRateDescription: vi
+      ? "Phần trăm người dùng đã tạo ít nhất một kế hoạch bữa ăn (người dùng có kế hoạch / tổng người dùng)."
+      : "Share of all users who have created at least one meal plan (users with a plan / total users).",
     adminTotalUsersLabel: vi ? "Tổng người dùng" : "Total users",
     adminUsersWithMealPlansLabel: vi
       ? "Người dùng có kế hoạch"
@@ -618,15 +621,45 @@ export function getStrings(lang: Lang) {
     adminDailyActiveLabel: vi
       ? "Theo ngày — 14 ngày qua"
       : "Daily — last 14 days",
-    adminWeeklyActiveLabel: vi
-      ? "Theo tuần — 8 tuần qua"
-      : "Weekly — last 8 weeks",
+    adminResponseTimeLabel: vi
+      ? "Thời gian phản hồi — 14 ngày qua"
+      : "Response time — last 14 days",
+    adminResponseTimeTooltip: (ms: number, count: number) =>
+      vi
+        ? `${Math.round(ms)} ms trung bình · ${count} yêu cầu`
+        : `${Math.round(ms)} ms avg · ${count} request${count === 1 ? "" : "s"}`,
     adminAiUsageHeading: vi ? "Mức sử dụng tính năng AI" : "AI Feature Usage",
     adminAiUsageSubtitle: vi ? "30 ngày qua" : "Last 30 days",
     adminNoAiUsage: vi
       ? "Chưa có yêu cầu AI nào trong 30 ngày qua."
       : "No AI requests in the last 30 days yet.",
-    adminFailRateLabel: (pct: string) => (vi ? `${pct} lỗi` : `${pct} fail`),
+    adminAiUsageTooltip: (total: number, failPct: string | null) =>
+      vi
+        ? `${total} yêu cầu${failPct ? ` · ${failPct} lỗi` : ""}`
+        : `${total} request${total === 1 ? "" : "s"}${failPct ? ` · ${failPct} fail` : ""}`,
+    adminViewAllAiRequests: vi
+      ? "Xem tất cả yêu cầu AI"
+      : "View all AI requests",
+
+    // ── Admin: AI requests log ───────────────────────────────────────────────
+    adminAiRequestsTitle: vi ? "Yêu cầu AI" : "AI Requests",
+    adminBackToAnalytics: vi ? "Về trang phân tích" : "Back to analytics",
+    adminNoAiRequestsFound: vi ? "Không có yêu cầu nào" : "No requests found",
+    adminFailedLoadAiRequests: vi
+      ? "Không thể tải yêu cầu AI"
+      : "Failed to load AI requests",
+    adminShowingAiRequests: (start: number, end: number, hasNext: boolean) =>
+      vi
+        ? `Hiện ${start}–${end} trong ${end}${hasNext ? "+" : ""} yêu cầu`
+        : `Showing ${start}–${end} of ${end}${hasNext ? "+" : ""} requests`,
+    adminAiRequestIdLabel: vi ? "ID" : "ID",
+    adminAiRequestDurationLabel: vi ? "Thời gian" : "Duration",
+    adminAiRequestTokenUsageLabel: vi ? "Token" : "Tokens",
+    adminAiRequestProviderLabel: vi ? "Nhà cung cấp" : "Provider",
+    adminAiRequestNotTrackedYet: vi ? "Chưa theo dõi" : "Not tracked yet",
+    adminAiRequestErrorLabel: vi ? "Lỗi" : "Error",
+    adminAiRequestUserLabel: vi ? "Người dùng" : "User",
+    adminAiRequestTypeFieldLabel: vi ? "Loại yêu cầu" : "Request type",
     adminTopUsersHeading: vi
       ? "Người dùng hoạt động tích cực nhất"
       : "Most Active Users",
@@ -652,12 +685,23 @@ export function getStrings(lang: Lang) {
           .replace(/\b\w/g, (c) => c.toUpperCase());
       const map: Record<string, string> = {
         chat: "Trò chuyện AI",
-        dish_recognition: "Nhận diện món ăn",
-        ingredients_detect: "Nhận diện nguyên liệu",
+        dish: "Nhận diện món ăn",
+        ingredients: "Nhận diện nguyên liệu",
         meal_suggest: "Gợi ý bữa ăn",
         shopping_list: "Danh sách mua sắm",
+        map_aisles: "Sắp xếp lối đi",
       };
       return map[value] ?? value.replace(/_/g, " ");
+    },
+    aiRequestStatusDisplay(value: string): string {
+      const map: Record<string, string> = {
+        pending: vi ? "Đang chờ" : "Pending",
+        processing: vi ? "Đang xử lý" : "Processing",
+        completed: vi ? "Hoàn tất" : "Completed",
+        failed: vi ? "Thất bại" : "Failed",
+        cancelled: vi ? "Đã hủy" : "Cancelled",
+      };
+      return map[value] ?? value;
     },
 
     // ── Admin: recipes list ────────────────────────────────────────────────
