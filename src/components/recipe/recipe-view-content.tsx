@@ -19,7 +19,7 @@ import type { RecipeMeta } from "@/lib/recipe-meta";
 import type { RecipeCardTheme } from "./recipe-card-theme";
 import { SectionCard } from "./section-card";
 
-const CALORIES_KEY = "Calories (cal)";
+const CALORIES_KEY = "Calories (kcal)";
 const PROTEIN_KEY = "Protein (g)";
 const CARBS_KEY = "Carbohydrates (g)";
 const FAT_KEY = "Fat (g)";

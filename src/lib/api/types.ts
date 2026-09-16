@@ -89,7 +89,7 @@ export interface MappedIngredient {
 export interface RecipeNutritionIngredient {
   display_string: string;
   grams: number;
-  /** Keyed by nutrient label, e.g. "Calories (cal)", "Protein (g)". */
+  /** Keyed by nutrient label, e.g. "Calories (kcal)", "Protein (g)". */
   nutrition: Record<string, number>;
 }
 

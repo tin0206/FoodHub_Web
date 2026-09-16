@@ -7,7 +7,7 @@
 import type { RecipeNutrition } from "@/lib/api/types";
 
 const STORAGE_KEY = "fh_recipe_meta";
-const CALORIES_KEY = "Calories (cal)";
+const CALORIES_KEY = "Calories (kcal)";
 
 export interface RecipeMeta {
   cookingMinutes: number;
