@@ -9,8 +9,12 @@ import { getLang } from "@/lib/i18n";
 import { useStrings } from "@/lib/use-strings";
 import { hasAccessToken, getCurrentUser } from "@/lib/auth";
 import { ApiError } from "@/lib/api-client";
-import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
+import { searchRecipes } from "@/lib/api/recipes";
 import type { ApiRecipe } from "@/lib/api/types";
+import {
+  SEARCH_CATEGORY_CHIPS,
+  isDietaryCategory,
+} from "@/lib/dietary-categories";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { buildRecipeSlug } from "@/lib/recipe-slug";
 import {
@@ -18,28 +22,7 @@ import {
   type RecipeCardData,
 } from "@/components/recipe/recipe-card";
 
-// ─── Constants (mirrors mobile SearchScreen) ─────────────────────────────────
-
 const PAGE_SIZE = 30;
-
-const MEAL_TYPE_CATEGORIES: [string, string][] = [
-  ["🌅", "Breakfast"],
-  ["🥗", "Lunch"],
-  ["🍝", "Dinner"],
-];
-
-const HIDDEN_CATEGORIES = new Set(["Quick Meal", "Quick Meals"]);
-
-const DIETARY_EMOJI: Record<string, string> = {
-  Alcoholic: "🍸",
-  Beverage: "🥤",
-  "Dairy Free": "🥛",
-  "Gluten Free": "🌾",
-  "Nut Free": "🥜",
-  Pescetarian: "🐟",
-  Vegan: "🌱",
-  Vegetarian: "🥦",
-};
 
 // ─── Persisted filter/pagination state (survives navigating to a recipe and back) ──
 
@@ -106,7 +89,6 @@ export default function SearchPage() {
   const [query, setQuery] = useState(() => loadSearchState().query);
   const [debouncedQuery, setDebouncedQuery] = useState(() => loadSearchState().query.trim());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => loadSearchState().selectedCategory);
-  const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
@@ -114,7 +96,6 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryToken, setRetryToken] = useState(0);
-  const [dietaryReady, setDietaryReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const hasFilter = debouncedQuery.trim() !== "" || selectedCategory !== null;
@@ -127,27 +108,11 @@ export default function SearchPage() {
   }, [query, selectedCategory, page]);
 
   useEffect(() => {
-    let cancelled = false;
-    getDietaryRestrictions()
-      .then((opts) => {
-        if (!cancelled) setDietaryOptions(opts);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setDietaryReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => window.clearTimeout(t);
   }, [query]);
 
   useEffect(() => {
-    if (!dietaryReady) return;
     if (!hasAccessToken()) {
       setRecipes([]);
       setLoading(false);
@@ -161,7 +126,7 @@ export default function SearchPage() {
       setLoadError("");
       try {
         const dietary =
-          selectedCategory && dietaryOptions.includes(selectedCategory)
+          selectedCategory && isDietaryCategory(selectedCategory)
             ? selectedCategory
             : undefined;
         const q =
@@ -200,9 +165,7 @@ export default function SearchPage() {
   }, [
     debouncedQuery,
     selectedCategory,
-    dietaryOptions,
     retryToken,
-    dietaryReady,
     page,
     lang,
   ]);
@@ -220,16 +183,6 @@ export default function SearchPage() {
   function openDetail(recipe: ApiRecipe) {
     router.push(`/search/${buildRecipeSlug(recipe.id, recipe.title)}`);
   }
-
-  const mealTypeLabels = new Set(
-    MEAL_TYPE_CATEGORIES.map(([, label]) => label),
-  );
-  const categoryChips: [string, string][] = [
-    ...MEAL_TYPE_CATEGORIES,
-    ...dietaryOptions
-      .filter((d) => !mealTypeLabels.has(d) && !HIDDEN_CATEGORIES.has(d))
-      .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
-  ];
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto p-4 md:p-6">
@@ -268,50 +221,36 @@ export default function SearchPage() {
         />
       </div>
 
-      {/* Category chips — wait until every option is fetched so the row doesn't
-          pop in twice (meal types immediately, dietary labels a moment later). */}
       <p className="text-xs mb-2.5" style={{ color: "var(--tm-text-3)" }}>
         {t.popularCategories}
       </p>
       <div className="flex flex-wrap gap-2 mb-5">
-        {!dietaryReady
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <span
-                key={i}
-                className="inline-block rounded-full animate-pulse"
-                style={{
-                  width: 76 + (i % 3) * 18,
-                  height: 28,
-                  backgroundColor: dark ? "#1E1E1E" : "var(--tm-subtle)",
-                }}
-              />
-            ))
-          : categoryChips.map(([emoji, label]) => {
-              const active = selectedCategory === label;
-              return (
-                <button
-                  key={label}
-                  onClick={() => toggleCategory(label)}
-                  className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
-                  style={
-                    active
-                      ? {
-                          backgroundColor: "#059669",
-                          color: "white",
-                          boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
-                        }
-                      : {
-                          backgroundColor: dark ? "#1E1E1E" : "white",
-                          color: "var(--tm-text-2)",
-                          boxShadow: panelShadow(dark),
-                        }
-                  }
-                >
-                  <span>{emoji}</span>
-                  {t.categoryDisplay(label)}
-                </button>
-              );
-            })}
+        {SEARCH_CATEGORY_CHIPS.map(([emoji, label]) => {
+          const active = selectedCategory === label;
+          return (
+            <button
+              key={label}
+              onClick={() => toggleCategory(label)}
+              className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
+              style={
+                active
+                  ? {
+                      backgroundColor: "#059669",
+                      color: "white",
+                      boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
+                    }
+                  : {
+                      backgroundColor: dark ? "#1E1E1E" : "white",
+                      color: "var(--tm-text-2)",
+                      boxShadow: panelShadow(dark),
+                    }
+              }
+            >
+              <span>{emoji}</span>
+              {t.categoryDisplay(label)}
+            </button>
+          );
+        })}
       </div>
 
       {/* Results header */}
