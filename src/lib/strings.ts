@@ -383,8 +383,8 @@ export function getStrings(lang: Lang) {
       : "Set your dietary objectives",
     primaryGoalLabel: vi ? "Mục tiêu chính" : "Primary Goal",
     dailyCalorieTarget: vi
-      ? "Calories mục tiêu (kcal/ngày)"
-      : "Target Calories (kcal/day)",
+      ? "Calories mục tiêu (cal/ngày)"
+      : "Target Calories (cal/day)",
     targetProtein: vi ? "Protein mục tiêu (g/ngày)" : "Target Protein (g/day)",
     targetCarb: vi ? "Tinh bột mục tiêu (g/ngày)" : "Target Carbs (g/day)",
     targetFat: vi ? "Chất béo mục tiêu (g/ngày)" : "Target Fat (g/day)",
@@ -924,7 +924,7 @@ export function getStrings(lang: Lang) {
     adminJoinedLabel: vi ? "Ngày tham gia" : "Joined",
     adminAgeYears: (age: number) => (vi ? `${age} tuổi` : `${age} years`),
     adminWeightKg: (w: number) => `${w} kg`,
-    adminCalorieDay: (c: number) => (vi ? `${c} kcal/ngày` : `${c} kcal/day`),
+    adminCalorieDay: (c: number) => (vi ? `${c} cal/ngày` : `${c} cal/day`),
     adminProteinDay: (c: number) =>
       vi ? `${c} g protein/ngày` : `${c} g protein/day`,
     adminCarbDay: (c: number) =>
@@ -974,8 +974,8 @@ export function getStrings(lang: Lang) {
     adminGenderFieldLabel: vi ? "Giới tính" : "Gender",
     adminGenderUnspecified: vi ? "Không xác định" : "Unspecified",
     adminCalorieTargetFieldLabel: vi
-      ? "Mục tiêu calo (kcal/ngày)"
-      : "Calorie target (kcal/day)",
+      ? "Mục tiêu calo (cal/ngày)"
+      : "Calorie target (cal/day)",
     adminProteinTargetFieldLabel: vi
       ? "Mục tiêu protein (g/ngày)"
       : "Protein target (g/day)",

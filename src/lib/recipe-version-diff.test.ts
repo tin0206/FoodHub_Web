@@ -14,7 +14,7 @@ const originalFriedRice = `Easy And Simple Fried Rice
 A quick and flavorful dish that combines cooked rice with a savory mix of vegetables and seasonings.
 
 **Nutrition (Per Serving):**
-- Calories: 115.2 kcal
+- Calories: 115.2 cal
 - Protein: 2.68 g
 - Carbohydrates: 18.41 g
 - Fat: 3.46 g
@@ -36,7 +36,7 @@ const modifiedFriedRice = `**🍽️ Easy And Simple Fried Rice (Modified)**
 A lighter version with less oil and onion.
 
 **🔥 Nutrition (Per Serving):**
-- Calories: 98.0 kcal
+- Calories: 98.0 cal
 - Protein: 2.68 g
 - Carbohydrates: 18.41 g
 - Fat: 2.10 g
@@ -58,7 +58,7 @@ const secondModifiedFriedRice = `**🍽️ Easy And Simple Fried Rice (Modified)
 A lighter version with less oil and onion.
 
 **🔥 Nutrition (Per Serving):**
-- Calories: 90.0 kcal
+- Calories: 90.0 cal
 - Protein: 2.68 g
 - Carbohydrates: 18.41 g
 - Fat: 1.80 g
@@ -201,8 +201,14 @@ describe("diffRecipeLines", () => {
   });
 
   it("latest modified diffs ingredients against the previous modified, not original", () => {
-    const vsOriginal = diffRecipeLines(originalFriedRice, secondModifiedFriedRice);
-    const vsPrevious = diffRecipeLines(modifiedFriedRice, secondModifiedFriedRice);
+    const vsOriginal = diffRecipeLines(
+      originalFriedRice,
+      secondModifiedFriedRice,
+    );
+    const vsPrevious = diffRecipeLines(
+      modifiedFriedRice,
+      secondModifiedFriedRice,
+    );
     const originalHighlights = vsOriginal.filter(hunkIsHighlightSafe).length;
     const previousHighlights = vsPrevious.filter(hunkIsHighlightSafe).length;
     assert.ok(previousHighlights < originalHighlights);
