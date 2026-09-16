@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Minus, X, ClipboardList, UtensilsCrossed, Trash2 } from 'lucide-react'
+import { Plus, X, ClipboardList, UtensilsCrossed, Trash2 } from 'lucide-react'
 import { ApiError } from '@/lib/api-client'
 import {
   getMealPlan, replaceMealPlan, addExtraMealSlot, deleteMealSlot, isMainSlot, localIsoDate, slotDisplayLabel,
@@ -24,32 +24,13 @@ function errorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
-// ─── Serving stepper button ─────────────────────────────────────────────────
-
-function ServingButton({ icon, onClick }: { icon: ReactNode; onClick?: () => void }) {
-  const enabled = !!onClick
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!enabled}
-      className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-      style={{ backgroundColor: enabled ? '#0596691F' : 'var(--tm-subtle)', color: enabled ? '#059669' : 'var(--tm-text-3)' }}
-    >
-      {icon}
-    </button>
-  )
-}
-
 // ─── Meal item row ───────────────────────────────────────────────────────────
 
 function MealItemRow({
-  item, onRemove, onServings, onOpen,
-}: { item: MealPlanItem; onRemove: () => void; onServings: (servings: number) => void; onOpen: () => void }) {
+  item, onRemove, onOpen,
+}: { item: MealPlanItem; onRemove: () => void; onOpen: () => void }) {
   const dark = useDarkMode()
-  const t = useStrings()
   const panelBorder = dark ? '#2A2A2A' : 'var(--tm-border-i)'
-  const servingsLabel = item.servings % 1 === 0 ? item.servings.toFixed(0) : String(item.servings)
 
   return (
     <div className="flex items-center gap-2.5 px-3.5 py-2" style={{ borderTop: `1px solid ${panelBorder}` }}>
@@ -66,20 +47,11 @@ function MealItemRow({
           height={44}
         />
       </button>
-      <div className="flex-1 min-w-0">
-        <button type="button" onClick={onOpen} className="block w-full text-left">
-          <p className="text-sm font-semibold truncate" style={{ color: 'var(--tm-text)' }}>
-            {item.recipe?.title ?? `#${item.recipe_id}`}
-          </p>
-        </button>
-        <div className="flex items-center gap-1.5 mt-1">
-          <ServingButton icon={<Minus size={13} />} onClick={item.servings > 1 ? () => onServings(item.servings - 1) : undefined} />
-          <span className="text-xs font-medium w-16 text-center" style={{ color: 'var(--tm-text-3)' }}>
-            {servingsLabel} {t.servingsSuffix}
-          </span>
-          <ServingButton icon={<Plus size={13} />} onClick={() => onServings(item.servings + 1)} />
-        </div>
-      </div>
+      <button type="button" onClick={onOpen} className="flex-1 min-w-0 text-left">
+        <p className="text-sm font-semibold truncate" style={{ color: 'var(--tm-text)' }}>
+          {item.recipe?.title ?? `#${item.recipe_id}`}
+        </p>
+      </button>
       <button
         type="button"
         onClick={onRemove}
@@ -96,12 +68,11 @@ function MealItemRow({
 // ─── Slot card ────────────────────────────────────────────────────────────────
 
 function SlotCard({
-  slot, onAdd, onRemoveItem, onServings, onOpenItem, onDeleteSlot,
+  slot, onAdd, onRemoveItem, onOpenItem, onDeleteSlot,
 }: {
   slot: MealSlot
   onAdd: () => void
   onRemoveItem: (item: MealPlanItem) => void
-  onServings: (item: MealPlanItem, servings: number) => void
   onOpenItem: (item: MealPlanItem) => void
   onDeleteSlot?: () => void
 }) {
@@ -147,7 +118,6 @@ function SlotCard({
             key={item.id}
             item={item}
             onRemove={() => onRemoveItem(item)}
-            onServings={(s) => onServings(item, s)}
             onOpen={() => onOpenItem(item)}
           />
         ))
@@ -226,16 +196,6 @@ export default function MealPlanPage() {
     await save({ ...plan, slots })
   }
 
-  async function setServings(slot: MealSlot, item: MealPlanItem, servings: number) {
-    if (!plan || servings < 1) return
-    const slots = plan.slots.map((s) =>
-      s.id === slot.id
-        ? { ...s, items: s.items.map((it) => (it.id === item.id ? { ...it, servings } : it)) }
-        : s,
-    )
-    await save({ ...plan, slots })
-  }
-
   async function handleDeleteSlot(slot: MealSlot) {
     try {
       const result = await deleteMealSlot(date, slot.id, getLang())
@@ -305,7 +265,6 @@ export default function MealPlanPage() {
                 slot={slot}
                 onAdd={() => setPickerSlot(slot)}
                 onRemoveItem={(item) => removeItem(slot, item)}
-                onServings={(item, servings) => setServings(slot, item, servings)}
                 onOpenItem={(item) => openRecipe(item)}
                 onDeleteSlot={isMainSlot(slot.slot_key) ? undefined : () => handleDeleteSlot(slot)}
               />

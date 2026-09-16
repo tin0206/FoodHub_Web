@@ -73,7 +73,6 @@ function ShoppingRow({
   onToggleExpanded: () => void
 }) {
   const dark = useDarkMode()
-  const t = useStrings()
   const panelBorder = dark ? '#2A2A2A' : 'var(--tm-border-i)'
   const hasSources = item.sources.length > 0
   const label = item.quantity_text ? `${item.quantity_text} ${item.name}` : item.name
@@ -117,7 +116,7 @@ function ShoppingRow({
         <div className="px-3.5 pb-2.5 space-y-1" style={{ paddingLeft: 52 }}>
           {item.sources.map((src, i) => (
             <p key={i} className="text-xs" style={{ color: 'var(--tm-text-3)' }}>
-              {src.recipe_title} — {t.plannedServings(src.servings)}
+              {src.recipe_title}
             </p>
           ))}
         </div>
