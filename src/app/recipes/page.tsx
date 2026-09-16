@@ -4,9 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
-import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
+import { searchRecipes } from "@/lib/api/recipes";
 import { ensureDemoSession } from "@/lib/demo-session";
 import type { ApiRecipe } from "@/lib/api/types";
+import {
+  SEARCH_CATEGORY_CHIPS,
+  isDietaryCategory,
+} from "@/lib/dietary-categories";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { buildRecipeSlug } from "@/lib/recipe-slug";
 import {
@@ -15,25 +19,6 @@ import {
 } from "@/components/recipe/recipe-card";
 
 const PAGE_SIZE = 24;
-
-const MEAL_TYPE_CATEGORIES: [string, string][] = [
-  ["🌅", "Breakfast"],
-  ["🥗", "Lunch"],
-  ["🍝", "Dinner"],
-];
-
-const HIDDEN_CATEGORIES = new Set(["Quick Meal", "Quick Meals"]);
-
-const DIETARY_EMOJI: Record<string, string> = {
-  Alcoholic: "🍸",
-  Beverage: "🥤",
-  "Dairy Free": "🥛",
-  "Gluten Free": "🌾",
-  "Nut Free": "🥜",
-  Pescetarian: "🐟",
-  Vegan: "🌱",
-  Vegetarian: "🥦",
-};
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback;
@@ -65,8 +50,6 @@ export default function PublicRecipesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     null,
   );
-  const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
-  const [dietaryReady, setDietaryReady] = useState(false);
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
@@ -108,22 +91,6 @@ export default function PublicRecipesPage() {
   }, [sessionRetryToken]);
 
   useEffect(() => {
-    if (!ready || !tokenRef.current) return;
-    let cancelled = false;
-    getDietaryRestrictions()
-      .then((opts) => {
-        if (!cancelled) setDietaryOptions(opts);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setDietaryReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ready]);
-
-  useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => window.clearTimeout(t);
   }, [query]);
@@ -138,7 +105,7 @@ export default function PublicRecipesPage() {
       setLoadError("");
       try {
         const dietary =
-          selectedCategory && dietaryOptions.includes(selectedCategory)
+          selectedCategory && isDietaryCategory(selectedCategory)
             ? selectedCategory
             : undefined;
         const result = await searchRecipes({
@@ -169,7 +136,7 @@ export default function PublicRecipesPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [ready, debouncedQuery, selectedCategory, dietaryOptions, page, retryToken]);
+  }, [ready, debouncedQuery, selectedCategory, page, retryToken]);
 
   useEffect(() => {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -183,14 +150,6 @@ export default function PublicRecipesPage() {
   function openDetail(recipe: ApiRecipe) {
     router.push(`/recipes/${buildRecipeSlug(recipe.id, recipe.title)}`);
   }
-
-  const mealTypeLabels = new Set(MEAL_TYPE_CATEGORIES.map(([, label]) => label));
-  const categoryChips: [string, string][] = [
-    ...MEAL_TYPE_CATEGORIES,
-    ...dietaryOptions
-      .filter((d) => !mealTypeLabels.has(d) && !HIDDEN_CATEGORIES.has(d))
-      .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
-  ];
 
   return (
     <div className="landing-page-content" style={{ maxWidth: "72rem" }}>
@@ -249,47 +208,33 @@ export default function PublicRecipesPage() {
             />
           </div>
 
-          {/* Category chips — wait until every option is fetched so the row
-              doesn't pop in twice (meal types immediately, dietary labels later). */}
           <div className="flex flex-wrap gap-2 mb-6">
-            {!dietaryReady
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="inline-block rounded-full animate-pulse"
-                    style={{
-                      width: 76 + (i % 3) * 18,
-                      height: 28,
-                      backgroundColor: "var(--tm-subtle)",
-                    }}
-                  />
-                ))
-              : categoryChips.map(([emoji, label]) => {
-                  const active = selectedCategory === label;
-                  return (
-                    <button
-                      key={label}
-                      onClick={() => toggleCategory(label)}
-                      className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
-                      style={
-                        active
-                          ? {
-                              backgroundColor: "#059669",
-                              color: "white",
-                              boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
-                            }
-                          : {
-                              backgroundColor: "white",
-                              color: "var(--tm-text-2)",
-                              boxShadow: "0 3px 10px rgba(12,26,20,0.06)",
-                            }
-                      }
-                    >
-                      <span>{emoji}</span>
-                      {label}
-                    </button>
-                  );
-                })}
+            {SEARCH_CATEGORY_CHIPS.map(([emoji, label]) => {
+              const active = selectedCategory === label;
+              return (
+                <button
+                  key={label}
+                  onClick={() => toggleCategory(label)}
+                  className="flex items-center gap-1.5 text-[11.5px] font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={
+                    active
+                      ? {
+                          backgroundColor: "#059669",
+                          color: "white",
+                          boxShadow: "0 4px 12px rgba(5,150,105,0.3)",
+                        }
+                      : {
+                          backgroundColor: "white",
+                          color: "var(--tm-text-2)",
+                          boxShadow: "0 3px 10px rgba(12,26,20,0.06)",
+                        }
+                  }
+                >
+                  <span>{emoji}</span>
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           <div ref={resultsRef} className="flex items-center justify-between mb-3">

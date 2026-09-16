@@ -61,14 +61,6 @@ export async function searchRecipes(params?: {
   return { totalCount: res.total_count, recipes: res.recipes };
 }
 
-export async function getDietaryRestrictions(): Promise<string[]> {
-  const res = await apiFetch<{ dietary_restrictions: string[] }>(
-    "/recipes/dietary-restrictions",
-    { auth: false },
-  );
-  return res.dietary_restrictions;
-}
-
 /** Catalog ingredient lookup for the ingredient picker (mapped_id + amount + unit). */
 export async function searchIngredients(
   q: string,

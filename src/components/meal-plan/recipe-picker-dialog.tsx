@@ -2,36 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
-import { searchRecipes, getDietaryRestrictions } from "@/lib/api/recipes";
+import { searchRecipes } from "@/lib/api/recipes";
 import type { ApiRecipe } from "@/lib/api/types";
 import { getLang } from "@/lib/i18n";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { useStrings } from "@/lib/use-strings";
+import {
+  SEARCH_CATEGORY_CHIPS,
+  isDietaryCategory,
+} from "@/lib/dietary-categories";
 import { RecipeCard, type RecipeCardData } from "@/components/recipe/recipe-card";
 
 const PAGE_SIZE = 24;
 // The API's `visibility` query param isn't honored server-side, so we over-fetch and
 // filter to public recipes client-side — a meal plan slot can't hold someone else's private recipe.
 const FETCH_LIMIT = 60;
-
-const MEAL_TYPE_CATEGORIES: [string, string][] = [
-  ["🌅", "Breakfast"],
-  ["🥗", "Lunch"],
-  ["🍝", "Dinner"],
-];
-
-const HIDDEN_CATEGORIES = new Set(["Quick Meal", "Quick Meals"]);
-
-const DIETARY_EMOJI: Record<string, string> = {
-  Alcoholic: "🍸",
-  Beverage: "🥤",
-  "Dairy Free": "🥛",
-  "Gluten Free": "🌾",
-  "Nut Free": "🥜",
-  Pescetarian: "🐟",
-  Vegan: "🌱",
-  Vegetarian: "🥦",
-};
 
 function toCardData(recipe: ApiRecipe): RecipeCardData {
   const meta = getOrEstimateMeta(recipe);
@@ -53,25 +38,8 @@ export function RecipePickerDialog({
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [dietaryOptions, setDietaryOptions] = useState<string[]>([]);
-  const [dietaryReady, setDietaryReady] = useState(false);
   const [results, setResults] = useState<ApiRecipe[] | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    getDietaryRestrictions()
-      .then((opts) => {
-        if (!cancelled) setDietaryOptions(opts);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setDietaryReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -79,12 +47,11 @@ export function RecipePickerDialog({
   }, [query]);
 
   useEffect(() => {
-    if (!dietaryReady) return;
     let cancelled = false;
     const controller = new AbortController();
     setLoading(true);
     const dietary =
-      selectedCategory && dietaryOptions.includes(selectedCategory) ? selectedCategory : undefined;
+      selectedCategory && isDietaryCategory(selectedCategory) ? selectedCategory : undefined;
     const q = debouncedQuery || (selectedCategory && !dietary ? selectedCategory : undefined);
     searchRecipes({ q, dietaryRestriction: dietary, limit: FETCH_LIMIT, lang: getLang(), signal: controller.signal })
       .then((res) => {
@@ -102,19 +69,11 @@ export function RecipePickerDialog({
       cancelled = true;
       controller.abort();
     };
-  }, [debouncedQuery, selectedCategory, dietaryOptions, dietaryReady]);
+  }, [debouncedQuery, selectedCategory]);
 
   function toggleCategory(category: string) {
     setSelectedCategory((prev) => (prev === category ? null : category));
   }
-
-  const mealTypeLabels = new Set(MEAL_TYPE_CATEGORIES.map(([, label]) => label));
-  const categoryChips: [string, string][] = [
-    ...MEAL_TYPE_CATEGORIES,
-    ...dietaryOptions
-      .filter((d) => !mealTypeLabels.has(d) && !HIDDEN_CATEGORIES.has(d))
-      .map((d): [string, string] => [DIETARY_EMOJI[d] ?? "🍽️", d]),
-  ];
 
   return (
     <div
@@ -161,33 +120,25 @@ export function RecipePickerDialog({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {!dietaryReady
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="inline-block rounded-full animate-pulse"
-                    style={{ width: 76 + (i % 3) * 18, height: 26, backgroundColor: "var(--tm-subtle)" }}
-                  />
-                ))
-              : categoryChips.map(([emoji, label]) => {
-                  const active = selectedCategory === label;
-                  return (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => toggleCategory(label)}
-                      className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full transition-colors"
-                      style={
-                        active
-                          ? { backgroundColor: "#059669", color: "white" }
-                          : { backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }
-                      }
-                    >
-                      <span>{emoji}</span>
-                      {t.categoryDisplay(label)}
-                    </button>
-                  );
-                })}
+            {SEARCH_CATEGORY_CHIPS.map(([emoji, label]) => {
+              const active = selectedCategory === label;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => toggleCategory(label)}
+                  className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={
+                    active
+                      ? { backgroundColor: "#059669", color: "white" }
+                      : { backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }
+                  }
+                >
+                  <span>{emoji}</span>
+                  {t.categoryDisplay(label)}
+                </button>
+              );
+            })}
           </div>
         </div>
 
