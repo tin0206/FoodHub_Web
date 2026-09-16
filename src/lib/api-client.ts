@@ -10,15 +10,18 @@ export function getApiBaseUrl(): string {
   return base;
 }
 
-/** API origin without `/api/v1` suffix (used for `/media/...` images). */
+/** API origin without `/api/v1` suffix. */
 export function getApiOrigin(): string {
   return getApiBaseUrl().replace(/\/api\/v1\/?$/, "");
 }
 
-/**
- * Resolve recipe/AI image URLs the same way as foodhub_mobile ApiConfig.resolveImageUrl.
- * Relative `/media/...` paths must hit the API host, not the Next.js origin.
- */
+const CEPH_PUBLIC_BASE = "https://ceph.foodhub.io.vn/foodhub-images";
+
+function cephUrl(objectKey: string, search = ""): string {
+  return `${CEPH_PUBLIC_BASE}/${objectKey.replace(/^\//, "")}${search}`;
+}
+
+/** Resolve `/media/...` (and S3 path-style URLs) to public Ceph. */
 export function resolveMediaUrl(url: string | null | undefined): string {
   if (!url || !url.trim()) return "";
 
@@ -30,9 +33,9 @@ export function resolveMediaUrl(url: string | null | undefined): string {
     return trimmed;
   }
 
-  // Relative path (including /media/...)
   if (trimmed.startsWith("/") || !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
     const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    if (path.startsWith("/media/")) return cephUrl(path.slice("/media/".length));
     return `${origin}${path}`;
   }
 
@@ -41,11 +44,10 @@ export function resolveMediaUrl(url: string | null | undefined): string {
     const path = parsed.pathname;
     const mediaIdx = path.indexOf("/foodhub-images/");
     if (mediaIdx >= 0) {
-      const objectKey = path.slice(mediaIdx + "/foodhub-images/".length);
-      return `${origin}/media/${objectKey}`;
+      return cephUrl(path.slice(mediaIdx + "/foodhub-images/".length), parsed.search);
     }
     if (path.startsWith("/media/")) {
-      return `${origin}${path}${parsed.search}`;
+      return cephUrl(path.slice("/media/".length), parsed.search);
     }
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       return trimmed;
