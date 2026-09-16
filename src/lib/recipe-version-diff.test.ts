@@ -176,7 +176,7 @@ describe("diffRecipeLines", () => {
     const hunks = diffRecipeLines(originalFriedRice, modifiedFriedRice);
     const changed = hunks.filter((h) => h.op === "changed");
     assert.equal(
-      hunks.some((h) => hunkIsHighlightSafe(h) && h.text.includes("kcal")),
+      hunks.some((h) => hunkIsHighlightSafe(h) && h.text.includes("cal")),
       false,
     );
     assert.equal(
