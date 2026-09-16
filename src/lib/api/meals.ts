@@ -22,12 +22,22 @@ export function localIsoDate(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+let cachedSuggestions: { lang?: string; data: MealSuggestion } | undefined;
+
 export async function getTodaySuggestions(params?: {
   lang?: string;
   suggestionDate?: string;
   signal?: AbortSignal;
 }): Promise<MealSuggestion> {
-  return apiFetch<MealSuggestion>("/meal-suggestions/today", {
+  const date = params?.suggestionDate ?? localIsoDate();
+  if (
+    cachedSuggestions &&
+    cachedSuggestions.lang === params?.lang &&
+    cachedSuggestions.data.suggestion_date === date
+  ) {
+    return cachedSuggestions.data;
+  }
+  const data = await apiFetch<MealSuggestion>("/meal-suggestions/today", {
     query: {
       lang: params?.lang,
       suggestion_date: params?.suggestionDate,
@@ -35,6 +45,8 @@ export async function getTodaySuggestions(params?: {
     signal: params?.signal,
     timeoutMs: 200_000,
   });
+  if (data.status === "ready") cachedSuggestions = { lang: params?.lang, data };
+  return data;
 }
 
 export async function refreshTodaySuggestions(params?: {
@@ -43,7 +55,7 @@ export async function refreshTodaySuggestions(params?: {
   extraExcludeIds?: number[];
   signal?: AbortSignal;
 }): Promise<MealSuggestion> {
-  return apiFetch<MealSuggestion>("/meal-suggestions/today/refresh", {
+  const data = await apiFetch<MealSuggestion>("/meal-suggestions/today/refresh", {
     method: "POST",
     query: {
       lang: params?.lang,
@@ -53,6 +65,8 @@ export async function refreshTodaySuggestions(params?: {
     signal: params?.signal,
     timeoutMs: 200_000,
   });
+  if (data.status === "ready") cachedSuggestions = { lang: params?.lang, data };
+  return data;
 }
 
 // ─── Meal plan ──────────────────────────────────────────────────────────────
@@ -80,6 +94,8 @@ export interface MealPlan {
 
 const MAIN_SLOT_KEYS = new Set(["breakfast", "lunch", "dinner"]);
 
+let cachedMealPlan: { lang?: string; data: MealPlan } | undefined;
+
 /** Main slots (breakfast/lunch/dinner) can't be deleted — only extra slots can. */
 export function isMainSlot(slotKey: string): boolean {
   return MAIN_SLOT_KEYS.has(slotKey);
@@ -104,7 +120,16 @@ export function slotDisplayLabel(
 }
 
 export async function getMealPlan(date: string, lang?: string): Promise<MealPlan> {
-  return apiFetch<MealPlan>(`/meal-plans/${date}`, { query: { lang } });
+  if (
+    cachedMealPlan &&
+    cachedMealPlan.lang === lang &&
+    String(cachedMealPlan.data.plan_date) === date
+  ) {
+    return cachedMealPlan.data;
+  }
+  const plan = await apiFetch<MealPlan>(`/meal-plans/${date}`, { query: { lang } });
+  cachedMealPlan = { lang, data: plan };
+  return plan;
 }
 
 /** No PATCH exists — every mutation (add/remove item, change servings) resends the whole plan. */
@@ -114,7 +139,7 @@ export async function replaceMealPlan(
   lang?: string,
 ): Promise<MealPlan> {
   const planDate = date ?? plan.plan_date;
-  return apiFetch<MealPlan>(`/meal-plans/${planDate}`, {
+  const updated = await apiFetch<MealPlan>(`/meal-plans/${planDate}`, {
     method: "PUT",
     query: { lang },
     body: {
@@ -129,6 +154,8 @@ export async function replaceMealPlan(
       })),
     },
   });
+  cachedMealPlan = { lang, data: updated };
+  return updated;
 }
 
 export async function addExtraMealSlot(
@@ -136,11 +163,13 @@ export async function addExtraMealSlot(
   label: string,
   lang?: string,
 ): Promise<MealPlan> {
-  return apiFetch<MealPlan>(`/meal-plans/${date}/slots`, {
+  const updated = await apiFetch<MealPlan>(`/meal-plans/${date}/slots`, {
     method: "POST",
     query: { lang },
     body: { label },
   });
+  cachedMealPlan = { lang, data: updated };
+  return updated;
 }
 
 /** Some deployments return 204 (no body) — callers should re-fetch the plan when this resolves to undefined. */
@@ -149,10 +178,16 @@ export async function deleteMealSlot(
   slotId: number,
   lang?: string,
 ): Promise<MealPlan | undefined> {
-  return apiFetch<MealPlan | undefined>(`/meal-plans/${date}/slots/${slotId}`, {
-    method: "DELETE",
-    query: { lang },
-  });
+  const updated = await apiFetch<MealPlan | undefined>(
+    `/meal-plans/${date}/slots/${slotId}`,
+    {
+      method: "DELETE",
+      query: { lang },
+    },
+  );
+  if (updated) cachedMealPlan = { lang, data: updated };
+  else cachedMealPlan = undefined;
+  return updated;
 }
 
 // ─── Shopping list ──────────────────────────────────────────────────────────
