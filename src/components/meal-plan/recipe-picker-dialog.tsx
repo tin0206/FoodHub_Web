@@ -10,7 +10,8 @@ import { useStrings } from "@/lib/use-strings";
 import {
   SEARCH_CATEGORY_CHIPS,
   defaultMealCategory,
-  isDietaryCategory,
+  recipeSearchQuery,
+  toggleSearchCategory,
 } from "@/lib/dietary-categories";
 import { RecipeCard, type RecipeCardData } from "@/components/recipe/recipe-card";
 
@@ -38,9 +39,9 @@ export function RecipePickerDialog({
   const t = useStrings();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([
     defaultMealCategory(),
-  );
+  ]);
   const [results, setResults] = useState<ApiRecipe[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,10 +54,8 @@ export function RecipePickerDialog({
     let cancelled = false;
     const controller = new AbortController();
     setLoading(true);
-    const dietary =
-      selectedCategory && isDietaryCategory(selectedCategory) ? selectedCategory : undefined;
-    const q = debouncedQuery || (selectedCategory && !dietary ? selectedCategory : undefined);
-    searchRecipes({ q, dietaryRestriction: dietary, limit: FETCH_LIMIT, lang: getLang(), signal: controller.signal })
+    const q = recipeSearchQuery(debouncedQuery, selectedCategories);
+    searchRecipes({ q, limit: FETCH_LIMIT, lang: getLang(), signal: controller.signal })
       .then((res) => {
         if (!cancelled) {
           setResults(res.recipes.filter((r) => r.visibility === "public").slice(0, PAGE_SIZE));
@@ -72,10 +71,10 @@ export function RecipePickerDialog({
       cancelled = true;
       controller.abort();
     };
-  }, [debouncedQuery, selectedCategory]);
+  }, [debouncedQuery, selectedCategories]);
 
   function toggleCategory(category: string) {
-    setSelectedCategory((prev) => (prev === category ? null : category));
+    setSelectedCategories((prev) => toggleSearchCategory(prev, category));
   }
 
   return (
@@ -124,7 +123,7 @@ export function RecipePickerDialog({
 
           <div className="flex flex-wrap gap-2">
             {SEARCH_CATEGORY_CHIPS.map(([emoji, label]) => {
-              const active = selectedCategory === label;
+              const active = selectedCategories.includes(label);
               return (
                 <button
                   key={label}

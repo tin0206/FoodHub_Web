@@ -14,7 +14,8 @@ import type { ApiRecipe } from "@/lib/api/types";
 import {
   SEARCH_CATEGORY_CHIPS,
   defaultMealCategory,
-  isDietaryCategory,
+  recipeSearchQuery,
+  toggleSearchCategory,
 } from "@/lib/dietary-categories";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { buildRecipeSlug } from "@/lib/recipe-slug";
@@ -31,12 +32,12 @@ const SEARCH_STATE_KEY = "fh_search_state";
 
 interface StoredSearchState {
   query: string;
-  selectedCategory: string | null;
+  selectedCategories: string[];
   page: number;
 }
 
 function emptySearchState(): StoredSearchState {
-  return { query: "", selectedCategory: defaultMealCategory(), page: 0 };
+  return { query: "", selectedCategories: [defaultMealCategory()], page: 0 };
 }
 
 function loadSearchState(): StoredSearchState {
@@ -44,13 +45,20 @@ function loadSearchState(): StoredSearchState {
   try {
     const raw = sessionStorage.getItem(SEARCH_STATE_KEY);
     if (!raw) return emptySearchState();
-    const parsed = JSON.parse(raw) as Partial<StoredSearchState>;
+    const parsed = JSON.parse(raw) as Partial<StoredSearchState> & {
+      selectedCategory?: unknown;
+    };
+    let selectedCategories: string[] | undefined;
+    if (Array.isArray(parsed.selectedCategories)) {
+      selectedCategories = parsed.selectedCategories.filter(
+        (c): c is string => typeof c === "string" && c.length > 0,
+      );
+    } else if (typeof parsed.selectedCategory === "string") {
+      selectedCategories = [parsed.selectedCategory];
+    }
     return {
       query: typeof parsed.query === "string" ? parsed.query : "",
-      selectedCategory:
-        typeof parsed.selectedCategory === "string"
-          ? parsed.selectedCategory
-          : defaultMealCategory(),
+      selectedCategories: selectedCategories ?? [defaultMealCategory()],
       page: typeof parsed.page === "number" && parsed.page >= 0 ? parsed.page : 0,
     };
   } catch {
@@ -96,7 +104,9 @@ export default function SearchPage() {
   const lang = useLang();
   const [query, setQuery] = useState(() => loadSearchState().query);
   const [debouncedQuery, setDebouncedQuery] = useState(() => loadSearchState().query.trim());
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => loadSearchState().selectedCategory);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    () => loadSearchState().selectedCategories,
+  );
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
@@ -106,14 +116,14 @@ export default function SearchPage() {
   const [retryToken, setRetryToken] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const hasFilter = debouncedQuery.trim() !== "" || selectedCategory !== null;
+  const hasFilter = debouncedQuery.trim() !== "" || selectedCategories.length > 0;
 
   // Persist filter + pagination so returning from a recipe detail (or a fresh
   // tab reopen within the same session) restores exactly where the user left off.
   useEffect(() => {
-    const state: StoredSearchState = { query, selectedCategory, page };
+    const state: StoredSearchState = { query, selectedCategories, page };
     sessionStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(state));
-  }, [query, selectedCategory, page]);
+  }, [query, selectedCategories, page]);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -133,16 +143,8 @@ export default function SearchPage() {
       setLoading(true);
       setLoadError("");
       try {
-        const dietary =
-          selectedCategory && isDietaryCategory(selectedCategory)
-            ? selectedCategory
-            : undefined;
-        const q =
-          debouncedQuery ||
-          (selectedCategory && !dietary ? selectedCategory : undefined);
         const result = await searchRecipes({
-          q,
-          dietaryRestriction: dietary,
+          q: recipeSearchQuery(debouncedQuery, selectedCategories),
           skip: page * PAGE_SIZE,
           limit: PAGE_SIZE,
           lang: getLang(),
@@ -172,7 +174,7 @@ export default function SearchPage() {
     };
   }, [
     debouncedQuery,
-    selectedCategory,
+    selectedCategories,
     retryToken,
     page,
     lang,
@@ -185,7 +187,7 @@ export default function SearchPage() {
 
   function toggleCategory(category: string) {
     setPage(0);
-    setSelectedCategory((prev) => (prev === category ? null : category));
+    setSelectedCategories((prev) => toggleSearchCategory(prev, category));
   }
 
   function openDetail(recipe: ApiRecipe) {
@@ -234,7 +236,7 @@ export default function SearchPage() {
       </p>
       <div className="flex flex-wrap gap-2 mb-5">
         {SEARCH_CATEGORY_CHIPS.map(([emoji, label]) => {
-          const active = selectedCategory === label;
+          const active = selectedCategories.includes(label);
           return (
             <button
               key={label}

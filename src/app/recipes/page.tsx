@@ -10,7 +10,8 @@ import type { ApiRecipe } from "@/lib/api/types";
 import {
   SEARCH_CATEGORY_CHIPS,
   defaultMealCategory,
-  isDietaryCategory,
+  recipeSearchQuery,
+  toggleSearchCategory,
 } from "@/lib/dietary-categories";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { buildRecipeSlug } from "@/lib/recipe-slug";
@@ -48,9 +49,9 @@ export default function PublicRecipesPage() {
   const [sessionRetryToken, setSessionRetryToken] = useState(0);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([
     defaultMealCategory(),
-  );
+  ]);
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
@@ -60,7 +61,7 @@ export default function PublicRecipesPage() {
   const [retryToken, setRetryToken] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const hasFilter = debouncedQuery.trim() !== "" || selectedCategory !== null;
+  const hasFilter = debouncedQuery.trim() !== "" || selectedCategories.length > 0;
 
   // Guest browsing session — same disposable-account mechanism as the landing
   // page's AI demo, so recipe search/detail work without asking for sign-in.
@@ -105,13 +106,8 @@ export default function PublicRecipesPage() {
       setLoading(true);
       setLoadError("");
       try {
-        const dietary =
-          selectedCategory && isDietaryCategory(selectedCategory)
-            ? selectedCategory
-            : undefined;
         const result = await searchRecipes({
-          q: debouncedQuery || (selectedCategory && !dietary ? selectedCategory : undefined),
-          dietaryRestriction: dietary,
+          q: recipeSearchQuery(debouncedQuery, selectedCategories),
           skip: page * PAGE_SIZE,
           limit: PAGE_SIZE,
           token: token!,
@@ -137,7 +133,7 @@ export default function PublicRecipesPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [ready, debouncedQuery, selectedCategory, page, retryToken]);
+  }, [ready, debouncedQuery, selectedCategories, page, retryToken]);
 
   useEffect(() => {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -145,7 +141,7 @@ export default function PublicRecipesPage() {
 
   function toggleCategory(category: string) {
     setPage(0);
-    setSelectedCategory((prev) => (prev === category ? null : category));
+    setSelectedCategories((prev) => toggleSearchCategory(prev, category));
   }
 
   function openDetail(recipe: ApiRecipe) {
@@ -211,7 +207,7 @@ export default function PublicRecipesPage() {
 
           <div className="flex flex-wrap gap-2 mb-6">
             {SEARCH_CATEGORY_CHIPS.map(([emoji, label]) => {
-              const active = selectedCategory === label;
+              const active = selectedCategories.includes(label);
               return (
                 <button
                   key={label}

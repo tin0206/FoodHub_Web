@@ -40,3 +40,29 @@ export function defaultMealCategory(now = new Date()): string {
   if (hour < 17) return "Lunch";
   return "Dinner";
 }
+
+/** Search uses `q` only: selected chips plus typed text,
+ * e.g. Dinner + Vegan + cake → "Dinner Vegan cake". */
+export function recipeSearchQuery(
+  text: string,
+  categories: string[] = [],
+): string | undefined {
+  const selected = new Set(
+    categories.map((c) => c.trim()).filter(Boolean),
+  );
+  const chips = SEARCH_CATEGORY_CHIPS.map(([, label]) => label).filter((label) =>
+    selected.has(label),
+  );
+  const typed = text.trim();
+  const parts = typed ? [...chips, typed] : chips;
+  return parts.length ? parts.join(" ") : undefined;
+}
+
+export function toggleSearchCategory(
+  selected: string[],
+  category: string,
+): string[] {
+  return selected.includes(category)
+    ? selected.filter((c) => c !== category)
+    : [...selected, category];
+}
