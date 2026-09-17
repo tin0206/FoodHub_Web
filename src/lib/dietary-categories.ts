@@ -32,3 +32,11 @@ export const RECIPE_LABEL_OPTIONS: string[] = [
 export function isDietaryCategory(label: string): boolean {
   return DIETARY_LABELS.has(label);
 }
+
+/** Same windows as the home greeting: morning → Breakfast, afternoon → Lunch, evening → Dinner. */
+export function defaultMealCategory(now = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Breakfast";
+  if (hour < 17) return "Lunch";
+  return "Dinner";
+}

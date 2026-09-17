@@ -9,6 +9,7 @@ import { getOrEstimateMeta } from "@/lib/recipe-meta";
 import { useStrings } from "@/lib/use-strings";
 import {
   SEARCH_CATEGORY_CHIPS,
+  defaultMealCategory,
   isDietaryCategory,
 } from "@/lib/dietary-categories";
 import { RecipeCard, type RecipeCardData } from "@/components/recipe/recipe-card";
@@ -37,7 +38,9 @@ export function RecipePickerDialog({
   const t = useStrings();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    defaultMealCategory(),
+  );
   const [results, setResults] = useState<ApiRecipe[] | null>(null);
   const [loading, setLoading] = useState(true);
 

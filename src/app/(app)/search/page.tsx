@@ -13,6 +13,7 @@ import { searchRecipes } from "@/lib/api/recipes";
 import type { ApiRecipe } from "@/lib/api/types";
 import {
   SEARCH_CATEGORY_CHIPS,
+  defaultMealCategory,
   isDietaryCategory,
 } from "@/lib/dietary-categories";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
@@ -34,19 +35,26 @@ interface StoredSearchState {
   page: number;
 }
 
+function emptySearchState(): StoredSearchState {
+  return { query: "", selectedCategory: defaultMealCategory(), page: 0 };
+}
+
 function loadSearchState(): StoredSearchState {
-  if (typeof window === "undefined") return { query: "", selectedCategory: null, page: 0 };
+  if (typeof window === "undefined") return emptySearchState();
   try {
     const raw = sessionStorage.getItem(SEARCH_STATE_KEY);
-    if (!raw) return { query: "", selectedCategory: null, page: 0 };
+    if (!raw) return emptySearchState();
     const parsed = JSON.parse(raw) as Partial<StoredSearchState>;
     return {
       query: typeof parsed.query === "string" ? parsed.query : "",
-      selectedCategory: typeof parsed.selectedCategory === "string" ? parsed.selectedCategory : null,
+      selectedCategory:
+        typeof parsed.selectedCategory === "string"
+          ? parsed.selectedCategory
+          : defaultMealCategory(),
       page: typeof parsed.page === "number" && parsed.page >= 0 ? parsed.page : 0,
     };
   } catch {
-    return { query: "", selectedCategory: null, page: 0 };
+    return emptySearchState();
   }
 }
 

@@ -9,6 +9,7 @@ import { ensureDemoSession } from "@/lib/demo-session";
 import type { ApiRecipe } from "@/lib/api/types";
 import {
   SEARCH_CATEGORY_CHIPS,
+  defaultMealCategory,
   isDietaryCategory,
 } from "@/lib/dietary-categories";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
@@ -48,7 +49,7 @@ export default function PublicRecipesPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    null,
+    defaultMealCategory(),
   );
   const [recipes, setRecipes] = useState<ApiRecipe[] | null>(null);
   const [totalCount, setTotalCount] = useState(0);
