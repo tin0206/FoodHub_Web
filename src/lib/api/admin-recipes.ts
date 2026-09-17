@@ -61,11 +61,13 @@ export async function createRecipe(
   });
 }
 
+/** Admin-only direct edit — bypasses the regular endpoint's catalog-fork and
+ * ownership checks (backend gates this route on the admin role instead). */
 export async function updateRecipe(
   recipeId: number,
   body: Partial<RecipeWritePayload>,
 ): Promise<ApiRecipe> {
-  return apiFetch<ApiRecipe>(`/recipes/${recipeId}`, {
+  return apiFetch<ApiRecipe>(`/admin/recipes/${recipeId}`, {
     method: "PATCH",
     body,
   });

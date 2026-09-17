@@ -85,7 +85,6 @@ export default function AdminRecipeEditPage() {
         dietary_restrictions: recipe.dietary_restrictions ?? [],
         estimated_servings: recipe.estimated_servings,
         image_url: recipe.image_url,
-        created_by: recipe.created_by,
       }}
     />
   );

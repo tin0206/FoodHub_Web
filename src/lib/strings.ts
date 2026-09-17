@@ -116,7 +116,7 @@ export function getStrings(lang: Lang) {
     recipeNameHint: vi ? "Tên công thức…" : "Recipe name…",
     detectingDishTitleHint: vi ? "Đang nhận diện món ăn…" : "Recognizing dish…",
     minSuffix: vi ? "phút" : "min",
-    calSuffix: vi ? "calo" : "cal",
+    calSuffix: "kcal",
     servingsSuffix: vi ? "khẩu phần" : "servings",
     ingredientHintSearch: vi ? "Tìm nguyên liệu…" : "Search ingredient…",
     ingredientsLabel: vi ? "Nguyên liệu" : "Ingredients",
@@ -383,8 +383,8 @@ export function getStrings(lang: Lang) {
       : "Set your dietary objectives",
     primaryGoalLabel: vi ? "Mục tiêu chính" : "Primary Goal",
     dailyCalorieTarget: vi
-      ? "Calories mục tiêu (cal/ngày)"
-      : "Target Calories (cal/day)",
+      ? "Calories mục tiêu (kcal/ngày)"
+      : "Target Calories (kcal/day)",
     targetProtein: vi ? "Protein mục tiêu (g/ngày)" : "Target Protein (g/day)",
     targetCarb: vi ? "Tinh bột mục tiêu (g/ngày)" : "Target Carbs (g/day)",
     targetFat: vi ? "Chất béo mục tiêu (g/ngày)" : "Target Fat (g/day)",
@@ -769,8 +769,8 @@ export function getStrings(lang: Lang) {
       ? "Không thể cập nhật hiển thị"
       : "Failed to update visibility",
     adminCatalogNotice: vi
-      ? "Công thức chung (chia sẻ). Chỉnh sửa sẽ tạo một bản sao riêng tư. API không cho phép xóa."
-      : "Catalog recipe (shared). Edit creates a private copy. Delete is not allowed by the API.",
+      ? "Công thức chung (chia sẻ). Xóa không được API cho phép."
+      : "Catalog recipe (shared). Deleting is not allowed by the API.",
     adminIngredientsHeading: vi ? "Nguyên liệu" : "Ingredients",
     adminNoIngredients: vi ? "Không có nguyên liệu" : "No ingredients",
     adminInstructionsHeading: vi ? "Hướng dẫn" : "Instructions",
@@ -823,13 +823,6 @@ export function getStrings(lang: Lang) {
       : "Sign in with a real admin account to edit recipes.",
 
     // ── Admin: recipe form ─────────────────────────────────────────────────
-    adminCatalogFormNotice: vi
-      ? "Đây là công thức chung (dùng chung). Lưu lại sẽ tạo một "
-      : "This is a shared catalog recipe. Saving will create a ",
-    adminCatalogFormNoticeStrong: vi ? "bản sao riêng tư" : "private copy",
-    adminCatalogFormNoticeSuffix: vi
-      ? " thuộc về bạn (theo API) — công thức gốc trong catalog không bị ghi đè."
-      : " owned by you (API behavior) — the original catalog entry is not overwritten.",
     adminPhotoLabel: vi ? "Ảnh công thức" : "Recipe photo",
     adminPhotoUploadFailed: vi
       ? "Đã lưu công thức, nhưng không thể tải ảnh lên."
@@ -840,7 +833,7 @@ export function getStrings(lang: Lang) {
     adminServingsCount: (n: number) =>
       vi ? `${n} khẩu phần` : `${n} serving${n === 1 ? "" : "s"}`,
     adminMinutesCount: (n: number) => (vi ? `${n} phút` : `${n} min`),
-    adminCaloriesCount: (n: number) => (vi ? `${n} calo` : `${n} cal`),
+    adminCaloriesCount: (n: number) => `${n} kcal`,
     adminIngredientHint: (i: number) =>
       vi ? `Nguyên liệu ${i + 1}` : `Ingredient ${i + 1}`,
     adminAddIngredient: vi ? "Thêm nguyên liệu" : "Add ingredient",
@@ -859,9 +852,6 @@ export function getStrings(lang: Lang) {
     adminFailedSaveRecipe: vi
       ? "Không thể lưu công thức"
       : "Failed to save recipe",
-    adminSaveAsPrivateCopy: vi
-      ? "Lưu thành bản sao riêng tư"
-      : "Save as private copy",
     adminSaveRecipeChanges: vi ? "Lưu thay đổi" : "Save Changes",
     adminSaveRecipeCta: vi ? "Lưu công thức" : "Save Recipe",
 
@@ -924,7 +914,7 @@ export function getStrings(lang: Lang) {
     adminJoinedLabel: vi ? "Ngày tham gia" : "Joined",
     adminAgeYears: (age: number) => (vi ? `${age} tuổi` : `${age} years`),
     adminWeightKg: (w: number) => `${w} kg`,
-    adminCalorieDay: (c: number) => (vi ? `${c} cal/ngày` : `${c} cal/day`),
+    adminCalorieDay: (c: number) => (vi ? `${c} kcal/ngày` : `${c} kcal/day`),
     adminProteinDay: (c: number) =>
       vi ? `${c} g protein/ngày` : `${c} g protein/day`,
     adminCarbDay: (c: number) =>
@@ -974,8 +964,8 @@ export function getStrings(lang: Lang) {
     adminGenderFieldLabel: vi ? "Giới tính" : "Gender",
     adminGenderUnspecified: vi ? "Không xác định" : "Unspecified",
     adminCalorieTargetFieldLabel: vi
-      ? "Mục tiêu calo (cal/ngày)"
-      : "Calorie target (cal/day)",
+      ? "Mục tiêu calo (kcal/ngày)"
+      : "Calorie target (kcal/day)",
     adminProteinTargetFieldLabel: vi
       ? "Mục tiêu protein (g/ngày)"
       : "Protein target (g/day)",

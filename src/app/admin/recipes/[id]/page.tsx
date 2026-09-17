@@ -36,7 +36,7 @@ import type {
   RecipeVisibility,
 } from "@/lib/api/types";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { ingredientLines } from "@/components/recipe/recipe-view-content";
+import { ingredientLines, NutritionBlock } from "@/components/recipe/recipe-view-content";
 import LoadingOverlay from "@/components/loading-overlay";
 import { getOrEstimateMeta } from "@/lib/recipe-meta";
 
@@ -412,12 +412,6 @@ export default function AdminRecipeDetailPage() {
             <Users size={11} /> {t.adminServingsCount(recipe.estimated_servings)}
           </span>
         )}
-        <span
-          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-          style={{ backgroundColor: "var(--tm-subtle)", color: "var(--tm-text-2)" }}
-        >
-          <Flame size={11} /> {t.adminCaloriesCount(meta.calories)}
-        </span>
       </div>
 
       {(recipe.dietary_restrictions?.length ?? 0) > 0 && (
@@ -469,6 +463,24 @@ export default function AdminRecipeDetailPage() {
             )}
           </ul>
         </div>
+
+        {recipe.nutrition && (
+          <div
+            className="rounded-2xl p-3.5"
+            style={{
+              backgroundColor: "var(--tm-surface)",
+              border: "1px solid var(--tm-border-i)",
+            }}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Flame size={15} color={accent} />
+              <span className="text-[13px] font-bold" style={{ color: "var(--tm-text)" }}>
+                {t.nutritionLabel}
+              </span>
+            </div>
+            <NutritionBlock nutrition={recipe.nutrition} accent={accent} t={t} />
+          </div>
+        )}
 
         <div
           className="rounded-2xl p-3.5"

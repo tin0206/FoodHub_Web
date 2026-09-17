@@ -47,7 +47,7 @@ export function RecipeCard({
   if (recipe.calories != null) {
     stats.push({
       icon: Flame,
-      text: `${recipe.calories} cal`,
+      text: `${recipe.calories} kcal`,
       color: "#EF4444",
     });
   } else if (recipe.servings != null) {

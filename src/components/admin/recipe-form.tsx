@@ -55,7 +55,6 @@ export type RecipeFormInitial = Pick<
   | "dietary_restrictions"
   | "estimated_servings"
   | "image_url"
-  | "created_by"
 >;
 
 export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
@@ -63,7 +62,6 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
   const isDark = useDarkMode();
   const accent = isDark ? ADMIN_ACCENT_DARK : ADMIN_ACCENT_LIGHT;
   const t = useStrings();
-  const isCatalog = initial != null && initial.created_by == null;
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState(
@@ -187,12 +185,12 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
             setError(t.adminPhotoUploadFailed);
           }
         }
-        if (saved.id !== initial.id) {
-          // Catalog edit clones into a private copy
-          router.replace(`/admin/recipes/${saved.id}`);
-          return;
-        }
-        router.push(`/admin/recipes/${saved.id}`);
+        // The edit page is only ever reached by pushing from its detail page,
+        // so that entry is already sitting right underneath in history — go
+        // back to it (remounting refetches the just-saved data) instead of
+        // pushing/replacing a new entry, which left an extra one needing a
+        // second Back press to actually leave.
+        router.back();
       } else {
         const created = await createRecipe(payload);
         if (Number.isFinite(minutesNum) && (minutesNum as number) > 0) {
@@ -233,17 +231,6 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
       >
         <ArrowLeft size={14} /> {t.back}
       </button>
-
-      {isCatalog && (
-        <div
-          className="rounded-2xl p-3 mb-3 text-xs"
-          style={{ backgroundColor: `${accent}14`, color: accent }}
-        >
-          {t.adminCatalogFormNotice}
-          <strong>{t.adminCatalogFormNoticeStrong}</strong>
-          {t.adminCatalogFormNoticeSuffix}
-        </div>
-      )}
 
       <div className="space-y-2.5">
         <FieldCard>
@@ -465,9 +452,7 @@ export function AdminRecipeForm({ initial }: { initial?: RecipeFormInitial }) {
             {saving
               ? t.saving
               : initial
-                ? isCatalog
-                  ? t.adminSaveAsPrivateCopy
-                  : t.adminSaveRecipeChanges
+                ? t.adminSaveRecipeChanges
                 : t.adminSaveRecipeCta}
           </button>
         </div>
