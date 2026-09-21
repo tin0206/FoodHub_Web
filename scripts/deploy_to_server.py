@@ -137,6 +137,13 @@ def run(cmd: list[str]) -> int:
     return subprocess.call(cmd, cwd=ROOT)
 
 
+def ssh_bash(target: str, script: str) -> int:
+    """OpenSSH joins remote argv with spaces; quote the whole bash -lc script."""
+    remote = f"bash -lc {shlex.quote(script)}"
+    print("--->", "ssh", "-t", target, "bash -lc '<remote script>'")
+    return subprocess.call(["ssh", "-t", target, remote], cwd=ROOT)
+
+
 def npm_argv(*args: str) -> list[str]:
     npm = shutil.which("npm.cmd") if os.name == "nt" else None
     npm = npm or shutil.which("npm") or "npm"
@@ -187,11 +194,16 @@ def main() -> int:
     if run(["git", "push"]) != 0:
         return 1
 
+    branch = pick(file_vals, "SERVER_BRANCH", "master")
     quoted_dir = shlex.quote(remote_dir)
+    # After force-push / local Mac edits, plain `git pull` diverges — hard reset.
     remote = (
         f"{REMOTE_NODE_PREP}\n"
         f"cd {quoted_dir}\n"
-        "git pull\n"
+        f"git fetch origin\n"
+        f"git checkout -f {branch} || git checkout -B {branch} origin/{branch}\n"
+        f"git reset --hard origin/{branch}\n"
+        "git clean -fd -e .env -e .env.local -e .deploy.pid -e deploy.log\n"
         "npm i\n"
         "npm run build\n"
         f"{REMOTE_START}\n"
@@ -199,11 +211,10 @@ def main() -> int:
     target = f"{user}@{host}"
     print(
         f"---> SSH {target} -> cd {remote_dir} && "
-        "git pull && npm i && npm run build && npm run start"
+        f"reset origin/{branch} && npm i && npm run build && npm run start"
     )
     print("---> Enter Mac password when prompted...")
-    # Pass script as argv (not stdin) so OpenSSH can still prompt for password on the TTY.
-    return subprocess.call(["ssh", "-t", target, "bash", "-lc", remote], cwd=ROOT)
+    return ssh_bash(target, remote)
 
 
 if __name__ == "__main__":
