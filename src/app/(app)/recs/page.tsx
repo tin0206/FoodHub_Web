@@ -524,11 +524,38 @@ export default function RecsPage() {
       .filter(Boolean);
   }
 
+  /** Strips the on-screen "Dishes detected:" label back off, same as
+   * ingredientsForApi() does for the ingredients side. */
+  function rawDishName(): string {
+    const text = composeDishText?.trim();
+    if (!text) return "";
+    const prefix = t.dishesDetectedPrefix;
+    if (text.toLowerCase().startsWith(prefix.toLowerCase()))
+      return text.slice(prefix.length).trim();
+    return text;
+  }
+
+  // The compose-row label ("Dishes detected:" / "Ingredients detected:") is
+  // only ever shown before sending — the chat message actually sent (and
+  // recorded in the transcript) is phrased as a real question instead.
+  function dishPromptText(): string {
+    const name = rawDishName();
+    return name ? `${t.howToMakeDishPrompt} ${name}` : "";
+  }
+
+  function ingredientsPromptText(): string {
+    const list = ingredientsForApi();
+    return list.length
+      ? `${t.whatCanIDoWithIngredientsPrompt} ${list.join(", ")}`
+      : "";
+  }
+
   function buildMergedPrompt(userQuery: string): string {
     const parts: string[] = [];
-    if (composeDishText?.trim()) parts.push(composeDishText.trim());
-    if (composeIngredientsText?.trim())
-      parts.push(composeIngredientsText.trim());
+    const dishPrompt = dishPromptText();
+    if (dishPrompt) parts.push(dishPrompt);
+    const ingredientsPrompt = ingredientsPromptText();
+    if (ingredientsPrompt) parts.push(ingredientsPrompt);
     const trimmed = userQuery.trim();
     if (trimmed) parts.push(trimmed);
     return parts.join("\n");
@@ -694,7 +721,7 @@ export default function RecsPage() {
   // the other one (if also pending) untouched for the user to send separately.
   async function sendDetectionOnly(kind: "dish" | "ingredients") {
     if (busy || isDetecting) return;
-    const merged = (kind === "dish" ? composeDishText : composeIngredientsText)?.trim();
+    const merged = kind === "dish" ? dishPromptText() : ingredientsPromptText();
     if (!merged) return;
 
     if (!sessionId) {
