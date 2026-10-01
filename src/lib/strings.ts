@@ -376,6 +376,9 @@ export function getStrings(lang: Lang) {
     emailLabel: "Email",
     ageLabel: vi ? "Tuổi" : "Age",
     weightLabel: vi ? "Cân nặng (kg)" : "Weight (kg)",
+    heightLabel: vi ? "Chiều cao (cm)" : "Height (cm)",
+    cookingSkillLabel: vi ? "Kỹ năng nấu ăn" : "Cooking skill",
+    mealsPerDayLabel: vi ? "Số bữa / ngày" : "Meals per day",
     genderLabel: vi ? "Giới tính" : "Gender",
     nutritionGoals: vi ? "Mục tiêu dinh dưỡng" : "Nutrition Goals",
     setDietaryObjectives: vi
@@ -393,6 +396,18 @@ export function getStrings(lang: Lang) {
     dietaryRestrictionsLabel: vi
       ? "Chế độ ăn đặc biệt"
       : "Dietary Restrictions",
+    excludedIngredientsLabel: vi
+      ? "Dị ứng / nguyên liệu loại trừ (cách nhau bởi dấu phẩy)"
+      : "Allergies / excluded ingredients (comma-separated)",
+    favoriteFoodsLabel: vi
+      ? "Món / hương vị yêu thích (cách nhau bởi dấu phẩy)"
+      : "Favorite foods (comma-separated)",
+    dislikedIngredientsLabel: vi
+      ? "Nguyên liệu không thích (cách nhau bởi dấu phẩy)"
+      : "Disliked ingredients (comma-separated)",
+    cookingSkillBeginner: vi ? "Mới bắt đầu" : "Beginner",
+    cookingSkillIntermediate: vi ? "Trung bình" : "Intermediate",
+    cookingSkillAdvanced: vi ? "Nâng cao" : "Advanced",
     changePasswordLabel: vi ? "Đổi mật khẩu" : "Change password",
     sendFeedbackLabel: vi ? "Gửi phản hồi" : "Send feedback",
     saveChanges: vi ? "Lưu thay đổi" : "Save changes",

@@ -18,6 +18,9 @@ interface ProfileForm {
   fullName: string;
   age: string;
   weight: string;
+  heightCm: string;
+  cookingSkill: string;
+  mealsPerDay: string;
   gender: string;
   primaryGoal: string;
   calorieTarget: string;
@@ -25,6 +28,9 @@ interface ProfileForm {
   carbTarget: string;
   fatTarget: string;
   dietaryRestrictions: string[];
+  excludedIngredients: string;
+  favoriteFoods: string;
+  dislikedIngredients: string;
   language: string;
   theme: string;
   notifyRecommendations: boolean;
@@ -35,6 +41,8 @@ interface ProfileForm {
 interface FieldErrors {
   age: string;
   weight: string;
+  heightCm: string;
+  mealsPerDay: string;
   calorieTarget: string;
   proteinTarget: string;
   carbTarget: string;
@@ -50,8 +58,18 @@ export const PRIMARY_GOALS = [
   "Maintain Weight",
 ];
 export const GENDER_OPTIONS = ["Male", "Female", "Other"];
+export const COOKING_SKILLS = ["beginner", "intermediate", "advanced"] as const;
 export const DIETARY_TAGS = ["Dairy Free", "Non-Alcoholic", "Gluten Free", "Nut Free", "Vegan", "Vegetarian", "Pescetarian"];
-const NO_ERRORS: FieldErrors = { age: "", weight: "", calorieTarget: "", proteinTarget: "", carbTarget: "", fatTarget: "" };
+const NO_ERRORS: FieldErrors = {
+  age: "",
+  weight: "",
+  heightCm: "",
+  mealsPerDay: "",
+  calorieTarget: "",
+  proteinTarget: "",
+  carbTarget: "",
+  fatTarget: "",
+};
 
 function isPositiveNumber(v: string) {
   if (!v.trim()) return true; // optional
@@ -59,11 +77,31 @@ function isPositiveNumber(v: string) {
   return !isNaN(n) && n > 0;
 }
 
+function isMealsPerDay(v: string) {
+  if (!v.trim()) return true;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 && n <= 6;
+}
+
+function listToCsv(values?: string[] | null) {
+  return (values ?? []).join(", ");
+}
+
+function csvToList(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function toForm(user: ApiUser): ProfileForm {
   return {
     fullName: user.full_name ?? "",
     age: user.age != null ? String(user.age) : "",
     weight: user.weight != null ? String(user.weight) : "",
+    heightCm: user.height_cm != null ? String(user.height_cm) : "",
+    cookingSkill: user.cooking_skill ?? "",
+    mealsPerDay: user.meals_per_day != null ? String(user.meals_per_day) : "3",
     gender: user.gender ?? "",
     primaryGoal: user.primary_goal ?? "",
     calorieTarget: user.calorie_target != null ? String(user.calorie_target) : "",
@@ -71,6 +109,9 @@ function toForm(user: ApiUser): ProfileForm {
     carbTarget: user.carb_target != null ? String(user.carb_target) : "",
     fatTarget: user.fat_target != null ? String(user.fat_target) : "",
     dietaryRestrictions: user.dietary_restrictions ?? [],
+    excludedIngredients: listToCsv(user.excluded_ingredients),
+    favoriteFoods: listToCsv(user.favorite_foods),
+    dislikedIngredients: listToCsv(user.disliked_ingredients),
     language: user.language || "en",
     theme: user.theme === "dark" ? "dark" : "light",
     notifyRecommendations: user.notify_recommendations ?? true,
@@ -323,6 +364,8 @@ export function ProfileEditor() {
     const errors: FieldErrors = {
       age: !isPositiveNumber(formData.age) ? t.mustBePositiveNumber : "",
       weight: !isPositiveNumber(formData.weight) ? t.mustBePositiveNumber : "",
+      heightCm: !isPositiveNumber(formData.heightCm) ? t.mustBePositiveNumber : "",
+      mealsPerDay: !isMealsPerDay(formData.mealsPerDay) ? t.mustBePositiveNumber : "",
       calorieTarget: !isPositiveNumber(formData.calorieTarget) ? t.mustBePositiveNumber : "",
       proteinTarget: !isPositiveNumber(formData.proteinTarget) ? t.mustBePositiveNumber : "",
       carbTarget: !isPositiveNumber(formData.carbTarget) ? t.mustBePositiveNumber : "",
@@ -338,12 +381,18 @@ export function ProfileEditor() {
         full_name: formData.fullName.trim() || null,
         age: formData.age.trim() ? Number(formData.age) : null,
         weight: formData.weight.trim() ? Number(formData.weight) : null,
+        height_cm: formData.heightCm.trim() ? Number(formData.heightCm) : null,
+        cooking_skill: formData.cookingSkill || null,
+        meals_per_day: formData.mealsPerDay.trim() ? Number(formData.mealsPerDay) : 3,
         gender: formData.gender || null,
         calorie_target: formData.calorieTarget.trim() ? Number(formData.calorieTarget) : null,
         protein_target: formData.proteinTarget.trim() ? Number(formData.proteinTarget) : null,
         carb_target: formData.carbTarget.trim() ? Number(formData.carbTarget) : null,
         fat_target: formData.fatTarget.trim() ? Number(formData.fatTarget) : null,
         dietary_restrictions: formData.dietaryRestrictions,
+        excluded_ingredients: csvToList(formData.excludedIngredients),
+        favorite_foods: csvToList(formData.favoriteFoods),
+        disliked_ingredients: csvToList(formData.dislikedIngredients),
         primary_goal: formData.primaryGoal || null,
         language: formData.language,
         theme: formData.theme,
@@ -528,6 +577,61 @@ export function ProfileEditor() {
                 />
                 {fieldErrors.weight && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.weight}</p>}
               </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.heightLabel}</label>
+                <input
+                  type="text"
+                  value={formData.heightCm}
+                  onChange={(e) => { set("heightCm", e.target.value); clearError("heightCm"); }}
+                  className={inputCls}
+                  style={{ ...inputStyle, borderColor: fieldErrors.heightCm ? "#f87171" : "var(--tm-border-i)" }}
+                  placeholder="170"
+                />
+                {fieldErrors.heightCm && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.heightCm}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.mealsPerDayLabel}</label>
+                <input
+                  type="text"
+                  value={formData.mealsPerDay}
+                  onChange={(e) => { set("mealsPerDay", e.target.value); clearError("mealsPerDay"); }}
+                  className={inputCls}
+                  style={{ ...inputStyle, borderColor: fieldErrors.mealsPerDay ? "#f87171" : "var(--tm-border-i)" }}
+                  placeholder="3"
+                />
+                {fieldErrors.mealsPerDay && <p className="mt-1 text-xs" style={errStyle}>{fieldErrors.mealsPerDay}</p>}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium mb-1.5" style={labelStyle}>{t.cookingSkillLabel}</p>
+              <div className="flex gap-2 flex-wrap">
+                {COOKING_SKILLS.map((skill) => {
+                  const active = formData.cookingSkill === skill;
+                  const label =
+                    skill === "beginner"
+                      ? t.cookingSkillBeginner
+                      : skill === "intermediate"
+                        ? t.cookingSkillIntermediate
+                        : t.cookingSkillAdvanced;
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => set("cookingSkill", active ? "" : skill)}
+                      className="flex-1 min-w-[30%] py-2 rounded-lg border text-sm transition-colors"
+                      style={{
+                        backgroundColor: active ? "#ECFDF5" : "var(--tm-surface)",
+                        borderColor: active ? "#059669" : "var(--tm-border)",
+                        color: active ? "#059669" : "var(--tm-text-2)",
+                        fontWeight: active ? 600 : 400,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div>
@@ -653,6 +757,38 @@ export function ProfileEditor() {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.excludedIngredientsLabel}</label>
+                <input
+                  value={formData.excludedIngredients}
+                  onChange={(e) => set("excludedIngredients", e.target.value)}
+                  className={inputCls}
+                  style={inputStyle}
+                  placeholder="peanut, scallion, green onion"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.favoriteFoodsLabel}</label>
+                <input
+                  value={formData.favoriteFoods}
+                  onChange={(e) => set("favoriteFoods", e.target.value)}
+                  className={inputCls}
+                  style={inputStyle}
+                  placeholder="spicy, soup, chicken"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={labelStyle}>{t.dislikedIngredientsLabel}</label>
+                <input
+                  value={formData.dislikedIngredients}
+                  onChange={(e) => set("dislikedIngredients", e.target.value)}
+                  className={inputCls}
+                  style={inputStyle}
+                  placeholder="cilantro, liver"
+                />
               </div>
             </div>
           </SectionCard>
