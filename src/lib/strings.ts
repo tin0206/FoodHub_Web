@@ -268,6 +268,12 @@ export function getStrings(lang: Lang) {
     ingredientsDetectedPrefix: vi
       ? "Nguyên liệu nhận diện được:"
       : "Ingredients detected:",
+    // Phrasing actually sent to the AI as the chat message — kept distinct from
+    // the labels above, which stay on-screen in the compose preview row.
+    howToMakeDishPrompt: vi ? "Cách làm món này:" : "How to make this dish:",
+    whatCanIDoWithIngredientsPrompt: vi
+      ? "Tôi có thể làm gì với những nguyên liệu này:"
+      : "What can I do with these ingredients:",
     couldNotRecognizeDish: vi
       ? "Không nhận diện được món ăn trong ảnh đó."
       : "Could not recognize a dish in that photo.",

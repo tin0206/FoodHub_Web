@@ -33,7 +33,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     const existing = getCurrentUser();
-    if (existing) router.replace(getPostLoginPath(existing));
+    if (existing) {
+      router.replace(getPostLoginPath(existing));
+      return;
+    }
+    // Read directly instead of useSearchParams() — avoids opting this
+    // otherwise-static page into a Suspense boundary just for this.
+    if (new URLSearchParams(window.location.search).get("expired") === "1") {
+      setAuthError("Your session has expired. Please sign in again.");
+    }
   }, [router]);
 
   function getEmailError(val = email) {

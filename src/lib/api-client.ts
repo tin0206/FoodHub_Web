@@ -1,4 +1,23 @@
 const TOKEN_KEY = "fh_access_token";
+const CURRENT_USER_KEY = "fh_current_user";
+
+/** The server rejected a request we sent with a stored bearer token — the
+ * token is expired/invalid. Clear the whole cached session (not just the
+ * token) so route guards that only check for a cached user object (see
+ * `getCurrentUser()`) stop treating this browser as signed in, then send
+ * the user back to login instead of leaving a dead session in place. */
+function forceLogout(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(CURRENT_USER_KEY);
+  } catch {
+    // localStorage unavailable — nothing to clear
+  }
+  if (!window.location.pathname.startsWith("/login")) {
+    window.location.href = "/login?expired=1";
+  }
+}
 
 export function getApiBaseUrl(): string {
   const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
@@ -222,6 +241,9 @@ export async function apiFetch<T = unknown>(
   }
 
   if (!res.ok) {
+    if (res.status === 401 && auth) {
+      forceLogout();
+    }
     throw new ApiError(extractDetail(data), res.status, data);
   }
 
@@ -280,6 +302,9 @@ export async function apiUpload<T = unknown>(
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      forceLogout();
+    }
     throw new ApiError(extractDetail(data), res.status, data);
   }
 
