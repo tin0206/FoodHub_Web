@@ -710,11 +710,6 @@ export const MarkdownReply = memo(function MarkdownReply({
                 </span>
                 <ChevronRight size={18} color="#059669" className="shrink-0" />
               </button>
-              {Number.isFinite(numericLinkId) && recipeCache?.[numericLinkId]?.recommendation_reason ? (
-                <p className="text-[11px] leading-snug px-1" style={{ color: "var(--tm-text-2, #6B7280)" }}>
-                  {recipeCache[numericLinkId].recommendation_reason}
-                </p>
-              ) : null}
               </div>
               );
             })}

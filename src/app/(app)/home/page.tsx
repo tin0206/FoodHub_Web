@@ -218,11 +218,6 @@ function SuggestionMealRow({
                 onTap={() => onOpen(recipe)}
                 onAction={() => onOpen(recipe)}
                 onAddToPlan={() => onAddToPlan(recipe)}
-                footer={recipe.recommendation_reason ? (
-                  <p className="text-[11px] leading-snug" style={{ color: 'var(--tm-text-2)' }}>
-                    {recipe.recommendation_reason}
-                  </p>
-                ) : undefined}
               />
             </div>
           ))}
