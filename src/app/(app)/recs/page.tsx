@@ -371,7 +371,14 @@ export default function RecsPage() {
     if (recipes.length === 0) return;
     setRecipeCache((prev) => {
       const next = { ...prev };
-      for (const r of recipes) next[r.id] = r;
+      for (const recipe of recipes) {
+        const previous = next[recipe.id];
+        next[recipe.id] = {
+          ...recipe,
+          recommendation_reason:
+            recipe.recommendation_reason ?? previous?.recommendation_reason ?? null,
+        };
+      }
       return next;
     });
   }

@@ -129,6 +129,8 @@ export interface ApiRecipe {
   created_at: string;
   updated_at: string;
   locale: string;
+  /** Present on personalized chat and meal-suggestion recipes. */
+  recommendation_reason?: string | null;
 }
 
 export interface ApiRecipeTranslation {

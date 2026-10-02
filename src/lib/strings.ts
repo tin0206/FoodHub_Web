@@ -57,6 +57,8 @@ export function getStrings(lang: Lang) {
       ? "Không thể tạo gợi ý."
       : "Unable to generate suggestions.",
     noSuggestionsForMeal: vi ? "Chưa có công thức" : "No recipes yet",
+    thumbUp: vi ? "Thích gợi ý này" : "Like this suggestion",
+    thumbDown: vi ? "Không hợp" : "Not for me",
     aiHasOptionsIntro: (n: number) =>
       vi
         ? `Mình có ${n} cách để làm việc này — chọn cách phù hợp nhất nhé:`

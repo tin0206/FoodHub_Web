@@ -49,6 +49,8 @@ function parseChatRecipe(json: Record<string, unknown>): ApiRecipe | null {
     created_at: (json.created_at as string) || "",
     updated_at: (json.updated_at as string) || "",
     locale: (json.locale as string) || "en",
+    recommendation_reason:
+      typeof json.recommendation_reason === "string" ? json.recommendation_reason : null,
   };
 }
 
