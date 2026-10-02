@@ -13,6 +13,7 @@ import { useStrings } from "@/lib/use-strings";
 import LoadingOverlay from "@/components/loading-overlay";
 import { FlagIcon } from "@/components/flag-icon";
 import { PasswordRequirements } from "@/components/auth/password-requirements";
+import { clearProfileDraft, loadProfileDraft } from "@/lib/profile-draft";
 
 interface ProfileForm {
   fullName: string;
@@ -118,6 +119,46 @@ function toForm(user: ApiUser): ProfileForm {
     notifyNewFeatures: user.notify_new_features ?? true,
     notifyWeeklySummary: user.notify_weekly_summary ?? true,
   };
+}
+
+function applyDraftToForm(base: ProfileForm, draft: UserProfileUpdate): ProfileForm {
+  const next = { ...base };
+  if (draft.age !== undefined) next.age = draft.age != null ? String(draft.age) : "";
+  if (draft.weight !== undefined) next.weight = draft.weight != null ? String(draft.weight) : "";
+  if (draft.height_cm !== undefined) {
+    next.heightCm = draft.height_cm != null ? String(draft.height_cm) : "";
+  }
+  if (draft.cooking_skill !== undefined) next.cookingSkill = draft.cooking_skill ?? "";
+  if (draft.meals_per_day !== undefined) {
+    next.mealsPerDay = draft.meals_per_day != null ? String(draft.meals_per_day) : "3";
+  }
+  if (draft.gender !== undefined) next.gender = draft.gender ?? "";
+  if (draft.primary_goal !== undefined) next.primaryGoal = draft.primary_goal ?? "";
+  if (draft.calorie_target !== undefined) {
+    next.calorieTarget = draft.calorie_target != null ? String(draft.calorie_target) : "";
+  }
+  if (draft.protein_target !== undefined) {
+    next.proteinTarget = draft.protein_target != null ? String(draft.protein_target) : "";
+  }
+  if (draft.carb_target !== undefined) {
+    next.carbTarget = draft.carb_target != null ? String(draft.carb_target) : "";
+  }
+  if (draft.fat_target !== undefined) {
+    next.fatTarget = draft.fat_target != null ? String(draft.fat_target) : "";
+  }
+  if (draft.dietary_restrictions !== undefined) {
+    next.dietaryRestrictions = draft.dietary_restrictions ?? [];
+  }
+  if (draft.excluded_ingredients !== undefined) {
+    next.excludedIngredients = listToCsv(draft.excluded_ingredients);
+  }
+  if (draft.favorite_foods !== undefined) {
+    next.favoriteFoods = listToCsv(draft.favorite_foods);
+  }
+  if (draft.disliked_ingredients !== undefined) {
+    next.dislikedIngredients = listToCsv(draft.disliked_ingredients);
+  }
+  return next;
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -285,6 +326,7 @@ export function ProfileEditor() {
   const [setPasswordSent, setSetPasswordSent] = useState(false);
   const [setPasswordError, setSetPasswordError] = useState("");
   const [actionButtonsVisible, setActionButtonsVisible] = useState(false);
+  const [hasProfileDraft, setHasProfileDraft] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomActionsRef = useRef<HTMLDivElement>(null);
 
@@ -296,7 +338,14 @@ export function ProfileEditor() {
         setUser(u);
         const form = toForm(u);
         setSavedData(form);
-        setFormData(form);
+        const draft = loadProfileDraft();
+        if (draft?.proposed_profile) {
+          setFormData(applyDraftToForm(form, draft.proposed_profile));
+          setHasProfileDraft(true);
+        } else {
+          setFormData(form);
+          setHasProfileDraft(false);
+        }
         // Backend is the source of truth for the saved preference — sync the live app language to it.
         setLang(u.language === "vi" ? "vi" : "en");
         applyTheme(u.theme === "dark");
@@ -405,6 +454,8 @@ export function ProfileEditor() {
       const form = toForm(updated);
       setSavedData(form);
       setFormData(form);
+      clearProfileDraft();
+      setHasProfileDraft(false);
       updateCachedUser(updated);
       applyTheme(updated.theme === "dark");
       setSaveSuccess(true);
@@ -421,6 +472,8 @@ export function ProfileEditor() {
       setFormData(savedData);
       setLang(savedData.language === "vi" ? "vi" : "en");
     }
+    clearProfileDraft();
+    setHasProfileDraft(false);
     setFieldErrors(NO_ERRORS);
     setSaveError("");
   }
@@ -541,6 +594,19 @@ export function ProfileEditor() {
               </div>
             </div>
           </SectionCard>
+
+          {hasProfileDraft && (
+            <div
+              className="mb-4 rounded-xl border px-3 py-2.5 text-xs"
+              style={{
+                backgroundColor: "#ECFDF5",
+                borderColor: "#A7F3D0",
+                color: "#065F46",
+              }}
+            >
+              {t.profileDraftBanner}
+            </div>
+          )}
 
           {/* Personal Information */}
           <SectionCard icon={<User size={18} color="#059669" />} iconBg="#ECFDF5" title={t.personalInformation} subtitle={t.updateProfileDetails}>

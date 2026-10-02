@@ -134,6 +134,42 @@ export async function aiWelcome(input?: {
   return parseChatPayload(detail, input?.sessionId ?? null);
 }
 
+export async function aiNewChat(input?: {
+  previousSessionId?: string | null;
+  dietaryRestrictions?: string[];
+  primaryGoal?: string;
+  ingredients?: string[];
+  token?: string;
+}): Promise<ChatResponse & { proposed_profile?: Record<string, unknown> | null; changed_fields: string[] }> {
+  const detail = await apiFetch<
+    AiRequestDetail & {
+      proposed_profile?: Record<string, unknown> | null;
+      changed_fields?: string[];
+    }
+  >("/ai/chat/new", {
+    method: "POST",
+    token: input?.token,
+    timeoutMs: CHAT_TIMEOUT_MS,
+    body: {
+      ...(input?.previousSessionId
+        ? { previous_session_id: input.previousSessionId }
+        : {}),
+      dietary_restrictions: input?.dietaryRestrictions ?? [],
+      ...(input?.primaryGoal ? { primary_goal: input.primaryGoal } : {}),
+      ingredients: input?.ingredients ?? [],
+    },
+  });
+  const completed = requireCompleted(detail);
+  const chat = parseChatPayload(completed, null);
+  return {
+    ...chat,
+    proposed_profile: detail.proposed_profile ?? null,
+    changed_fields: Array.isArray(detail.changed_fields)
+      ? detail.changed_fields.map(String)
+      : [],
+  };
+}
+
 export async function aiChat(input: {
   message: string;
   sessionId: string;

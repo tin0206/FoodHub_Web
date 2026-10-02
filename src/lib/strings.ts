@@ -212,12 +212,22 @@ export function getStrings(lang: Lang) {
       ? "Đang khởi động phiên trợ lý..."
       : "Starting companion session...",
     aiThinking: vi ? "Đang suy nghĩ…" : "Thinking…",
-    resetChatTitle: vi ? "Đặt lại cuộc trò chuyện?" : "Reset chat?",
+    resetChatTitle: vi ? "Bắt đầu trò chuyện mới?" : "Start a new chat?",
     resetChatDesc: vi
-      ? "Thao tác này sẽ xóa cuộc trò chuyện và các dữ liệu đã nhận diện. Tùy chọn hồ sơ vẫn được giữ nguyên."
-      : "This clears the conversation and compose detections. Your profile preferences stay the same.",
-    resetLabel: vi ? "Đặt lại" : "Reset",
+      ? "Chúng tôi sẽ dùng cuộc trò chuyện hiện tại để đề xuất cập nhật hồ sơ (nếu có), rồi mở phiên mới. Tùy chọn đã lưu trên máy chủ chưa đổi cho đến khi bạn xác nhận trong Hồ sơ."
+      : "We'll use the current conversation to suggest profile updates (if any), then open a fresh session. Saved server preferences stay unchanged until you confirm them in Profile.",
+    resetLabel: vi ? "Trò chuyện mới" : "New chat",
     askForRecipesHint: vi ? "Hỏi về công thức..." : "Ask for recipes...",
+    profileUpdatedFromChatToast: (fields: string) =>
+      vi
+        ? `Hồ sơ được đề xuất cập nhật từ phiên chat trước (${fields}). Hãy xem lại trong Hồ sơ và chỉnh nếu cần.`
+        : `Profile suggestions from the previous chat (${fields}). Please review them in Profile and edit if needed.`,
+    profileDraftBanner: vi
+      ? "Có đề xuất hồ sơ từ chat trước — đã điền sẵn bên dưới. Lưu để áp dụng hoặc Hủy để bỏ."
+      : "Suggestions from a previous chat are prefilled below. Save to apply or Cancel to discard.",
+    startingNewChat: vi
+      ? "Đang tạo trò chuyện mới và đề xuất hồ sơ…"
+      : "Starting new chat and refining profile…",
     editDishesLabel: vi ? "Sửa món ăn" : "Edit dishes",
     editIngredientsLabel: vi ? "Sửa nguyên liệu" : "Edit ingredients",
     unableToOpenRecipe: (name: string) =>

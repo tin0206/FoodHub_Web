@@ -16,6 +16,7 @@ import { apiGetMe } from "@/lib/api/auth";
 import {
   aiWelcome,
   aiChat,
+  aiNewChat,
   aiDetectDish,
   aiDetectIngredients,
   getChatSession,
@@ -23,8 +24,9 @@ import {
 } from "@/lib/api/ai";
 import { getRecipe } from "@/lib/api/recipes";
 import { ApiError, resolveMediaUrl } from "@/lib/api-client";
-import type { ApiRecipe, ChatHistoryMessage, ChatOption } from "@/lib/api/types";
+import type { ApiRecipe, ChatHistoryMessage, ChatOption, UserProfileUpdate } from "@/lib/api/types";
 import { loadChatSession, saveChatSession } from "@/lib/chat-session";
+import { saveProfileDraft } from "@/lib/profile-draft";
 import { RecipeImageHeader } from "@/components/recipe/recipe-image-header";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import {
@@ -54,6 +56,27 @@ function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return err.message || fallback;
   if (err instanceof Error) return err.message;
   return fallback;
+}
+
+function profileFieldLabel(field: string, t: ReturnType<typeof useStrings>): string {
+  const map: Record<string, string> = {
+    age: t.ageLabel,
+    gender: t.genderLabel,
+    weight: t.weightLabel,
+    height_cm: t.heightLabel,
+    cooking_skill: t.cookingSkillLabel,
+    meals_per_day: t.mealsPerDayLabel,
+    calorie_target: t.dailyCalorieTarget,
+    protein_target: t.targetProtein,
+    carb_target: t.targetCarb,
+    fat_target: t.targetFat,
+    dietary_restrictions: t.dietaryRestrictionsLabel,
+    excluded_ingredients: t.excludedIngredientsLabel,
+    favorite_foods: t.favoriteFoodsLabel,
+    disliked_ingredients: t.dislikedIngredientsLabel,
+    primary_goal: t.primaryGoalLabel,
+  };
+  return map[field] || field;
 }
 
 function ComposeDetectionRow({
@@ -331,6 +354,7 @@ export default function RecsPage() {
   const [error, setError] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [profileToast, setProfileToast] = useState<string | null>(null);
   // The recipe the user last opened from a chat reply — provides the title/image
   // when they save an AI-edited version ("make it vegetarian") back to their library.
   const [referencedRecipe, setReferencedRecipe] = useState<ApiRecipe | null>(null);
@@ -768,7 +792,58 @@ export default function RecsPage() {
 
   async function handleReset() {
     setConfirmReset(false);
-    await bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal);
+    const previousSessionId = sessionId;
+    setIsBootstrapping(true);
+    setError("");
+    setMessages([]);
+    setHistory([]);
+    setComposeDishText(null);
+    setComposeIngredientsText(null);
+    setReferencedRecipe(null);
+    setLastCtas([]);
+    setRecipeCache({});
+    setSessionId(null);
+    try {
+      const response = await aiNewChat({
+        previousSessionId,
+        dietaryRestrictions: profile.dietaryRestrictions,
+        primaryGoal: profile.primaryGoal || undefined,
+      });
+      setSessionId(response.session_id || newSessionId());
+      const reply = response.reply.trim() || t.aiWelcomeFallback;
+      cacheRecipes(response.recipes);
+      setMessages([
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: reply,
+          options: response.options,
+          isWelcome: true,
+        },
+      ]);
+      setLastCtas(extractRecipeMarkdownLinks(reply).links);
+      if (response.reply.trim()) {
+        setHistory([{ role: "assistant", content: response.reply }]);
+      }
+      if (response.changed_fields.length && response.proposed_profile) {
+        saveProfileDraft(
+          response.proposed_profile as UserProfileUpdate,
+          response.changed_fields,
+        );
+        const labels = response.changed_fields
+          .map((field) => profileFieldLabel(field, t))
+          .join(", ");
+        setProfileToast(t.profileUpdatedFromChatToast(labels));
+        window.setTimeout(() => setProfileToast(null), 7000);
+      }
+    } catch (err) {
+      const msg = errorMessage(err, t.unableToReachAi);
+      setError(msg);
+      setMessages([{ id: `err-${Date.now()}`, role: "assistant", text: msg }]);
+    } finally {
+      setIsBootstrapping(false);
+      scrollToBottom();
+    }
   }
 
   async function handleDetect(file: File, kind: "dish" | "ingredients") {
@@ -1092,8 +1167,24 @@ export default function RecsPage() {
           }
           onClose={() => setShowHistory(false)}
           onSelectSession={(id) => void loadExistingSession(id)}
-          onNewChat={() => void bootstrapWelcome(profile.dietaryRestrictions, profile.primaryGoal)}
+          onNewChat={() => {
+            setShowHistory(false);
+            setConfirmReset(true);
+          }}
         />
+      )}
+
+      {profileToast && (
+        <div
+          className="fixed bottom-6 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-xl px-4 py-3 text-sm shadow-lg"
+          style={{
+            backgroundColor: "var(--tm-surface)",
+            color: "var(--tm-text)",
+            border: "1px solid var(--tm-border)",
+          }}
+        >
+          {profileToast}
+        </div>
       )}
     </div>
   );
