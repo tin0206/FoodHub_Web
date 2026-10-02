@@ -10,8 +10,6 @@ import { getTodaySuggestions, refreshTodaySuggestions, getMealPlan, localIsoDate
 import type { ApiRecipe, TopFavoriteRecipe } from '@/lib/api/types'
 import { getLang } from '@/lib/i18n'
 import { RecipeCard, type RecipeCardData } from '@/components/recipe/recipe-card'
-import { RecipePreferenceBar } from '@/components/recipe/recipe-preference-bar'
-import { listRecipeFeedback, type RecipeSentiment } from '@/lib/api/recipe-feedback'
 import { getOrEstimateMeta } from '@/lib/recipe-meta'
 import { buildRecipeSlug } from '@/lib/recipe-slug'
 import { useDarkMode } from '@/lib/use-dark-mode'
@@ -198,14 +196,12 @@ function SuggestionEmptyCard({ text }: { text: string }) {
 
 /** One meal-type row (Breakfast/Lunch/Dinner) inside the Recommended for You section. */
 function SuggestionMealRow({
-  label, recipes, onOpen, onAddToPlan, sentiments, onSentiment,
+  label, recipes, onOpen, onAddToPlan,
 }: {
   label: string
   recipes: ApiRecipe[]
   onOpen: (r: ApiRecipe) => void
   onAddToPlan: (r: ApiRecipe) => void
-  sentiments: Record<number, RecipeSentiment | null>
-  onSentiment: (recipeId: number, sentiment: RecipeSentiment) => void
 }) {
   const t = useStrings()
   return (
@@ -222,15 +218,11 @@ function SuggestionMealRow({
                 onTap={() => onOpen(recipe)}
                 onAction={() => onOpen(recipe)}
                 onAddToPlan={() => onAddToPlan(recipe)}
-                footer={
-                  <RecipePreferenceBar
-                    recipeId={recipe.id}
-                    source="meal_suggestion"
-                    reason={recipe.recommendation_reason}
-                    sentiment={sentiments[recipe.id] ?? null}
-                    onSentiment={(sentiment) => onSentiment(recipe.id, sentiment)}
-                  />
-                }
+                footer={recipe.recommendation_reason ? (
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--tm-text-2)' }}>
+                    {recipe.recommendation_reason}
+                  </p>
+                ) : undefined}
               />
             </div>
           ))}
@@ -256,7 +248,6 @@ export default function HomePage() {
   const suggestionDateRef = useRef(localIsoDate())
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null)
   const [addToPlanRecipe, setAddToPlanRecipe] = useState<ApiRecipe | null>(null)
-  const [sentiments, setSentiments] = useState<Record<number, RecipeSentiment | null>>({})
 
   async function loadTopRecipes() {
     if (!hasAccessToken()) {
@@ -301,17 +292,6 @@ export default function HomePage() {
       setSuggestions(data)
       setSuggestionsLoading(false)
       setSuggestionsError(data.status === 'failed' ? (data.error_message || t.suggestionsFailed) : '')
-      const ids = [...data.breakfast, ...data.lunch, ...data.dinner].map((recipe) => recipe.id)
-      if (ids.length) {
-        listRecipeFeedback(ids)
-          .then((rows) => {
-            const next: Record<number, RecipeSentiment | null> = {}
-            for (const id of ids) next[id] = null
-            for (const row of rows) next[row.recipe_id] = row.sentiment
-            setSentiments((prev) => ({ ...prev, ...next }))
-          })
-          .catch(() => {})
-      }
     } catch (err) {
       setSuggestionsLoading(false)
       setSuggestionsError(errorMessage(err, t.suggestionsFailed))
@@ -425,9 +405,9 @@ export default function HomePage() {
             </div>
           ) : (
             <>
-              <SuggestionMealRow label={t.breakfastLabel} recipes={suggestions?.breakfast ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} sentiments={sentiments} onSentiment={(recipeId, sentiment) => setSentiments((prev) => ({ ...prev, [recipeId]: sentiment }))} />
-              <SuggestionMealRow label={t.lunchLabel} recipes={suggestions?.lunch ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} sentiments={sentiments} onSentiment={(recipeId, sentiment) => setSentiments((prev) => ({ ...prev, [recipeId]: sentiment }))} />
-              <SuggestionMealRow label={t.dinnerLabel} recipes={suggestions?.dinner ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} sentiments={sentiments} onSentiment={(recipeId, sentiment) => setSentiments((prev) => ({ ...prev, [recipeId]: sentiment }))} />
+              <SuggestionMealRow label={t.breakfastLabel} recipes={suggestions?.breakfast ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} />
+              <SuggestionMealRow label={t.lunchLabel} recipes={suggestions?.lunch ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} />
+              <SuggestionMealRow label={t.dinnerLabel} recipes={suggestions?.dinner ?? []} onOpen={openCatalogDetail} onAddToPlan={setAddToPlanRecipe} />
             </>
           )}
         </section>

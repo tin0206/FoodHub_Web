@@ -5,8 +5,6 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { BookOpen, ChevronRight, X } from "lucide-react";
 import { apiFetch, ApiError, resolveMediaUrl } from "@/lib/api-client";
-import { listRecipeFeedback, type RecipeSentiment } from "@/lib/api/recipe-feedback";
-import { RecipePreferenceBar } from "@/components/recipe/recipe-preference-bar";
 import { useStrings } from "@/lib/use-strings";
 import { useLang } from "@/lib/use-lang";
 import { getLang } from "@/lib/i18n";
@@ -588,29 +586,6 @@ export const MarkdownReply = memo(function MarkdownReply({
   }
 
   const [openLink, setOpenLink] = useState<RecipeLinkRef | null>(null);
-  const [sentiments, setSentiments] = useState<Record<number, RecipeSentiment | null>>({});
-  const feedbackIds = ctas
-    .map((link) => Number(link.recipeId))
-    .filter((id) => Number.isFinite(id));
-
-  useEffect(() => {
-    if (!canSaveRecipes || feedbackIds.length === 0) return;
-    let cancelled = false;
-    listRecipeFeedback(feedbackIds)
-      .then((rows) => {
-        if (cancelled) return;
-        const next: Record<number, RecipeSentiment | null> = {};
-        for (const id of feedbackIds) next[id] = null;
-        for (const row of rows) next[row.recipe_id] = row.sentiment;
-        setSentiments((prev) => ({ ...prev, ...next }));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-    // feedbackIds is derived from the reply text.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canSaveRecipes, feedbackIds.join(",")]);
 
   return (
     <div className="text-[13px] leading-relaxed" style={{ color: "var(--tm-text)" }}>
@@ -735,17 +710,11 @@ export const MarkdownReply = memo(function MarkdownReply({
                 </span>
                 <ChevronRight size={18} color="#059669" className="shrink-0" />
               </button>
-              {canSaveRecipes && Number.isFinite(numericLinkId) && (
-                <RecipePreferenceBar
-                  recipeId={numericLinkId}
-                  source="chat"
-                  reason={recipeCache?.[numericLinkId]?.recommendation_reason}
-                  sentiment={sentiments[numericLinkId] ?? null}
-                  onSentiment={(sentiment) =>
-                    setSentiments((prev) => ({ ...prev, [numericLinkId]: sentiment }))
-                  }
-                />
-              )}
+              {Number.isFinite(numericLinkId) && recipeCache?.[numericLinkId]?.recommendation_reason ? (
+                <p className="text-[11px] leading-snug px-1" style={{ color: "var(--tm-text-2, #6B7280)" }}>
+                  {recipeCache[numericLinkId].recommendation_reason}
+                </p>
+              ) : null}
               </div>
               );
             })}
